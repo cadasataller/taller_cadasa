@@ -1,0 +1,6 @@
+{
+  "name": "Operativa - Cadasa Taller",
+  "description": "Sistema de gestión operativa para Cadasa Taller, incluyendo calificaciones de supervisores, historial de reparaciones y planes de mantenimiento.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}
