@@ -1,11 +1,26 @@
 <script setup lang="ts">
-import { LoaderCircle, Search, X } from 'lucide-vue-next';
+import {
+  CircleAlert,
+  CircleEllipsis,
+  CirclePlus,
+  Layers,
+  LoaderCircle,
+  MapPinHouse,
+  Search,
+  Tractor,
+  Trash,
+  Warehouse,
+  X,
+} from 'lucide-vue-next';
 import { computed, onBeforeUnmount, shallowRef, watch } from 'vue';
 
 import CrearSolicitudEquipoChip from './CrearSolicitudEquipoChip.vue';
 import type { CatalogoContextoDestinoOption } from '@/stores/db_compras/catalogo_contexto_destino/catalogoContextoDestino.types';
 import type { EquipoOption } from '@/stores/dbequipos/equipos/equipos.types';
-import type { DestinoSeleccionado } from '@/stores/db_compras/solicitudes_compra/crear_solicitud/solicitudesCompraCrear.types';
+import type {
+  ContextoDestinoTipoOrigen,
+  DestinoSeleccionado,
+} from '@/stores/db_compras/solicitudes_compra/crear_solicitud/solicitudesCompraCrear.types';
 
 type NormalizedServiceSourceRow =
   | {
@@ -54,6 +69,43 @@ const selectedCodes = computed(() => new Set(props.selectedItems.map((item) => `
 const selectedTipoOrigen = computed(() => props.selectedItems[0]?.tipoOrigen ?? null);
 const normalizedQuery = computed(() => query.value.trim().toLocaleLowerCase());
 const hasEquipmentSearchTerm = computed(() => normalizedQuery.value.length >= 3);
+const selectedRows = computed<NormalizedServiceSourceRow[]>(() => props.selectedItems.map((item) => {
+  if (item.tipoOrigen === 'equipo') {
+    return {
+      key: `equipo-${item.codigo}`,
+      source: 'equipo' as const,
+      item: {
+        id: item.id,
+        codEquipo: item.codigo,
+        modelo: item.modelo,
+        marca: item.marca,
+        tipo: item.tipo,
+        label: item.label,
+      },
+      label: item.label,
+      tipoOrigen: 'equipo' as const,
+      selected: true,
+      conflict: false,
+    };
+  }
+
+  return {
+    key: `contexto-${item.codigo}`,
+    source: 'contexto' as const,
+    item: {
+      id: item.id,
+      codigo: item.codigo,
+      nombre: item.label,
+      tipoOrigen: item.tipoOrigen,
+      restringidoAServicios: false,
+      activo: true,
+    },
+    label: item.label,
+    tipoOrigen: item.tipoOrigen,
+    selected: true,
+    conflict: false,
+  };
+}));
 
 watch(query, (value) => {
   if (debounceTimer !== null) {
@@ -96,18 +148,30 @@ const equipmentRows = computed<NormalizedServiceSourceRow[]>(() => props.equipme
   })));
 
 const rows = computed<NormalizedServiceSourceRow[]>(() => {
-  if (!hasEquipmentSearchTerm.value) {
-    return contextRows.value;
-  }
+  const nextRows = hasEquipmentSearchTerm.value
+    ? [...contextRows.value, ...equipmentRows.value]
+    : [...contextRows.value];
+
+  const rowMap = new Map<string, NormalizedServiceSourceRow>(
+    nextRows.map((row) => [row.key, row])
+  );
+
+  selectedRows.value.forEach((row) => {
+    rowMap.set(row.key, {
+      ...(rowMap.get(row.key) ?? row),
+      ...row,
+    });
+  });
 
   return [
-    ...contextRows.value,
-    ...equipmentRows.value,
+    ...selectedRows.value,
+    ...[...rowMap.values()].filter((row) => !row.selected),
   ];
 });
 
 const shouldShowResults = computed(() =>
-  isFocused.value && (!props.isLoading || contextRows.value.length > 0 || hasEquipmentSearchTerm.value)
+  selectedRows.value.length > 0
+  || (isFocused.value && (!props.isLoading || contextRows.value.length > 0 || hasEquipmentSearchTerm.value))
 );
 
 const clearQuery = (): void => {
@@ -130,8 +194,14 @@ const handleBlur = (): void => {
   }, 150);
 };
 
-const handleSelectRow = (row: NormalizedServiceSourceRow): void => {
+const handleRowAction = (row: NormalizedServiceSourceRow): void => {
+  if (row.conflict) {
+    return;
+  }
+
   if (row.selected) {
+    const codigo = row.source === 'equipo' ? row.item.codEquipo : row.item.codigo;
+    emit('remove', { codigo, tipoOrigen: row.tipoOrigen });
     return;
   }
 
@@ -165,28 +235,87 @@ const searchStateMessage = computed(() => {
   return 'No hay destinos disponibles para este tipo de solicitud.';
 });
 
-const getRowClassName = (row: NormalizedServiceSourceRow): string => {
-  if (row.conflict) {
-    return 'bg-danger/8 text-danger hover:bg-danger/10';
+const ORIGIN_LEGEND: Array<{
+  tipoOrigen: ContextoDestinoTipoOrigen;
+  label: string;
+  icon: typeof Tractor;
+}> = [
+  { tipoOrigen: 'grupo_equipo', label: 'GRUPO EQUIPO', icon: Layers },
+  { tipoOrigen: 'equipo', label: 'EQUIPO', icon: Tractor },
+  { tipoOrigen: 'instalacion_taller', label: 'INSTALACION TALLER', icon: Warehouse },
+  { tipoOrigen: 'area_operativa', label: 'AREA OPERATIVA', icon: MapPinHouse },
+  { tipoOrigen: 'otros', label: 'OTROS', icon: CircleEllipsis },
+];
+
+const getOriginLabel = (tipoOrigen: ContextoDestinoTipoOrigen): string =>
+  tipoOrigen.replace(/[_-]+/g, ' ').toLocaleUpperCase();
+
+const getOriginIcon = (tipoOrigen: ContextoDestinoTipoOrigen) => {
+  if (tipoOrigen === 'grupo_equipo') {
+    return Layers;
   }
 
-  if (row.selected) {
-    return 'bg-main/8 text-main hover:bg-main/10';
+  if (tipoOrigen === 'equipo') {
+    return Tractor;
   }
 
-  return 'bg-white hover:bg-white';
+  if (tipoOrigen === 'instalacion_taller') {
+    return Warehouse;
+  }
+
+  if (tipoOrigen === 'area_operativa') {
+    return MapPinHouse;
+  }
+
+  return CircleEllipsis;
 };
 
-const getRowActionLabel = (row: NormalizedServiceSourceRow): string => {
+const getRowClassName = (row: NormalizedServiceSourceRow): string => {
   if (row.conflict) {
-    return 'Otro origen';
+    return 'bg-danger/8 text-danger';
   }
 
   if (row.selected) {
-    return 'Seleccionado';
+    return 'bg-main/8 text-main';
   }
 
-  return 'Agregar';
+  return 'bg-white text-stone-700';
+};
+
+const getActionIcon = (row: NormalizedServiceSourceRow) => {
+  if (row.selected) {
+    return Trash;
+  }
+
+  if (row.conflict) {
+    return CircleAlert;
+  }
+
+  return CirclePlus;
+};
+
+const getActionIconClassName = (row: NormalizedServiceSourceRow): string => {
+  if (row.selected) {
+    return 'text-danger';
+  }
+
+  if (row.conflict) {
+    return 'text-danger/80';
+  }
+
+  return 'text-main';
+};
+
+const getActionLabel = (row: NormalizedServiceSourceRow): string => {
+  if (row.selected) {
+    return `Quitar ${row.label}`;
+  }
+
+  if (row.conflict) {
+    return `${row.label} no disponible`;
+  }
+
+  return `Agregar ${row.label}`;
 };
 </script>
 
@@ -238,6 +367,9 @@ const getRowActionLabel = (row: NormalizedServiceSourceRow): string => {
           v-if="selectedItems.length > 0"
           class="sticky top-0 z-40 -mt-1 rounded-lg border border-stone-200 bg-stone-50/95 px-3 py-2 shadow-sm backdrop-blur lg:hidden"
         >
+          <p class="mb-2 text-[10px] text-black">
+            Se debe elegir solo destinos del mismo origen
+          </p>
           <div class="flex flex-wrap items-start gap-2">
             <CrearSolicitudEquipoChip
               v-for="item in selectedItems"
@@ -253,6 +385,9 @@ const getRowActionLabel = (row: NormalizedServiceSourceRow): string => {
           v-else
           class="sticky top-0 z-40 -mt-1 rounded-lg border border-dashed border-stone-300 bg-white/95 px-3 py-2 text-xs text-stone-500 shadow-sm backdrop-blur md:text-sm lg:hidden"
         >
+          <p class="mb-2 text-[10px] text-black">
+            Se debe elegir solo destinos del mismo origen
+          </p>
           Aún no has seleccionado destinos.
         </div>
 
@@ -270,31 +405,70 @@ const getRowActionLabel = (row: NormalizedServiceSourceRow): string => {
           </div>
 
           <template v-else-if="shouldShowResults && rows.length > 0">
-            <button
-              v-for="row in rows"
-              :key="row.key"
-              type="button"
-              class="flex w-full items-center justify-between border-b border-stone-200 px-3 py-2 text-left text-xs transition last:border-b-0"
-              :class="getRowClassName(row)"
-              @mousedown.prevent
-              @click="handleSelectRow(row)"
-            >
-              <div class="min-w-0">
-                <span class="block min-w-0 truncate">{{ row.label }}</span>
+            <div class="sticky top-0 z-20 border-b border-stone-200 bg-stone-50/95 backdrop-blur">
+              <div class="flex flex-wrap gap-2 px-3 py-2">
                 <span
-                  v-if="row.conflict"
-                  class="mt-1 block text-[11px] font-medium text-danger/80"
+                  v-for="item in ORIGIN_LEGEND"
+                  :key="item.tipoOrigen"
+                  class="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-white px-2 py-1 text-[11px] font-medium text-stone-600"
                 >
-                  Si deseas elegir este origen, elimina primero el destino seleccionado.
+                  <component
+                    :is="item.icon"
+                    class="h-3.5 w-3.5"
+                  />
+                  <span>{{ item.label }}</span>
                 </span>
               </div>
-              <span
-                class="shrink-0 font-semibold"
-                :class="row.conflict ? 'text-danger/80' : row.selected ? 'text-main/80' : 'text-main'"
+
+              <div class="grid grid-cols-[3rem_minmax(0,1fr)_9rem_3.5rem] items-center gap-2 border-t border-stone-200 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-stone-500">
+                <span class="text-center">Tipo</span>
+                <span class="text-center">Destino</span>
+                <span class="text-center">Origen</span>
+                <span class="text-center">Estado</span>
+              </div>
+            </div>
+
+            <div>
+              <div
+                v-for="row in rows"
+                :key="row.key"
+                class="grid grid-cols-[3rem_minmax(0,1fr)_9rem_3.5rem] items-center gap-2 border-b border-stone-200 px-3 py-2 text-xs transition last:border-b-0"
+                :class="[getRowClassName(row), row.conflict ? 'cursor-not-allowed' : 'cursor-pointer']"
+                :aria-label="getActionLabel(row)"
+                :title="getActionLabel(row)"
+                @mousedown.prevent
+                @click="handleRowAction(row)"
               >
-                {{ getRowActionLabel(row) }}
-              </span>
-            </button>
+                <div class="flex justify-center">
+                  <component
+                    :is="getOriginIcon(row.tipoOrigen)"
+                    class="h-4 w-4"
+                  />
+                </div>
+
+                <div class="min-w-0 text-center">
+                  <span class="block truncate font-medium">
+                    {{ row.label }}
+                  </span>
+                </div>
+
+                <div class="min-w-0 text-center">
+                  <span class="block truncate font-semibold">
+                    {{ getOriginLabel(row.tipoOrigen) }}
+                  </span>
+                </div>
+
+                <div class="flex justify-center">
+                  <span class="inline-flex rounded-full p-1">
+                    <component
+                      :is="getActionIcon(row)"
+                      class="h-4 w-4"
+                      :class="getActionIconClassName(row)"
+                    />
+                  </span>
+                </div>
+              </div>
+            </div>
           </template>
 
           <div
@@ -307,6 +481,9 @@ const getRowActionLabel = (row: NormalizedServiceSourceRow): string => {
       </div>
 
       <div class="hidden min-h-[12rem] overflow-hidden rounded-lg border border-stone-200 bg-stone-50 px-3 py-3 lg:block lg:min-h-0">
+        <p class="mb-3 text-[10px] text-black">
+          Se debe elegir solo destinos del mismo origen
+        </p>
         <div
           v-if="selectedItems.length > 0"
           class="grid max-h-full grid-cols-2 items-start content-start gap-3 overflow-y-auto lg:grid-cols-3"
