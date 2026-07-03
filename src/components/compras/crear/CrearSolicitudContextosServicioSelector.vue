@@ -232,7 +232,7 @@ const searchStateMessage = computed(() => {
     return 'No hay resultados para la búsqueda actual.';
   }
 
-  return 'No hay destinos disponibles para este tipo de solicitud.';
+  return 'No hay destinos buscados. Puedes filtrar destinos desde el primer carácter. Para equipos, ingresa al menos 3 caracteres.';
 });
 
 const ORIGIN_LEGEND: Array<{
@@ -321,9 +321,14 @@ const getActionLabel = (row: NormalizedServiceSourceRow): string => {
 
 <template>
   <div class="flex h-full min-h-0 flex-col gap-3 overflow-y-auto lg:overflow-hidden">
-    <label class="block text-xs font-semibold text-stone-800">
-      Destino <span class="text-danger">*</span>
-    </label>
+    <div class="space-y-1">
+      <label class="block text-xs font-semibold text-stone-800">
+        Destino <span class="text-danger">*</span>
+      </label>
+      <p class="text-xs text-stone-500">
+        ¿Dónde se usará o a qué área o equipo se asignará?
+      </p>
+    </div>
 
     <div class="grid min-h-0 flex-1 gap-4 lg:grid-cols-2 lg:overflow-hidden">
       <div class="flex min-h-0 flex-col gap-3">
