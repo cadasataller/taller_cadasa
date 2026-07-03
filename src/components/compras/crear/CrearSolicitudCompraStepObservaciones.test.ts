@@ -53,8 +53,8 @@ describe('CrearSolicitudCompraStepObservaciones', () => {
     expect(references).toContain('Instalaciones de taller');
     expect(wrapper.html()).toContain('emerald');
     expect(wrapper.html()).toContain('rose');
-    expect(textarea.attributes('maxlength')).toBe('250');
-    expect(references).toContain('19/250');
+    expect(textarea.attributes('maxlength')).toBeUndefined();
+    expect(references).not.toContain('19/250');
   });
 
   it('emite el estado de scroll en desktop cuando llega al fondo con tolerancia', async () => {

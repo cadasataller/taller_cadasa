@@ -171,8 +171,7 @@ export const stepProductosSchema = z.object({
 export const stepObservacionesSchema = z.object({
   observacion: z.string()
     .trim()
-    .min(1, 'La observación es obligatoria.')
-    .max(250, 'La observación no puede superar los 250 caracteres.'),
+    .min(1, 'La observación es obligatoria.'),
   solicitarUrgente: z.boolean(),
   motivoUrgencia: z.string(),
 }).superRefine((value, ctx) => {
@@ -193,8 +192,7 @@ const baseCreateSchema = z.object({
   servicios: z.array(servicioSolicitudSchema),
   observacion: z.string()
     .trim()
-    .min(1, 'La observación es obligatoria.')
-    .max(250, 'La observación no puede superar los 250 caracteres.'),
+    .min(1, 'La observación es obligatoria.'),
   solicitarUrgente: z.boolean(),
   motivoUrgencia: z.string(),
 }).superRefine((value, ctx) => {

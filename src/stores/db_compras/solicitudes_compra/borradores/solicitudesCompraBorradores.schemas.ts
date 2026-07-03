@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-import { OBSERVACION_MAX_LENGTH } from '../crear_solicitud/solicitudesCompraCrear.types';
-
 const todayAtMidnight = (): Date => {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
@@ -117,8 +115,7 @@ export const solicitudCompraBorradorSchema = z.object({
   servicios: z.array(servicioSolicitudSchema),
   observacion: z.string()
     .trim()
-    .min(1, 'La observación es obligatoria.')
-    .max(OBSERVACION_MAX_LENGTH, `La observación no puede superar los ${OBSERVACION_MAX_LENGTH} caracteres.`),
+    .min(1, 'La observación es obligatoria.'),
   solicitarUrgente: z.boolean(),
   motivoUrgencia: z.string(),
 }).superRefine((value, ctx) => {

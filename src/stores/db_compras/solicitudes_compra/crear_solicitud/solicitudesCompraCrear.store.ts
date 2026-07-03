@@ -27,7 +27,6 @@ import {
   stepProductosSchema,
 } from './solicitudesCompraCrear.schemas';
 import {
-  OBSERVACION_MAX_LENGTH,
   OBSERVACION_PREFILL_PREFIX,
 } from './solicitudesCompraCrear.types';
 import type {
@@ -105,8 +104,7 @@ const formatZodErrors = (issues: Array<{ path: PropertyKey[]; message: string }>
   return nextErrors;
 };
 
-const truncateObservacion = (value: string): string => value.slice(0, OBSERVACION_MAX_LENGTH);
-const normalizeObservacion = (value: string): string => truncateObservacion(value.toUpperCase());
+const normalizeObservacion = (value: string): string => value.toUpperCase();
 const normalizeDescripcion = (value: string): string => value.trim().toUpperCase();
 const DESTINO_MIXED_ORIGIN_ERROR_MESSAGE = 'No se puede combinar otro origen de destino en esta solicitud. Si deseas elegir otro origen, elimina primero el destino ya seleccionado.';
 const formatDateForDb = (value: Date): string => {
@@ -157,7 +155,7 @@ const buildObservacionPrefill = (destinos: DestinoSeleccionado[]): string => {
     ? `${OBSERVACION_PREFILL_PREFIX}${equipmentCodes.join(', ')}`
     : OBSERVACION_PREFILL_PREFIX;
 
-  return truncateObservacion(generated);
+  return generated;
 };
 
 const toDestinoEquipoSeleccionado = (

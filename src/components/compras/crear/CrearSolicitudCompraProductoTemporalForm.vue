@@ -51,6 +51,7 @@ const title = computed(() => props.mode === 'edit'
   : 'Agregar producto manual');
 const submitLabel = computed(() => props.mode === 'edit' ? 'Guardar cambios' : 'Agregar');
 const shouldShowUnitResults = computed(() => unitFieldOpen.value && !error.value);
+const nombreCharacterCount = computed(() => formState.nombre.length);
 
 const normalizeText = (value: string): string => value.trim().toUpperCase();
 
@@ -190,6 +191,11 @@ const handleSubmit = (): void => {
             placeholder="Ej. Producto no catalogado"
             @input="resizeNombreField"
           />
+          <div class="flex items-center justify-between gap-3 text-xs text-stone-500">
+            <p class="font-semibold text-stone-600">
+              {{ nombreCharacterCount }}/56
+            </p>
+          </div>
           <p
             v-if="fieldErrors.nombre"
             class="text-sm font-medium text-danger"

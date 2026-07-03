@@ -18,7 +18,6 @@ import type {
   CrearSolicitudAdjuntoValidationIssue,
   DestinoSeleccionado,
 } from '@/stores/db_compras/solicitudes_compra/crear_solicitud/solicitudesCompraCrear.types';
-import { OBSERVACION_MAX_LENGTH } from '@/stores/db_compras/solicitudes_compra/crear_solicitud/solicitudesCompraCrear.types';
 
 interface EquipoObservacionChip {
   codigo: string;
@@ -73,11 +72,9 @@ const serviceContextChips = computed(() => props.destinos
     nombre: item.label,
   })));
 
-const characterCount = computed(() => props.observacion.length);
-
 const handleObservacionInput = (event: Event): void => {
   const textarea = event.target as HTMLTextAreaElement;
-  emit('update:observacion', textarea.value.toUpperCase().slice(0, OBSERVACION_MAX_LENGTH));
+  emit('update:observacion', textarea.value.toUpperCase());
 };
 
 const isDesktopViewport = (): boolean => window.innerWidth >= DESKTOP_BREAKPOINT;
@@ -217,19 +214,12 @@ watch(
 
         <textarea
           :value="observacion"
-          :maxlength="OBSERVACION_MAX_LENGTH"
           rows="3"
           class="w-full rounded-xl border px-3 py-2 text-sm text-stone-900 outline-none"
           :class="observacionError ? 'border-danger bg-danger-bg/30' : 'border-stone-300'"
           placeholder="Describe el contexto de la solicitud"
           @input="handleObservacionInput"
         />
-
-        <div class="flex items-center justify-between gap-3 text-xs text-stone-500">
-          <p class="font-semibold text-stone-600">
-            {{ characterCount }}/{{ OBSERVACION_MAX_LENGTH }}
-          </p>
-        </div>
 
         <p
           v-if="observacionError"

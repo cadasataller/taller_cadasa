@@ -12,7 +12,6 @@ export type ContextoDestinoTipoOrigen =
   | 'otros';
 
 export const OBSERVACION_PREFILL_PREFIX = 'PARA USO EN: ';
-export const OBSERVACION_MAX_LENGTH = 250;
 export const ADJUNTO_MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 export const ADJUNTO_MAX_FILES = 5;
 export const ADJUNTO_MAX_NAME_LENGTH = 50;
