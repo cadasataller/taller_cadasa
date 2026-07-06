@@ -42,6 +42,21 @@ vi.mock('../borradores/solicitudesCompraBorradores.service', () => ({
   },
 }));
 
+vi.mock('@/stores/db_compras/calendario_feriados/calendarioFeriados.service', () => ({
+  calendarioFeriadosService: {
+    obtenerPorAnio: vi.fn(async (year: number) => ({
+      year,
+      holidays: [],
+    })),
+  },
+}));
+
+vi.mock('@/stores/db_mantenimiento/app_feature_access/featureAccess.service', () => ({
+  featureAccessService: {
+    obtenerFuncionalidadesPermitidas: vi.fn(async () => []),
+  },
+}));
+
 import { useSolicitudesCompraCrearStore } from './solicitudesCompraCrear.store';
 import { OBSERVACION_PREFILL_PREFIX } from './solicitudesCompraCrear.types';
 
@@ -72,11 +87,11 @@ describe('solicitudesCompraCrear.store', () => {
     expect(store.areaNombre).toBe('Operativa');
   });
 
-  it('arma payload de productos con nombre principal y p_contextos_destino', () => {
+  it('arma payload de productos con nombre principal y p_contextos_destino', async () => {
     const store = useSolicitudesCompraCrearStore();
 
     store.setTipoSolicitud('zafra');
-    store.setFechaEntrega('2026-07-10');
+    await store.setFechaEntrega('2026-07-20');
     store.agregarEquipo(equipoOption);
     store.setObservacion('Solicitud para mantenimiento preventivo.');
     store.agregarProductoTemporal({
@@ -86,7 +101,7 @@ describe('solicitudesCompraCrear.store', () => {
       unidadLabel: 'Gal',
     });
 
-    const payload = store.buildPayload();
+    const payload = await store.buildPayload();
 
     expect(payload.p_contextos_destino).toEqual([
       { tipo_origen: 'equipo', codigo: 'EQ-001' },
@@ -102,11 +117,11 @@ describe('solicitudesCompraCrear.store', () => {
     expect(payload.p_servicios).toEqual([]);
   });
 
-  it('arma payload de servicios con destinos de catalogo', () => {
+  it('arma payload de servicios con destinos de catalogo', async () => {
     const store = useSolicitudesCompraCrearStore();
 
     store.setTipoSolicitud('servicio');
-    store.setFechaEntrega('2026-07-10');
+    await store.setFechaEntrega('2026-07-20');
     store.agregarDestinoContexto({
       id: 20,
       codigo: 'TALLER',
@@ -121,7 +136,7 @@ describe('solicitudesCompraCrear.store', () => {
       unidadLabel: 'Un',
     });
 
-    const payload = store.buildPayload();
+    const payload = await store.buildPayload();
 
     expect(payload.p_contextos_destino).toEqual([
       { tipo_origen: 'instalacion_taller', codigo: 'TALLER' },
@@ -136,21 +151,21 @@ describe('solicitudesCompraCrear.store', () => {
     ]);
   });
 
-  it('exige al menos un destino en el paso 1', () => {
+  it('exige al menos un destino en el paso 1', async () => {
     const store = useSolicitudesCompraCrearStore();
 
     store.setTipoSolicitud('cultivo');
-    store.setFechaEntrega('2026-07-10');
+    await store.setFechaEntrega('2026-07-20');
 
     expect(store.validateStep(1)).toBe(false);
     expect(store.validationErrors.destinos).toBe('Debe seleccionar al menos un destino.');
   });
 
-  it('impide mezclar tipos de destino en una misma solicitud', () => {
+  it('impide mezclar tipos de destino en una misma solicitud', async () => {
     const store = useSolicitudesCompraCrearStore();
 
     store.setTipoSolicitud('servicio');
-    store.setFechaEntrega('2026-07-10');
+    await store.setFechaEntrega('2026-07-20');
     store.agregarEquipo(equipoOption);
     store.agregarDestinoContexto({
       id: 2,
@@ -164,11 +179,11 @@ describe('solicitudesCompraCrear.store', () => {
     expect(store.validationErrors.destinos).toBe('No se puede combinar otro origen de destino en esta solicitud. Si deseas elegir otro origen, elimina primero el destino ya seleccionado.');
   });
 
-  it('autocompleta observacion solo con codigos de equipos reales', () => {
+  it('autocompleta observacion solo con codigos de equipos reales', async () => {
     const store = useSolicitudesCompraCrearStore();
 
     store.setTipoSolicitud('servicio');
-    store.setFechaEntrega('2026-07-10');
+    await store.setFechaEntrega('2026-07-20');
     store.agregarDestinoContexto({
       id: 8,
       codigo: 'TALLER',
@@ -184,11 +199,11 @@ describe('solicitudesCompraCrear.store', () => {
     expect(store.observacion).toBe(`${OBSERVACION_PREFILL_PREFIX}EQ-001`);
   });
 
-  it('filtra destinos de catalogo al salir del tipo servicio', () => {
+  it('filtra destinos de catalogo al salir del tipo servicio', async () => {
     const store = useSolicitudesCompraCrearStore();
 
     store.setTipoSolicitud('servicio');
-    store.setFechaEntrega('2026-07-10');
+    await store.setFechaEntrega('2026-07-20');
     store.agregarDestinoContexto({
       id: 8,
       codigo: 'TALLER',
@@ -202,12 +217,12 @@ describe('solicitudesCompraCrear.store', () => {
     expect(store.observacion).toBe(OBSERVACION_PREFILL_PREFIX);
   });
 
-  it('genera snapshot de borrador con destinos y producto temporal migrado', () => {
+  it('genera snapshot de borrador con destinos y producto temporal migrado', async () => {
     const store = useSolicitudesCompraCrearStore();
 
     store.currentStep = 2;
     store.setTipoSolicitud('otros');
-    store.setFechaEntrega('2026-07-10');
+    await store.setFechaEntrega('2026-07-20');
     store.agregarEquipo(equipoOption);
     store.agregarProductoTemporal({
       nombre: 'Manguera hidraulica',
@@ -217,7 +232,7 @@ describe('solicitudesCompraCrear.store', () => {
     });
     store.setObservacion('Reposicion en campo.');
 
-    const snapshot = store.buildDraftSnapshot();
+    const snapshot = await store.buildDraftSnapshot();
 
     expect(snapshot.destinos).toEqual(store.destinos);
     expect(snapshot.productos).toEqual([
@@ -229,15 +244,15 @@ describe('solicitudesCompraCrear.store', () => {
     ]);
   });
 
-  it('hidrata borradores con destinos y productos del nuevo contrato', () => {
+  it('hidrata borradores con destinos y productos del nuevo contrato', async () => {
     const store = useSolicitudesCompraCrearStore();
 
-    store.hydrateFromDraft({
+    await store.hydrateFromDraft({
       id: 'draft-1',
       schemaVersion: 1,
       currentStep: 3,
       tipoSolicitud: 'otros',
-      fechaEntrega: '2026-07-10',
+      fechaEntrega: '2026-07-20',
       observacion: 'Reposicion programada.',
       solicitarUrgente: false,
       motivoUrgencia: '',

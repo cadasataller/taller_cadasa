@@ -2,7 +2,12 @@
 import { computed } from 'vue';
 
 import { useCatalogoContextoDestinoOptions } from '@/composables/compras/useCatalogoContextoDestinoOptions';
+import { useCalendarioFeriadosStore } from '@/stores/db_compras/calendario_feriados/calendarioFeriados.store';
 import type { CatalogoContextoDestinoOption } from '@/stores/db_compras/catalogo_contexto_destino/catalogoContextoDestino.types';
+import {
+  isAllowedDeliveryDateInNormalMode,
+  parseIsoDate,
+} from '@/stores/db_compras/solicitudes_compra/crear_solicitud/fechaEntregaRules';
 
 import CrearSolicitudContextosServicioSelector from './CrearSolicitudContextosServicioSelector.vue';
 import CrearSolicitudFechaField from './CrearSolicitudFechaField.vue';
@@ -18,6 +23,8 @@ const props = defineProps<{
   tipoSolicitud: SolicitudCompraTipoSolicitud | null;
   fechaEntrega: string | null;
   fechaEntregaRequiresReview: boolean;
+  fechaEntregaMinima: string | null;
+  isZafraActiva: boolean;
   destinos: DestinoSeleccionado[];
   validationErrors: CrearSolicitudFieldErrors;
   searchResults: EquipoOption[];
@@ -49,6 +56,23 @@ const {
   loading: serviceContextLoading,
   error: serviceContextError,
 } = useCatalogoContextoDestinoOptions(computed(() => props.tipoSolicitud));
+const calendarioFeriadosStore = useCalendarioFeriadosStore();
+
+const minimumDate = computed(() => parseIsoDate(props.fechaEntregaMinima));
+const disabledDate = (date: Date): boolean => {
+  if (props.isZafraActiva) {
+    return false;
+  }
+
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+
+  if (minimumDate.value && normalized < minimumDate.value) {
+    return true;
+  }
+
+  return !isAllowedDeliveryDateInNormalMode(normalized, calendarioFeriadosStore.holidaysByYear).isValid;
+};
 </script>
 
 <template>
@@ -65,6 +89,9 @@ const {
           :model-value="fechaEntrega"
           :error="validationErrors.fechaEntrega"
           :show-review-warning="fechaEntregaRequiresReview"
+          :min-date="minimumDate"
+          :is-zafra-activa="isZafraActiva"
+          :disabled-date="disabledDate"
           @update:model-value="emitFechaEntrega"
         />
       </div>

@@ -9,8 +9,15 @@ import {
   Users,
   Wrench,
 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, onMounted, shallowRef, watch } from 'vue';
 
+import { useCalendarioFeriadosStore } from '@/stores/db_compras/calendario_feriados/calendarioFeriados.store';
+import { useFeatureAccessStore } from '@/stores/db_mantenimiento/app_feature_access/featureAccess.store';
+import {
+  calculateMinimumFechaEntrega,
+  TEMPORADA_ZAFRA_ACTIVA_FEATURE_KEY,
+  validateFechaEntregaSync,
+} from '@/stores/db_compras/solicitudes_compra/crear_solicitud/fechaEntregaRules';
 import type { SolicitudCompraBorradorListadoItem } from '@/stores/db_compras/solicitudes_compra/borradores/solicitudesCompraBorradores.types';
 import { formatDateDisplay, formatPanamaDateTime } from '@/utils/dateUtils';
 
@@ -26,17 +33,42 @@ const emit = defineEmits<{
 const formattedEntrega = computed(() => formatDateDisplay(props.draft.fechaEntrega));
 const formattedCreatedAt = computed(() => formatPanamaDateTime(props.draft.createdAt));
 const formattedUpdatedAt = computed(() => formatPanamaDateTime(props.draft.updatedAt));
-const isEntregaExpired = computed(() => {
-  const entregaDate = new Date(`${props.draft.fechaEntrega}T00:00:00`);
+const calendarioFeriadosStore = useCalendarioFeriadosStore();
+const featureAccessStore = useFeatureAccessStore();
+const isEntregaExpired = shallowRef(false);
 
-  if (Number.isNaN(entregaDate.getTime())) {
-    return false;
+const syncEntregaReviewState = async (): Promise<void> => {
+  if (!featureAccessStore.isLoaded) {
+    await featureAccessStore.cargarFuncionalidadesPermitidas().catch(() => []);
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const isZafraActiva = featureAccessStore.tieneFuncionalidad(TEMPORADA_ZAFRA_ACTIVA_FEATURE_KEY);
+  let minimumAllowedDate: string | null = null;
 
-  return entregaDate < today;
+  if (!isZafraActiva) {
+    minimumAllowedDate = await calculateMinimumFechaEntrega({
+      today: new Date(),
+      ensureYear: (year) => calendarioFeriadosStore.ensureYear(year).then(() => undefined),
+      getHolidaysForYear: (year) => calendarioFeriadosStore.getHolidaysForYear(year),
+    });
+  }
+
+  isEntregaExpired.value = !validateFechaEntregaSync({
+    fechaEntrega: props.draft.fechaEntrega,
+    today: new Date(),
+    isZafraActiva,
+    minimumAllowedDate,
+    holidaysByYear: calendarioFeriadosStore.holidaysByYear,
+    rulesReady: true,
+  }).isValid;
+};
+
+watch(() => props.draft.fechaEntrega, () => {
+  void syncEntregaReviewState();
+}, { immediate: true });
+
+onMounted(() => {
+  void syncEntregaReviewState();
 });
 
 const destinosSummary = computed(() => {

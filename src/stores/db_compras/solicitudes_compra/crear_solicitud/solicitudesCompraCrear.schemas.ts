@@ -2,12 +2,6 @@ import { z } from 'zod';
 
 import type { SolicitudCompraTipoSolicitud } from './solicitudesCompraCrear.types';
 
-const todayAtMidnight = (): Date => {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  return date;
-};
-
 const tipoSolicitudSchema = z.enum(['zafra', 'cultivo', 'otros', 'servicio']);
 const PRODUCTO_REQUIRED_MESSAGE = 'Debe agregar al menos un producto para continuar.';
 const SERVICIO_REQUIRED_MESSAGE = 'Debe agregar al menos un servicio para continuar.';
@@ -17,13 +11,6 @@ const fechaEntregaSchema = z.string()
   .min(1, 'La fecha de entrega es obligatoria.')
   .refine((value) => !Number.isNaN(new Date(`${value}T00:00:00`).getTime()), {
     message: 'La fecha de entrega no es válida.',
-  })
-  .refine((value) => {
-    const selectedDate = new Date(`${value}T00:00:00`);
-    selectedDate.setHours(0, 0, 0, 0);
-    return selectedDate >= todayAtMidnight();
-  }, {
-    message: 'La fecha de entrega no puede ser menor a la fecha actual.',
   });
 
 const destinoSchema = z.object({

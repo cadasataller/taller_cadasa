@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 
+import { useFeatureAccessStore } from '@/stores/db_mantenimiento/app_feature_access/featureAccess.store';
 import { useUserStore } from '@/stores/userStore';
 import { useEquiposStore } from '@/stores/dbequipos/equipos/equipos.store';
 import type { EquipoOption } from '@/stores/dbequipos/equipos/equipos.types';
@@ -17,8 +18,17 @@ import {
   type SolicitudCompraBorradorStep,
   type SolicitudCompraBorradorUpdatePayload,
 } from '@/stores/db_compras/solicitudes_compra/borradores/solicitudesCompraBorradores.types';
+import { useCalendarioFeriadosStore } from '@/stores/db_compras/calendario_feriados/calendarioFeriados.store';
 
 import { solicitudesCompraCrearService } from './solicitudesCompraCrear.service';
+import {
+  calculateMinimumFechaEntrega,
+  formatDateForDb,
+  parseIsoDate,
+  requiresFechaEntregaDraftReview,
+  TEMPORADA_ZAFRA_ACTIVA_FEATURE_KEY,
+  validateFechaEntregaSync,
+} from './fechaEntregaRules';
 import {
   createSolicitudSendSchema,
   sanitizeCollectionsForTipoSolicitud,
@@ -57,6 +67,11 @@ const createInitialState = (): SolicitudCompraCrearState => ({
   submitMode: null,
   draftId: null,
   lastSavedDraftSnapshotHash: null,
+  fechaEntregaAutoAdjustedMessage: null,
+  fechaEntregaMinima: null,
+  fechaEntregaRulesLoading: false,
+  fechaEntregaRulesReady: false,
+  isZafraActiva: false,
   solicitanteNombre: '',
   solicitanteEmail: '',
   areaNombre: '',
@@ -107,43 +122,6 @@ const formatZodErrors = (issues: Array<{ path: PropertyKey[]; message: string }>
 const normalizeObservacion = (value: string): string => value.toUpperCase();
 const normalizeDescripcion = (value: string): string => value.trim().toUpperCase();
 const DESTINO_MIXED_ORIGIN_ERROR_MESSAGE = 'No se puede combinar otro origen de destino en esta solicitud. Si deseas elegir otro origen, elimina primero el destino ya seleccionado.';
-const formatDateForDb = (value: Date): string => {
-  const year = value.getFullYear();
-  const month = `${value.getMonth() + 1}`.padStart(2, '0');
-  const day = `${value.getDate()}`.padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-};
-const normalizeDraftFechaEntrega = (value: string, now = new Date()): string => {
-  const entregaDate = new Date(`${value}T00:00:00`);
-
-  if (Number.isNaN(entregaDate.getTime())) {
-    return value;
-  }
-
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-  entregaDate.setHours(0, 0, 0, 0);
-
-  if (entregaDate < today) {
-    return formatDateForDb(today);
-  }
-
-  return value;
-};
-const draftFechaEntregaRequiresReview = (value: string, now = new Date()): boolean => {
-  const entregaDate = new Date(`${value}T00:00:00`);
-
-  if (Number.isNaN(entregaDate.getTime())) {
-    return false;
-  }
-
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-  entregaDate.setHours(0, 0, 0, 0);
-
-  return entregaDate < today;
-};
 
 const buildObservacionPrefill = (destinos: DestinoSeleccionado[]): string => {
   const equipmentCodes = destinos
@@ -194,6 +172,19 @@ const resolveMaxUnlockedStep = (steps: {
   return 4;
 };
 
+const getFechaEntregaValidation = (state: SolicitudCompraCrearState) => {
+  const calendarioFeriadosStore = useCalendarioFeriadosStore();
+
+  return validateFechaEntregaSync({
+    fechaEntrega: state.fechaEntrega,
+    today: new Date(),
+    isZafraActiva: state.isZafraActiva,
+    minimumAllowedDate: state.fechaEntregaMinima,
+    holidaysByYear: calendarioFeriadosStore.holidaysByYear,
+    rulesReady: state.fechaEntregaRulesReady,
+  });
+};
+
 export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrear', {
   state: (): SolicitudCompraCrearState => createInitialState(),
 
@@ -203,11 +194,12 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       step2Valid: boolean;
       step3Valid: boolean;
     } {
+      const fechaEntregaValidation = getFechaEntregaValidation(state);
       const step1Valid = stepDatosBaseSchema.safeParse({
         tipoSolicitud: state.tipoSolicitud,
         fechaEntrega: state.fechaEntrega,
         destinos: state.destinos,
-      }).success;
+      }).success && fechaEntregaValidation.isValid;
       const step2Valid = step1Valid && stepProductosSchema.safeParse({
         tipoSolicitud: state.tipoSolicitud,
         productos: state.productos,
@@ -251,7 +243,7 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
         tipoSolicitud: state.tipoSolicitud,
         fechaEntrega: state.fechaEntrega,
         destinos: state.destinos,
-      }).success;
+      }).success && getFechaEntregaValidation(state).isValid;
     },
 
     observacionAutogenerada(state): boolean {
@@ -289,6 +281,7 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       this.fechaCreacionLocal = new Date();
       this.initialized = true;
       this.error = null;
+      await this.refreshFechaEntregaRules();
     },
 
     reset(): void {
@@ -318,9 +311,67 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       this.continuedFromDraft = false;
     },
 
-    hydrateFromDraft(draft: SolicitudCompraBorradorListadoItem): void {
-      const fechaEntregaRequiresReview = draftFechaEntregaRequiresReview(draft.fechaEntrega);
-      const normalizedFechaEntrega = normalizeDraftFechaEntrega(draft.fechaEntrega);
+    async refreshFechaEntregaRules(selectedFechaEntrega?: string | null): Promise<void> {
+      const featureAccessStore = useFeatureAccessStore();
+      const calendarioFeriadosStore = useCalendarioFeriadosStore();
+
+      this.fechaEntregaRulesLoading = true;
+      this.fechaEntregaRulesReady = false;
+
+      try {
+        if (!featureAccessStore.isLoaded) {
+          await featureAccessStore.cargarFuncionalidadesPermitidas().catch(() => []);
+        }
+
+        this.isZafraActiva = featureAccessStore.tieneFuncionalidad(TEMPORADA_ZAFRA_ACTIVA_FEATURE_KEY);
+
+        if (this.isZafraActiva) {
+          this.fechaEntregaMinima = null;
+          this.fechaEntregaRulesReady = true;
+          return;
+        }
+
+        this.fechaEntregaMinima = await calculateMinimumFechaEntrega({
+          today: new Date(),
+          ensureYear: (year) => calendarioFeriadosStore.ensureYear(year).then(() => undefined),
+          getHolidaysForYear: (year) => calendarioFeriadosStore.getHolidaysForYear(year),
+        });
+
+        const selectedDate = parseIsoDate(selectedFechaEntrega ?? this.fechaEntrega);
+        if (selectedDate) {
+          await calendarioFeriadosStore.ensureYear(selectedDate.getFullYear());
+        }
+
+        this.fechaEntregaRulesReady = true;
+      } catch (error) {
+        this.fechaEntregaMinima = null;
+        this.fechaEntregaRulesReady = false;
+        this.error = error instanceof Error
+          ? error.message
+          : 'No se pudieron cargar las reglas de fecha de entrega';
+      } finally {
+        this.fechaEntregaRulesLoading = false;
+      }
+    },
+
+    async hydrateFromDraft(draft: SolicitudCompraBorradorListadoItem): Promise<void> {
+      await this.refreshFechaEntregaRules(draft.fechaEntrega);
+
+      const fechaEntregaValidation = validateFechaEntregaSync({
+        fechaEntrega: draft.fechaEntrega,
+        today: new Date(),
+        isZafraActiva: this.isZafraActiva,
+        minimumAllowedDate: this.fechaEntregaMinima,
+        holidaysByYear: useCalendarioFeriadosStore().holidaysByYear,
+        rulesReady: this.fechaEntregaRulesReady,
+      });
+      const draftDateIsParseable = Boolean(parseIsoDate(draft.fechaEntrega));
+      const shouldAutoAdjustFechaEntrega = !this.isZafraActiva && !fechaEntregaValidation.isValid && Boolean(this.fechaEntregaMinima);
+      const normalizedFechaEntrega = shouldAutoAdjustFechaEntrega
+        ? this.fechaEntregaMinima
+        : draftDateIsParseable
+          ? draft.fechaEntrega
+          : null;
       const sanitizedCollections = sanitizeCollectionsForTipoSolicitud({
         tipoSolicitud: draft.tipoSolicitud,
         productos: draft.productos,
@@ -329,7 +380,7 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       const result = solicitudCompraBorradorSchema.safeParse({
         currentStep: draft.currentStep,
         tipoSolicitud: draft.tipoSolicitud,
-        fechaEntrega: normalizedFechaEntrega,
+        fechaEntrega: normalizedFechaEntrega ?? this.fechaEntregaMinima ?? formatDateForDb(new Date()),
         destinos: draft.destinos,
         productos: sanitizedCollections.productos,
         servicios: sanitizedCollections.servicios,
@@ -346,11 +397,19 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       const sanitizedProductos = sanitizedCollections.productos;
       const sanitizedServicios = sanitizedCollections.servicios;
       const observacionPrefill = buildObservacionPrefill(parsed.destinos);
+      const effectiveFechaEntrega = normalizedFechaEntrega ?? (draftDateIsParseable ? parsed.fechaEntrega : null);
       const step1Valid = stepDatosBaseSchema.safeParse({
         tipoSolicitud: parsed.tipoSolicitud,
-        fechaEntrega: normalizedFechaEntrega,
+        fechaEntrega: effectiveFechaEntrega ?? '',
         destinos: parsed.destinos,
-      }).success;
+      }).success && validateFechaEntregaSync({
+        fechaEntrega: effectiveFechaEntrega,
+        today: new Date(),
+        isZafraActiva: this.isZafraActiva,
+        minimumAllowedDate: this.fechaEntregaMinima,
+        holidaysByYear: useCalendarioFeriadosStore().holidaysByYear,
+        rulesReady: this.fechaEntregaRulesReady,
+      }).isValid;
       const step2Valid = step1Valid && stepProductosSchema.safeParse({
         tipoSolicitud: parsed.tipoSolicitud,
         productos: sanitizedProductos,
@@ -371,7 +430,7 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
         schema_version: draft.schemaVersion,
         current_step: Math.min(parsed.currentStep, maxUnlockedStep) as SolicitudCompraBorradorStep,
         tipo_solicitud: parsed.tipoSolicitud,
-        fecha_entrega: normalizedFechaEntrega,
+        fecha_entrega: draft.fechaEntrega,
         observacion: parsed.observacion.trim(),
         solicitar_urgente: parsed.solicitarUrgente,
         motivo_urgencia: parsed.solicitarUrgente
@@ -384,8 +443,18 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
 
       this.entryMode = 'draft';
       this.continuedFromDraft = true;
-      this.fechaEntregaRequiresReview = fechaEntregaRequiresReview;
-      this.currentStep = fechaEntregaRequiresReview
+      this.fechaEntregaRequiresReview = requiresFechaEntregaDraftReview({
+        fechaEntrega: draft.fechaEntrega,
+        today: new Date(),
+        isZafraActiva: this.isZafraActiva,
+        minimumAllowedDate: this.fechaEntregaMinima,
+        holidaysByYear: useCalendarioFeriadosStore().holidaysByYear,
+        rulesReady: this.fechaEntregaRulesReady,
+      });
+      this.fechaEntregaAutoAdjustedMessage = shouldAutoAdjustFechaEntrega
+        ? `Fecha de entrega cambiada; fecha anterior establecida ${draft.fechaEntrega}`
+        : null;
+      this.currentStep = this.fechaEntregaRequiresReview
         ? 1
         : Math.min(parsed.currentStep, maxUnlockedStep) as SolicitudCompraCreateStep;
       this.submitMode = null;
@@ -393,7 +462,7 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       this.lastSavedDraftSnapshotHash = createDraftSnapshotHash(draftSnapshot);
       this.fechaCreacionLocal = new Date(draft.createdAt);
       this.tipoSolicitud = parsed.tipoSolicitud;
-      this.fechaEntrega = normalizedFechaEntrega;
+      this.fechaEntrega = effectiveFechaEntrega;
       this.destinos = parsed.destinos;
       this.productos = sanitizedProductos;
       this.servicios = sanitizedServicios;
@@ -422,7 +491,7 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
     async prepareDraftEntry(draft: SolicitudCompraBorradorListadoItem): Promise<void> {
       this.reset();
       await this.initialize();
-      this.hydrateFromDraft(draft);
+      await this.hydrateFromDraft(draft);
     },
 
     setTipoSolicitud(value: SolicitudCompraTipoSolicitud | null): void {
@@ -463,10 +532,23 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       delete this.validationErrors.tipoSolicitud;
     },
 
-    setFechaEntrega(value: string | null): void {
+    async setFechaEntrega(value: string | null): Promise<void> {
       this.fechaEntrega = value;
       this.fechaEntregaRequiresReview = false;
+      this.fechaEntregaAutoAdjustedMessage = null;
       delete this.validationErrors.fechaEntrega;
+
+      if (!value) {
+        return;
+      }
+
+      const parsedDate = parseIsoDate(value);
+      if (!parsedDate) {
+        return;
+      }
+
+      const calendarioFeriadosStore = useCalendarioFeriadosStore();
+      await calendarioFeriadosStore.ensureYear(parsedDate.getFullYear());
     },
 
     setObservacion(value: string): void {
@@ -762,16 +844,20 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       const targetStep = step ?? this.currentStep;
 
       if (targetStep === 1) {
+        const fechaEntregaValidation = getFechaEntregaValidation(this);
         const result = stepDatosBaseSchema.safeParse({
           tipoSolicitud: this.tipoSolicitud,
           fechaEntrega: this.fechaEntrega,
           destinos: this.destinos,
         });
 
-        if (!result.success) {
+        if (!result.success || !fechaEntregaValidation.isValid) {
           this.validationErrors = {
             ...this.validationErrors,
-            ...formatZodErrors(result.error.issues),
+            ...(!result.success ? formatZodErrors(result.error.issues) : {}),
+            fechaEntrega: fechaEntregaValidation.isValid
+              ? this.validationErrors.fechaEntrega
+              : (fechaEntregaValidation.message ?? 'La fecha de entrega no es valida.'),
           };
           return false;
         }
@@ -860,7 +946,8 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       }
     },
 
-    buildPayload(): SolicitudCompraCrearPayload {
+    async buildPayload(): Promise<SolicitudCompraCrearPayload> {
+      await this.refreshFechaEntregaRules(this.fechaEntrega);
       const sanitizedCollections = sanitizeCollectionsForTipoSolicitud({
         tipoSolicitud: this.tipoSolicitud ?? 'zafra',
         productos: this.productos,
@@ -879,6 +966,15 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
 
       if (!result.success) {
         this.validationErrors = formatZodErrors(result.error.issues);
+        throw new Error('La solicitud no es válida');
+      }
+
+      const fechaEntregaValidation = getFechaEntregaValidation(this);
+      if (!fechaEntregaValidation.isValid) {
+        this.validationErrors = {
+          ...this.validationErrors,
+          fechaEntrega: fechaEntregaValidation.message ?? 'La fecha de entrega no es valida.',
+        };
         throw new Error('La solicitud no es válida');
       }
 
@@ -919,9 +1015,10 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       };
     },
 
-    buildDraftUpdateSnapshot(options?: {
+    async buildDraftUpdateSnapshot(options?: {
       syncValidationErrors?: boolean;
-    }): SolicitudCompraBorradorUpdatePayload {
+    }): Promise<SolicitudCompraBorradorUpdatePayload> {
+      await this.refreshFechaEntregaRules(this.fechaEntrega);
       const syncValidationErrors = options?.syncValidationErrors ?? true;
       const draftStep = (this.currentStep === 1 ? 2 : this.currentStep) as SolicitudCompraBorradorStep;
       const sanitizedCollections = this.tipoSolicitud
@@ -953,6 +1050,17 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
         throw new Error('El borrador no es válido');
       }
 
+      const fechaEntregaValidation = getFechaEntregaValidation(this);
+      if (!fechaEntregaValidation.isValid) {
+        if (syncValidationErrors) {
+          this.validationErrors = {
+            ...this.validationErrors,
+            fechaEntrega: fechaEntregaValidation.message ?? 'La fecha de entrega no es valida.',
+          };
+        }
+        throw new Error('El borrador no es válido');
+      }
+
       const parsed = result.data;
       return {
         activo: true,
@@ -971,10 +1079,9 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       } satisfies SolicitudCompraBorradorUpdatePayload;
     },
 
-    buildDraftSnapshot():
-      SolicitudCompraBorradorCreatePayload
-      | SolicitudCompraBorradorUpdatePayload {
-      const snapshot = this.buildDraftUpdateSnapshot();
+    async buildDraftSnapshot():
+      Promise<SolicitudCompraBorradorCreatePayload | SolicitudCompraBorradorUpdatePayload> {
+      const snapshot = await this.buildDraftUpdateSnapshot();
 
       if (this.draftId) {
         return snapshot;
@@ -1012,7 +1119,7 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
       this.draftSaving = true;
 
       try {
-        const updateSnapshot = this.buildDraftUpdateSnapshot({
+        const updateSnapshot = await this.buildDraftUpdateSnapshot({
           syncValidationErrors: !silent,
         });
         const snapshotHash = createDraftSnapshotHash(updateSnapshot);
@@ -1113,7 +1220,7 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
           );
         }
 
-        const payload = this.buildPayload();
+        const payload = await this.buildPayload();
         const response = await solicitudesCompraCrearService.crearSolicitud(payload);
 
         if (mode === 'send') {

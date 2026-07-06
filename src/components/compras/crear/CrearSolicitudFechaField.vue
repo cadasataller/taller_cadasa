@@ -5,12 +5,13 @@ import { es } from 'date-fns/locale';
 
 const model = defineModel<string | null>();
 
-defineProps<{
+const props = defineProps<{
   error?: string;
   showReviewWarning?: boolean;
+  minDate?: Date | null;
+  isZafraActiva?: boolean;
+  disabledDate?: (date: Date) => boolean;
 }>();
-
-const minDate = new Date();
 const inputFormats = {
   input: (value: Date | Date[]): string => {
     const date = Array.isArray(value) ? value[0] : value;
@@ -67,7 +68,8 @@ const displayValue = computed<Date | null>({
     >
       <VueDatePicker
         v-model="displayValue"
-        :min-date="minDate"
+        :min-date="props.isZafraActiva ? undefined : (props.minDate ?? undefined)"
+        :disabled-dates="props.disabledDate"
         :enable-time-picker="false"
         :locale="es"
         :formats="inputFormats"
@@ -90,7 +92,7 @@ const displayValue = computed<Date | null>({
       v-if="showReviewWarning"
       class="text-sm font-medium text-danger"
     >
-      Actualice fecha si es necesario
+      Actualice la fecha de entrega.
     </p>
   </div>
 </template>

@@ -13,8 +13,8 @@ const supabaseRatingsAnonKey = import.meta.env.VITE_SUPABASE_RATINGS_ANON_KEY ||
 export const supabaseRatings = createClient(supabaseRatingsUrl, supabaseRatingsAnonKey)
 
 // Client for Compras Database
-const supabaseComprasUrl = import.meta.env.VITE_SUPABASE_COMPRAS_URL || 'https://nnwtjjngneoeqbvifinn.supabase.co'
-const supabaseComprasAnonKey = import.meta.env.VITE_SUPABASE_COMPRAS_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ud3Rqam5nbmVvZXFidmlmaW5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDA0NTIsImV4cCI6MjA5Mjk3NjQ1Mn0.PDNubsNqbhSaqPatkO1FfjSDpAYwAUvzq662Ua0uw7Q'
+export const supabaseComprasUrl = import.meta.env.VITE_SUPABASE_COMPRAS_URL || 'https://nnwtjjngneoeqbvifinn.supabase.co'
+export const supabaseComprasAnonKey = import.meta.env.VITE_SUPABASE_COMPRAS_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ud3Rqam5nbmVvZXFidmlmaW5uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDA0NTIsImV4cCI6MjA5Mjk3NjQ1Mn0.PDNubsNqbhSaqPatkO1FfjSDpAYwAUvzq662Ua0uw7Q'
 
 
 export const supabaseCompras = createClient(supabaseComprasUrl, supabaseComprasAnonKey)
@@ -24,4 +24,3 @@ const supabaseEquiposUrl = import.meta.env.VITE_SUPABASE_EQUIPOS_URL || 'https:/
 const supabaseEquiposAnonKey = import.meta.env.VITE_SUPABASE_EQUIPOS_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppcmxhaXluZGNyb3hsdnVsc3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MDY3NzMsImV4cCI6MjA5Mjk4Mjc3M30.qvZEmnITEBqyb8ME971FGVedg_IYyhAiFvf5aw-mszQ'
 
 export const supabaseEquipos = createClient(supabaseEquiposUrl, supabaseEquiposAnonKey)
-

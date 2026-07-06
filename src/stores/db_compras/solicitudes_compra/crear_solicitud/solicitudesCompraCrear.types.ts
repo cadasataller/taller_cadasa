@@ -206,6 +206,11 @@ export interface SolicitudCompraCrearState extends CrearSolicitudHeaderContext {
   entryMode: 'new' | 'draft' | null;
   continuedFromDraft: boolean;
   fechaEntregaRequiresReview: boolean;
+  fechaEntregaAutoAdjustedMessage: string | null;
+  fechaEntregaMinima: string | null;
+  fechaEntregaRulesLoading: boolean;
+  fechaEntregaRulesReady: boolean;
+  isZafraActiva: boolean;
   currentStep: SolicitudCompraCreateStep;
   submitMode: SolicitudCompraSubmitMode;
   draftId: string | null;

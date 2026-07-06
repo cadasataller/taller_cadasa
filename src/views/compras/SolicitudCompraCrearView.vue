@@ -43,6 +43,10 @@ const {
   currentStep,
   continuedFromDraft,
   fechaEntregaRequiresReview,
+  fechaEntregaAutoAdjustedMessage,
+  fechaEntregaMinima,
+  fechaEntregaRulesLoading,
+  isZafraActiva,
   tipoSolicitud,
   fechaEntrega,
   destinos,
@@ -481,6 +485,13 @@ onBeforeUnmount(() => {
         >
           Los archivos adjuntos no se restauran al continuar un borrador.
         </p>
+
+        <p
+          v-if="fechaEntregaAutoAdjustedMessage"
+          class="rounded-lg border border-danger/30 bg-danger-bg px-3 py-2 text-xs font-medium text-danger lg:text-sm"
+        >
+          {{ fechaEntregaAutoAdjustedMessage }}
+        </p>
       </div>
 
       <div
@@ -491,6 +502,8 @@ onBeforeUnmount(() => {
           :tipo-solicitud="tipoSolicitud"
           :fecha-entrega="fechaEntrega"
           :fecha-entrega-requires-review="fechaEntregaRequiresReview"
+          :fecha-entrega-minima="fechaEntregaMinima"
+          :is-zafra-activa="isZafraActiva"
           :destinos="destinos"
           :validation-errors="validationErrors"
           :search-results="searchResults"
@@ -570,7 +583,7 @@ onBeforeUnmount(() => {
       <div class="col-span-4 row-start-5 shrink-0 rounded-lg border border-stone-200 bg-white px-3 py-2 shadow-sm lg:px-4">
         <CrearSolicitudCompraFooterActions
           :current-step="currentStep"
-          :loading="loading"
+          :loading="loading || fechaEntregaRulesLoading"
           :disable-next="shouldDisableNext"
           :disable-send="shouldDisableSend"
           :show-draft-button="canSaveDraft && canUseDrafts"
