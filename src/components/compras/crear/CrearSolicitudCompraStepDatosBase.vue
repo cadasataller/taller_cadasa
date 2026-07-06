@@ -59,6 +59,15 @@ const {
 const calendarioFeriadosStore = useCalendarioFeriadosStore();
 
 const minimumDate = computed(() => parseIsoDate(props.fechaEntregaMinima));
+const holidayHighlight = computed(() => ({
+  dates: Object.values(calendarioFeriadosStore.holidaysByYear)
+    .flat()
+    .map((value) => parseIsoDate(value))
+    .filter((value): value is Date => Boolean(value)),
+  options: {
+    highlightDisabled: true,
+  },
+}));
 const disabledDate = (date: Date): boolean => {
   if (props.isZafraActiva) {
     return false;
@@ -72,6 +81,10 @@ const disabledDate = (date: Date): boolean => {
   }
 
   return !isAllowedDeliveryDateInNormalMode(normalized, calendarioFeriadosStore.holidaysByYear).isValid;
+};
+
+const handleMonthYearUpdate = (payload: { year: number }): void => {
+  void calendarioFeriadosStore.ensureYear(payload.year);
 };
 </script>
 
@@ -92,7 +105,9 @@ const disabledDate = (date: Date): boolean => {
           :min-date="minimumDate"
           :is-zafra-activa="isZafraActiva"
           :disabled-date="disabledDate"
+          :holiday-highlight="holidayHighlight"
           @update:model-value="emitFechaEntrega"
+          @update-month-year="handleMonthYearUpdate"
         />
       </div>
 

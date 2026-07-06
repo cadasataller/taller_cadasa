@@ -9,6 +9,35 @@ import type { CalendarioFeriadosResponse } from './calendarioFeriados.types';
 const EDGE_FUNCTION_NAME = 'dias_feriado';
 const EDGE_FUNCTION_PATH = `${supabaseComprasUrl}/functions/v1/${EDGE_FUNCTION_NAME}`;
 
+const parseIsoDate = (value: string): Date | null => {
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatDateForDb = (value: Date): string => {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, '0');
+  const day = `${value.getDate()}`.padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
+
+const normalizeObservedHoliday = (value: string): string | null => {
+  const parsedDate = parseIsoDate(value);
+
+  if (!parsedDate) {
+    return null;
+  }
+
+  if (parsedDate.getDay() !== 0) {
+    return value;
+  }
+
+  const observedDate = new Date(parsedDate);
+  observedDate.setDate(observedDate.getDate() + 1);
+  return formatDateForDb(observedDate);
+};
+
 const normalizeCalendarioFeriadosResponse = (
   payload: unknown,
   fallbackYear: number
@@ -24,12 +53,15 @@ const normalizeCalendarioFeriadosResponse = (
     ? payload.year
     : fallbackYear;
   const maybeHolidays = 'holidays' in payload && Array.isArray(payload.holidays)
-    ? payload.holidays.filter((item): item is string => typeof item === 'string')
+    ? payload.holidays
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => normalizeObservedHoliday(item))
+      .filter((item): item is string => typeof item === 'string')
     : [];
 
   return {
     year: maybeYear,
-    holidays: maybeHolidays,
+    holidays: [...new Set(maybeHolidays)].sort(),
   };
 };
 

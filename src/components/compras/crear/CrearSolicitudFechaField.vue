@@ -3,6 +3,19 @@ import { VueDatePicker } from '@vuepic/vue-datepicker';
 import { computed } from 'vue';
 import { es } from 'date-fns/locale';
 
+interface DatepickerMonthYearChangePayload {
+  instance: number;
+  month: number;
+  year: number;
+}
+
+interface DatepickerHighlightConfig {
+  dates: Date[];
+  options: {
+    highlightDisabled: boolean;
+  };
+}
+
 const model = defineModel<string | null>();
 
 const props = defineProps<{
@@ -11,6 +24,10 @@ const props = defineProps<{
   minDate?: Date | null;
   isZafraActiva?: boolean;
   disabledDate?: (date: Date) => boolean;
+  holidayHighlight?: DatepickerHighlightConfig;
+}>();
+const emit = defineEmits<{
+  (e: 'updateMonthYear', value: DatepickerMonthYearChangePayload): void;
 }>();
 const inputFormats = {
   input: (value: Date | Date[]): string => {
@@ -70,6 +87,7 @@ const displayValue = computed<Date | null>({
         v-model="displayValue"
         :min-date="props.isZafraActiva ? undefined : (props.minDate ?? undefined)"
         :disabled-dates="props.disabledDate"
+        :highlight="props.holidayHighlight"
         :enable-time-picker="false"
         :locale="es"
         :formats="inputFormats"
@@ -77,6 +95,7 @@ const displayValue = computed<Date | null>({
         placeholder="Selecciona la fecha de entrega"
         class="crear-solicitud-datepicker "
         input-class-name="crear-solicitud-datepicker-input"
+        @update-month-year="emit('updateMonthYear', $event)"
       />
     </div>
 
@@ -96,3 +115,15 @@ const displayValue = computed<Date | null>({
     </p>
   </div>
 </template>
+
+<style scoped>
+:deep(.dp--cell-highlight) {
+  background-color: rgba(192, 57, 43, 0.18);
+  color: #9f2f23;
+}
+
+:deep(.dp--cell-highlight.dp--cell-disabled) {
+  background-color: rgba(192, 57, 43, 0.14);
+  color: #b14a3f;
+}
+</style>

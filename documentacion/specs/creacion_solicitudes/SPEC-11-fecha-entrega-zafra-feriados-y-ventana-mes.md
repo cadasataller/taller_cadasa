@@ -22,9 +22,11 @@ Definir la logica funcional y tecnica para controlar la `fechaEntrega` de una so
 
 - regla normal con anticipacion minima de 12 dias habiles
 - exclusion de sabados, domingos y feriados
+- observancia de feriados trasladados si un feriado cae domingo
 - restriccion operativa para entregas solo entre los dias `1` y `24` de cada mes
 - desplazamiento automatico al siguiente dia valido cuando el resultado cae entre `25` y `31`
 - excepcion total cuando exista `zafra activa`
+- autocompletado de `fechaEntrega` para solicitudes nuevas solo en modo normal
 - comportamiento consistente entre:
   - seleccion visual de fecha
   - validacion del paso 1
@@ -70,6 +72,19 @@ Para este flujo, un `dia habil` es cualquier fecha que cumpla simultaneamente:
 - no sea sabado
 - no sea domingo
 - no exista dentro del calendario global de feriados cargado para Panama
+
+3.1.1 Observancia de feriados en domingo
+
+Si un feriado oficial cae domingo:
+
+- no debe conservarse como feriado bloqueante en domingo para este flujo
+- debe trasladarse automaticamente al lunes inmediato siguiente
+- la fecha trasladada pasa a ser la que se registra en `holidays`
+
+Ejemplo conceptual:
+
+- si un feriado cae `2027-12-19` domingo
+- el calendario operativo debe tratar `2027-12-20` como feriado observado
 
 3.2 Dia invalido de entrega
 
@@ -289,6 +304,19 @@ Ejemplo conceptual:
 }
 ```
 
+8.3.1 Regla de normalizacion de feriados observados
+
+Antes de exponer `holidays` al frontend, la fuente debe normalizar cada fecha feriada asi:
+
+- si el feriado cae domingo, debe trasladarse al lunes inmediato siguiente
+- si el traslado cruza de año, la fecha resultante debe conservar el año real observado
+- no deben quedar duplicados despues de la normalizacion
+
+Ejemplo conceptual:
+
+- si la fuente original trae `2028-12-31` y esa fecha cae domingo
+- el frontend debe terminar operando con `2029-01-01`
+
 8.4 Regla de cache global por año
 
 El store global de feriados no debe pensar en una sola carga total.
@@ -392,6 +420,23 @@ Adicionalmente, debe impedir seleccionar:
 - feriados
 - dias `25` a `31`
 
+11.2.1 Señal visual de feriados
+
+El datepicker debe marcar visualmente los feriados con un tratamiento rojo.
+
+Objetivo:
+
+- que el usuario distinga que la fecha esta bloqueada especificamente por feriado
+- que la UI no dependa solo del estado disabled generico
+
+11.2.2 Navegacion entre años
+
+Cuando el usuario navegue visualmente a otro mes o a otro año en el datepicker:
+
+- deben cargarse los feriados del año visible si aun no existen en cache
+- la marcacion roja y el bloqueo de feriados deben reflejar ese año visible
+- no debe asumirse que navegar visualmente usa solo los años ya calculados por la minima
+
 11.3 En modo zafra activa
 
 Debe relajarse la restriccion anterior y permitir cualquier fecha valida del calendario.
@@ -425,6 +470,33 @@ El paso 1 solo puede considerarse valido si `fechaEntrega` cumple la regla corre
 12.3 Consecuencia
 
 El stepper, el boton `Siguiente`, `canSaveDraft`, `buildPayload` y `buildDraftUpdateSnapshot` deben depender de esa misma evaluacion.
+
+=====================================================================
+12.A EFECTO SOBRE CREACION NUEVA
+=====================================================================
+
+12.A.1 Solicitud nueva en modo normal
+
+Al preparar una solicitud nueva con `zafra activa = false`:
+
+- el sistema debe autocompletar `fechaEntrega`
+- el valor autocompletado debe ser exactamente la fecha minima valida calculada con las reglas vigentes
+
+12.A.2 Solicitud nueva en zafra activa
+
+Al preparar una solicitud nueva con `zafra activa = true`:
+
+- el sistema no debe autocompletar `fechaEntrega`
+- el campo debe quedar vacio para seleccion manual
+
+12.A.3 Fuente temporal para el autocompletado
+
+El autocompletado de solicitudes nuevas debe basarse en la fecha operativa actual de Panama al momento de abrir o preparar el formulario.
+
+No debe basarse en:
+
+- una fecha historica de borrador
+- una fecha previamente elegida por el usuario en otra sesion
 
 =====================================================================
 13. EFECTO SOBRE BORRADORES
@@ -565,16 +637,19 @@ La evaluacion de fecha debe seguir este orden:
 
 17.1 Modo normal
 
+- una solicitud nueva autocompleta `fechaEntrega` con la minima valida calculada
 - una solicitud nueva no permite elegir fechas antes de la minima calculada
 - el conteo de 12 dias omite sabados, domingos y feriados
 - si la fecha calculada cae entre `25` y `31`, se mueve al siguiente dia valido
 - si la fecha calculada cae en feriado o fin de semana, se mueve al siguiente dia valido
+- si un feriado cae domingo, el lunes inmediato siguiente se trata como feriado observado
 
 17.2 Zafra activa
 
 - al activar `zafra activa`, desaparecen las restricciones de 12 dias habiles
 - al activar `zafra activa`, se permite cualquier dia del mes
 - al activar `zafra activa`, se permiten sabados, domingos y feriados
+- al activar `zafra activa`, una solicitud nueva no autocompleta `fechaEntrega`
 
 17.3 Borradores
 
@@ -589,17 +664,20 @@ La evaluacion de fecha debe seguir este orden:
 - los feriados de un año ya cargado no vuelven a consultarse en la misma instancia
 - dos consumidores concurrentes del mismo año no disparan peticiones duplicadas
 - si el calculo cruza a un año no cargado, ese año se consulta y queda cacheado
+- si el usuario navega visualmente a otro año en el datepicker, ese año debe poder consultarse y quedar cacheado
 
 =====================================================================
 18. CASOS BORDE OBLIGATORIOS
 =====================================================================
 
 - hoy es viernes y el siguiente lunes es feriado
+- un feriado cae domingo y debe observarse en lunes
 - hoy es fin de mes y el conteo cruza al mes siguiente
 - el resultado del dia habil 12 cae en sabado
 - el resultado del dia habil 12 cae en feriado
 - el resultado del dia habil 12 cae en `25`, `26`, `27`, `28`, `29`, `30` o `31`
 - el conteo cruza de diciembre a enero
+- un feriado observado cruza de diciembre a enero
 - un borrador guardado en modo normal se reabre cuando `zafra activa = true`
 - un borrador guardado durante zafra activa se reabre cuando `zafra activa = false`
 
@@ -612,7 +690,10 @@ La evaluacion de fecha debe seguir este orden:
 - la Edge Function devuelve solo `year` y `holidays`
 - el calendario de feriados se considera global para la app
 - la cache debe vivir por instancia de app y por año
+- si un feriado cae domingo, se traslada al lunes inmediato siguiente antes de usarse en frontend
 - `zafra activa` es global y no depende de `tipoSolicitud`
+- en modo normal una solicitud nueva autocompleta `fechaEntrega` con la minima valida calculada
+- en modo zafra activa una solicitud nueva no autocompleta `fechaEntrega`
 - en modo zafra activa se ignoran:
   - dias habiles minimos
   - feriados

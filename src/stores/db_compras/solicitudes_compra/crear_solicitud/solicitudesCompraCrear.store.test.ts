@@ -1,6 +1,10 @@
 import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const mockedFeatureFlags = vi.hoisted(() => ({
+  value: [] as string[],
+}));
+
 vi.mock('@/stores/userStore', () => ({
   useUserStore: () => ({
     isLoaded: true,
@@ -53,7 +57,7 @@ vi.mock('@/stores/db_compras/calendario_feriados/calendarioFeriados.service', ()
 
 vi.mock('@/stores/db_mantenimiento/app_feature_access/featureAccess.service', () => ({
   featureAccessService: {
-    obtenerFuncionalidadesPermitidas: vi.fn(async () => []),
+    obtenerFuncionalidadesPermitidas: vi.fn(async () => mockedFeatureFlags.value),
   },
 }));
 
@@ -75,6 +79,7 @@ describe('solicitudesCompraCrear.store', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-07-02T12:00:00Z'));
+    mockedFeatureFlags.value = [];
   });
 
   it('inicializa datos de encabezado desde userStore', async () => {
@@ -85,6 +90,29 @@ describe('solicitudesCompraCrear.store', () => {
     expect(store.solicitanteNombre).toBe('Juan Pérez');
     expect(store.solicitanteEmail).toBe('juan@cadasa.test');
     expect(store.areaNombre).toBe('Operativa');
+  });
+
+  it('autocompleta la fecha minima al crear una nueva solicitud en modo normal', async () => {
+    const store = useSolicitudesCompraCrearStore();
+
+    await store.prepareNewEntry();
+
+    expect(store.entryMode).toBe('new');
+    expect(store.isZafraActiva).toBe(false);
+    expect(store.fechaEntregaMinima).toBe('2026-07-20');
+    expect(store.fechaEntrega).toBe('2026-07-20');
+  });
+
+  it('no autocompleta la fecha al crear una nueva solicitud con zafra activa', async () => {
+    mockedFeatureFlags.value = ['temporada_zafra_activa'];
+    const store = useSolicitudesCompraCrearStore();
+
+    await store.prepareNewEntry();
+
+    expect(store.entryMode).toBe('new');
+    expect(store.isZafraActiva).toBe(true);
+    expect(store.fechaEntregaMinima).toBeNull();
+    expect(store.fechaEntrega).toBeNull();
   });
 
   it('arma payload de productos con nombre principal y p_contextos_destino', async () => {

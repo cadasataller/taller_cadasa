@@ -11,6 +11,11 @@ const createInitialState = (): CalendarioFeriadosState => ({
   errorByYear: {},
 });
 
+const getHolidayYearKey = (value: string): string => {
+  const year = value.slice(0, 4);
+  return /^\d{4}$/.test(year) ? year : '';
+};
+
 export const useCalendarioFeriadosStore = defineStore('calendarioFeriados', {
   state: (): CalendarioFeriadosState => createInitialState(),
 
@@ -41,13 +46,30 @@ export const useCalendarioFeriadosStore = defineStore('calendarioFeriados', {
       const request = calendarioFeriadosService
         .obtenerPorAnio(year)
         .then((response) => {
-          const normalizedYearKey = String(response.year);
-          this.holidaysByYear = {
-            ...this.holidaysByYear,
-            [normalizedYearKey]: [...new Set(response.holidays)].sort(),
-          };
+          const nextHolidaysByYear = { ...this.holidaysByYear };
 
-          return this.holidaysByYear[normalizedYearKey] ?? [];
+          if (!nextHolidaysByYear[yearKey]) {
+            nextHolidaysByYear[yearKey] = [];
+          }
+
+          response.holidays.forEach((holiday) => {
+            const holidayYearKey = getHolidayYearKey(holiday);
+
+            if (!holidayYearKey) {
+              return;
+            }
+
+            nextHolidaysByYear[holidayYearKey] = [
+              ...new Set([
+                ...(nextHolidaysByYear[holidayYearKey] ?? []),
+                holiday,
+              ]),
+            ].sort();
+          });
+
+          this.holidaysByYear = nextHolidaysByYear;
+
+          return this.holidaysByYear[yearKey] ?? [];
         })
         .catch((error) => {
           const message = error instanceof Error

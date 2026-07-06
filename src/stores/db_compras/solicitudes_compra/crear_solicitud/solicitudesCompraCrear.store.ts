@@ -253,6 +253,19 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
   },
 
   actions: {
+    syncInitialFechaEntregaForNewEntry(): void {
+      if (this.entryMode !== 'new') {
+        return;
+      }
+
+      this.fechaEntrega = this.isZafraActiva
+        ? null
+        : this.fechaEntregaMinima;
+      this.fechaEntregaRequiresReview = false;
+      this.fechaEntregaAutoAdjustedMessage = null;
+      delete this.validationErrors.fechaEntrega;
+    },
+
     syncObservacionPrefill(): void {
       const generated = buildObservacionPrefill(this.destinos);
       const shouldOverwrite = !this.observacionEditadaManual
@@ -306,8 +319,9 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
 
     async prepareNewEntry(): Promise<void> {
       this.reset();
-      await this.initialize();
       this.entryMode = 'new';
+      await this.initialize();
+      this.syncInitialFechaEntregaForNewEntry();
       this.continuedFromDraft = false;
     },
 
@@ -328,6 +342,7 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
         if (this.isZafraActiva) {
           this.fechaEntregaMinima = null;
           this.fechaEntregaRulesReady = true;
+          this.syncInitialFechaEntregaForNewEntry();
           return;
         }
 
@@ -343,6 +358,7 @@ export const useSolicitudesCompraCrearStore = defineStore('solicitudesCompraCrea
         }
 
         this.fechaEntregaRulesReady = true;
+        this.syncInitialFechaEntregaForNewEntry();
       } catch (error) {
         this.fechaEntregaMinima = null;
         this.fechaEntregaRulesReady = false;
