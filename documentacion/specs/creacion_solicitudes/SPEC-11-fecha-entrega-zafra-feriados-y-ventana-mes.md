@@ -254,11 +254,20 @@ Por tanto:
 
 La funcion `functions/v1/dias_feriado` debe aceptar:
 
-- `year` opcional
+- metodo HTTP `GET`
+- query param `year` opcional
 
 Si `year` no se envia:
 
 - debe usar el año actual de Panama
+
+Regla de transporte:
+
+- frontend no debe enviar body JSON para esta funcion
+- frontend debe invocarla por query string, por ejemplo:
+  - `GET /functions/v1/dias_feriado?year=2026`
+- `OPTIONS` puede existir solo como soporte CORS
+- cualquier intento de `POST`, `PUT` o `PATCH` debe considerarse fuera de contrato para este flujo
 
 La respuesta util para frontend debe ser minima:
 
