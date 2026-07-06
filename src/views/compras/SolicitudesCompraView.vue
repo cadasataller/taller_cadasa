@@ -52,6 +52,7 @@ const featureAccessStore = useFeatureAccessStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
 const isTransitioningToCreate = ref(false);
 const isCheckingDrafts = ref(false);
+const isCreateButtonLoading = ref(false);
 const showDraftsModal = ref(false);
 const availableDrafts = ref<SolicitudCompraBorradorListadoItem[]>([]);
 const lastCreateTriggerElement = ref<HTMLElement | null>(null);
@@ -94,6 +95,7 @@ const canViewDrafts = computed(() =>
 );
 
 const showFeatureDeniedToast = (featureName: string): void => {
+  window.dispatchEvent(new CustomEvent('cancel-open-solicitud-compra'));
   toast.add({
     severity: 'warn',
     summary: 'Acceso restringido',
@@ -174,17 +176,28 @@ const handleOpenNewSolicitudCompra = (): void => {
 };
 
 const handleCreateDirect = async (): Promise<void> => {
+  isCreateButtonLoading.value = true;
+
   if (!canCreateSolicitud.value) {
+    isCreateButtonLoading.value = false;
     showFeatureDeniedToast('crear solicitudes de compra');
     return;
   }
 
   if (isTransitioningToCreate.value || isCreateOverlayOpen.value) {
+    window.dispatchEvent(new CustomEvent('cancel-open-solicitud-compra'));
+    isCreateButtonLoading.value = false;
     return;
   }
 
-  await createStore.prepareNewEntry();
-  await navigateToCreate();
+  try {
+    await createStore.prepareNewEntry();
+    await navigateToCreate();
+  } catch (error) {
+    window.dispatchEvent(new CustomEvent('cancel-open-solicitud-compra'));
+    isCreateButtonLoading.value = false;
+    throw error;
+  }
 };
 
 const handleCreateNewSolicitud = async (): Promise<void> => {
@@ -230,6 +243,7 @@ watch(
     if (name === 'Compras') {
       isTransitioningToCreate.value = false;
       isCheckingDrafts.value = false;
+      isCreateButtonLoading.value = false;
     }
   }
 );
@@ -258,6 +272,7 @@ onBeforeUnmount(() => {
           :active-grupo="activeGrupo"
           :is-mobile="false"
           :can-create="canCreateSolicitud"
+          :create-loading="isCreateButtonLoading"
           :can-view-drafts="canViewDrafts"
           @update:search="onSearchChange"
           @update:grupo="handleGrupoChange"
@@ -280,6 +295,7 @@ onBeforeUnmount(() => {
           :active-grupo="activeGrupo"
           :is-mobile="true"
           :can-create="canCreateSolicitud"
+          :create-loading="isCreateButtonLoading"
           :can-view-drafts="canViewDrafts"
           @update:search="onSearchChange"
           @update:grupo="handleGrupoChange"

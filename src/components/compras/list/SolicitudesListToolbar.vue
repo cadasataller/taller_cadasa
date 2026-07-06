@@ -25,6 +25,7 @@ const props = defineProps<{
   activeGrupo: SolicitudCompraGrupoListado;
   isMobile: boolean;
   canCreate?: boolean;
+  createLoading?: boolean;
   canViewDrafts?: boolean;
 }>();
 
@@ -183,10 +184,19 @@ const toggleMobileFilters = (): void => {
             <button
               v-if="!isMobile && shouldShowCreateButton"
               type="button"
-              class="inline-flex min-h-8 items-center justify-center gap-2 cursor-pointer rounded-2xl border border-accent bg-accent px-5 text-sm font-semibold text-main-dark shadow-sm transition hover:bg-accent-light"
+              class="inline-flex min-h-8 items-center justify-center gap-2 rounded-2xl border border-accent bg-accent px-5 text-sm font-semibold text-main-dark shadow-sm transition hover:bg-accent-light disabled:cursor-wait disabled:opacity-90"
+              :disabled="props.createLoading"
               @click="emit('create')"
             >
-              <Plus class="h-4 w-4" />
+              <span
+                v-if="props.createLoading"
+                class="h-4 w-4 animate-spin rounded-full border-2 border-main-dark/30 border-t-main-dark"
+                aria-hidden="true"
+              />
+              <Plus
+                v-else
+                class="h-4 w-4"
+              />
               <span>Crear</span>
             </button>
           </div>

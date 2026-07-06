@@ -81,6 +81,11 @@ const mobileTopBarSpacerClass = computed(() => showDashboardHeaderNav.value ? 'h
 const hideShellForSolicitudCompraCreate = computed(() =>
   isPreparingSolicitudCompraCreate.value || isSolicitudCompraCreateRoute.value
 );
+const isComprasFabLoading = computed(() =>
+  route.path.startsWith('/compras')
+  && isPreparingSolicitudCompraCreate.value
+  && !isSolicitudCompraCreateRoute.value
+);
 const canCreateSolicitudCompra = computed(() =>
   isFeatureAccessLoaded.value
   && featureAccessStore.tieneFuncionalidad(CREATE_SOLICITUD_FEATURE)
@@ -105,6 +110,22 @@ const handlePrepareSolicitudCompraCreate = (): void => {
   isPreparingSolicitudCompraCreate.value = true;
 };
 
+const handleCancelSolicitudCompraCreate = (): void => {
+  isPreparingSolicitudCompraCreate.value = false;
+};
+
+const mobileFabVisibilityClass = computed(() => {
+  if (route.path.startsWith('/compras')) {
+    return isSolicitudCompraCreateRoute.value
+      ? '-translate-x-6 opacity-0 pointer-events-none'
+      : 'translate-x-0 opacity-100';
+  }
+
+  return hideShellForSolicitudCompraCreate.value
+    ? '-translate-x-6 opacity-0 pointer-events-none'
+    : 'translate-x-0 opacity-100';
+});
+
 watch(
   () => route.name,
   (name) => {
@@ -121,6 +142,7 @@ watch(
 
 onMounted(async () => {
   window.addEventListener('prepare-open-solicitud-compra', handlePrepareSolicitudCompraCreate);
+  window.addEventListener('cancel-open-solicitud-compra', handleCancelSolicitudCompraCreate);
 
   featureAccessStore.cargarFuncionalidadesPermitidas().catch((error) => {
     console.error('Error cargando funcionalidades permitidas:', error);
@@ -155,6 +177,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('prepare-open-solicitud-compra', handlePrepareSolicitudCompraCreate);
+  window.removeEventListener('cancel-open-solicitud-compra', handleCancelSolicitudCompraCreate);
 });
 
 const logout = async () => {
@@ -169,10 +192,11 @@ const logout = async () => {
 
 const triggerNew = () => {
   if (route.path.startsWith('/compras')) {
-    if (!canCreateSolicitudCompra.value) {
+    if (!canCreateSolicitudCompra.value || isPreparingSolicitudCompraCreate.value) {
       return;
     }
 
+    isPreparingSolicitudCompraCreate.value = true;
     window.dispatchEvent(new CustomEvent('open-new-solicitud-compra'));
     return;
   } else {
@@ -343,10 +367,17 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
       <button 
         v-if="canShowMobileFab"
         @click="triggerNew" 
-        class="lg:hidden fixed bottom-20 right-6 w-14 h-14 bg-accent text-gray-900 rounded-full shadow-lg flex items-center justify-center z-40 active:scale-90 transition-all duration-300 cursor-pointer"
-        :class="hideShellForSolicitudCompraCreate ? '-translate-x-6 opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'"
+        class="lg:hidden fixed bottom-20 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-gray-900 shadow-lg transition-all duration-300 active:scale-90"
+        :class="[mobileFabVisibilityClass, isComprasFabLoading ? 'cursor-wait' : 'cursor-pointer']"
+        :disabled="isComprasFabLoading"
+        :aria-busy="isComprasFabLoading"
       >
-        <Plus class="w-8 h-8" />
+        <span
+          v-if="isComprasFabLoading"
+          class="h-6 w-6 animate-spin rounded-full border-[3px] border-main-dark/30 border-t-main-dark"
+          aria-hidden="true"
+        />
+        <Plus v-else class="w-8 h-8" />
       </button>
     </main>
   </div>
