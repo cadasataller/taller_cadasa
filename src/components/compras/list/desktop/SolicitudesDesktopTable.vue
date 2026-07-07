@@ -203,6 +203,7 @@ const onRowClick = (item: SolicitudCompraListItem): void => {
           <template v-if="column === 'folio'">
             <SolicitudFolioCell
               :folio="getSanitizedFolio(item)"
+              :can-see-folio="roleVisibility.canSeeFolio"
               :can-see-oc="roleVisibility.canSeeFolioOc"
               compact
             />
@@ -213,7 +214,7 @@ const onRowClick = (item: SolicitudCompraListItem): void => {
           </template>
 
           <template v-else-if="column === 'estado'">
-            <div class="flex min-h-full items-center">
+            <div class="flex min-h-full items-center justify-center">
               <SolicitudEstadoBadge :estado="item.estado" compact />
             </div>
           </template>
