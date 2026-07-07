@@ -32,7 +32,7 @@ const badgeClass = computed(() => {
 
 <template>
   <span
-    class="inline-flex items-center rounded-full border font-semibold"
+    class="inline-flex  text-center items-center rounded-full border font-semibold"
     :class="[badgeClass, compact ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11px]']"
   >
     {{ label }}

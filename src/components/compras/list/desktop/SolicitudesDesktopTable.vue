@@ -214,7 +214,7 @@ const onRowClick = (item: SolicitudCompraListItem): void => {
           </template>
 
           <template v-else-if="column === 'estado'">
-            <div class="flex min-h-full items-center justify-center">
+            <div class="flex min-h-full items-center">
               <SolicitudEstadoBadge :estado="item.estado" compact />
             </div>
           </template>
