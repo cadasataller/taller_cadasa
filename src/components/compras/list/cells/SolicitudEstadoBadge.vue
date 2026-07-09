@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 
 import type { SolicitudCompraSeguimientoUi } from '@/stores/db_compras/solicitudes_compra/solicitudesCompra.types';
+import { formatLongSpanishDate } from '@/utils/formatterDateHelper';
 
 const props = withDefaults(defineProps<{
   seguimiento: SolicitudCompraSeguimientoUi;
@@ -12,9 +13,10 @@ const props = withDefaults(defineProps<{
 
 const label = computed(() => props.seguimiento.label);
 const dateLabel = computed(() => {
+  const formattedDate = formatLongSpanishDate(props.seguimiento.fecha);
   const parts = [
     props.seguimiento.fechaLabel,
-    props.seguimiento.fecha,
+    formattedDate || props.seguimiento.fecha,
   ].filter((item): item is string => Boolean(item));
 
   return parts.length > 0 ? parts.join(': ') : null;

@@ -2,6 +2,7 @@
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 import { computed } from 'vue';
 import { es } from 'date-fns/locale';
+import { formatLongSpanishDate } from '@/utils/formatterDateHelper';
 
 interface DatepickerMonthYearChangePayload {
   instance: number;
@@ -30,22 +31,7 @@ const emit = defineEmits<{
   (e: 'updateMonthYear', value: DatepickerMonthYearChangePayload): void;
 }>();
 const inputFormats = {
-  input: (value: Date | Date[]): string => {
-    const date = Array.isArray(value) ? value[0] : value;
-
-    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-      return '';
-    }
-
-    return new Intl.DateTimeFormat('es', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    })
-      .format(date)
-      .toLowerCase();
-  },
+  input: formatLongSpanishDate,
 };
 
 const toDateValue = (value: string | null): Date | null => {
