@@ -24,6 +24,7 @@ al modelo nuevo basado en:
 - filtro `Creadas por mi`
 - fallback sin config
 
+### ACTUALIZA LA FORMA DE CARGA DE LAS SOLICITUDES
 Este paquete NO reemplaza las specs base existentes.
 
 Este paquete sirve para:
