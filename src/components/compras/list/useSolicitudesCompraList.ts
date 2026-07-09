@@ -23,6 +23,12 @@ export const useSolicitudesCompraList = () => {
     pagination,
     baseEmpty,
     initialized,
+    configAvailable,
+    visibleGroups,
+    seguimientoOptions,
+    canUseCreatedByMeFilter,
+    uiMessage,
+    configWarningToken,
   } = storeToRefs(store);
 
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -117,6 +123,12 @@ export const useSolicitudesCompraList = () => {
     hasMore,
     baseEmpty,
     initialized,
+    configAvailable,
+    visibleGroups,
+    seguimientoOptions,
+    canUseCreatedByMeFilter,
+    uiMessage,
+    configWarningToken,
     loadInitial,
     loadMore,
     onSearchChange,

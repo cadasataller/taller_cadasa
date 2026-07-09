@@ -44,8 +44,8 @@ export const mapSolicitudCompraListRowToItem = (
   const destinosItems = safeArrayText(row.destinos);
   const destinosTotal = Math.max(row.destinos_total, 0);
   const { visibles, ocultos } = calcularDestinosVisibles(destinosItems);
-  const estadoCodigo = normalizarTextoVacio(row.estado_codigo) ?? 'sin_estado';
-  const estadoNombre = normalizarTextoVacio(row.estado_nombre) ?? 'Sin estado';
+  const seguimientoCodigo = normalizarTextoVacio(row.seguimiento?.codigo) ?? 'sin_seguimiento';
+  const seguimientoLabel = normalizarTextoVacio(row.seguimiento?.label) ?? 'Sin seguimiento';
   const prioridadCodigo = normalizarTextoVacio(row.prioridad_codigo) ?? 'sin_prioridad';
   const prioridadNombre = normalizarTextoVacio(row.prioridad_nombre) ?? 'Sin prioridad';
   const cantidadAdjuntos = Math.max(row.cantidad_adjuntos, 0);
@@ -66,11 +66,14 @@ export const mapSolicitudCompraListRowToItem = (
       foliosOc,
     },
     observacion: normalizarTextoVacio(row.observacion),
-    estado: {
-      codigo: estadoCodigo,
-      nombre: estadoNombre,
-      badgeCodigo: normalizarTextoVacio(row.badge_codigo) ?? estadoCodigo,
-      badgeLabel: normalizarTextoVacio(row.badge_label) ?? estadoNombre,
+    seguimiento: {
+      codigo: seguimientoCodigo,
+      label: seguimientoLabel,
+      tipo: normalizarTextoVacio(row.seguimiento?.tipo),
+      fecha: normalizarTextoVacio(row.seguimiento?.fecha),
+      fechaLabel: normalizarTextoVacio(row.seguimiento?.fecha_label),
+      origen: normalizarTextoVacio(row.seguimiento?.origen),
+      alcanceCodigo: normalizarTextoVacio(row.seguimiento?.alcance_codigo),
     },
     prioridad: {
       codigo: prioridadCodigo,
@@ -114,7 +117,6 @@ export const mapSolicitudCompraListRowToItem = (
       },
     },
     grupoListado: toGrupoListado(row.grupo_listado),
-    disponibleDesde: normalizarTextoVacio(row.disponible_desde),
     conteos: {
       productosTotal,
       productosActivos,
@@ -131,6 +133,28 @@ export const mapSolicitudCompraListRowToItem = (
           ? ordenesCompraResumenParts.join(', ')
           : null,
     },
+    accionRol: row.accion_rol
+      ? {
+        key: normalizarTextoVacio(row.accion_rol.key),
+        label: normalizarTextoVacio(row.accion_rol.label),
+        fecha: normalizarTextoVacio(row.accion_rol.fecha),
+        actorEmail: normalizarTextoVacio(row.accion_rol.actor_email),
+        roleCodigo: normalizarTextoVacio(row.accion_rol.role_codigo),
+      }
+      : null,
+    badgeDelegacion: row.badge_delegacion?.codigo
+      ? {
+        codigo: normalizarTextoVacio(row.badge_delegacion.codigo) ?? 'sin_delegacion',
+        label: normalizarTextoVacio(row.badge_delegacion.label) ?? 'Delegada',
+        tipoDelegacion: normalizarTextoVacio(row.badge_delegacion.tipo_delegacion),
+        solicitudOrigenId: normalizarTextoVacio(row.badge_delegacion.solicitud_origen_id),
+        creadaPorEmail: normalizarTextoVacio(row.badge_delegacion.creada_por_email),
+        creadaParaEmail: normalizarTextoVacio(row.badge_delegacion.creada_para_email),
+      }
+      : null,
+    esDelegada: row.es_delegada === true,
+    tipoDelegacion: normalizarTextoVacio(row.tipo_delegacion),
+    esMia: row.es_mia === true,
   };
 };
 

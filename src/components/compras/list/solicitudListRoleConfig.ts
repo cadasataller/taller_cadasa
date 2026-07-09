@@ -25,7 +25,7 @@ const OPERATIVO_CONFIG: SolicitudListRoleConfig = {
   desktopColumns: [
     'folio',
     'observacion',
-    'estado',
+    'seguimiento',
     'prioridad',
     'destinos',
     'fechaEntrega',
@@ -33,7 +33,7 @@ const OPERATIVO_CONFIG: SolicitudListRoleConfig = {
   ],
   mobileFields: [
     'folio',
-    'estado',
+    'seguimiento',
     'observacion',
     'prioridad',
     'destinos',
@@ -61,7 +61,7 @@ export const SOLICITUD_LIST_ROLE_CONFIG: Record<
     desktopColumns: [
       'folio',
       'observacion',
-      'estado',
+      'seguimiento',
       'prioridad',
       'destinos',
       'area',
@@ -71,7 +71,7 @@ export const SOLICITUD_LIST_ROLE_CONFIG: Record<
     ],
     mobileFields: [
       'folio',
-      'estado',
+      'seguimiento',
       'observacion',
       'prioridad',
       'destinos',
@@ -95,7 +95,7 @@ export const SOLICITUD_LIST_ROLE_CONFIG: Record<
     desktopColumns: [
       'folio',
       'observacion',
-      'estado',
+      'seguimiento',
       'prioridad',
       'destinos',
       'area',
@@ -104,7 +104,7 @@ export const SOLICITUD_LIST_ROLE_CONFIG: Record<
     ],
     mobileFields: [
       'folio',
-      'estado',
+      'seguimiento',
       'observacion',
       'prioridad',
       'destinos',
@@ -124,8 +124,8 @@ export const SOLICITUD_LIST_ROLE_CONFIG: Record<
     canSeeConteos: true,
   },
   almacen: {
-    desktopColumns: ['observacion', 'area', 'prioridad', 'estado', 'bloqueado'],
-    mobileFields: ['observacion', 'area', 'prioridad', 'estado', 'bloqueado'],
+    desktopColumns: ['observacion', 'area', 'prioridad', 'seguimiento', 'bloqueado'],
+    mobileFields: ['observacion', 'area', 'prioridad', 'seguimiento', 'bloqueado'],
     canSeeFolio: false,
     canSeeFolioOc: false,
     canSeeArea: true,
@@ -144,7 +144,7 @@ export const SOLICITUD_LIST_ROLE_CONFIG: Record<
       'area',
       'solicitante',
       'prioridad',
-      'estado',
+      'seguimiento',
       'fechaEntrega',
       'bloqueado',
     ],
@@ -154,7 +154,7 @@ export const SOLICITUD_LIST_ROLE_CONFIG: Record<
       'area',
       'solicitante',
       'prioridad',
-      'estado',
+      'seguimiento',
       'fechaEntrega',
       'bloqueado',
     ],

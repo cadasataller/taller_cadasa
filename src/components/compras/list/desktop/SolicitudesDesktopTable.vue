@@ -39,7 +39,7 @@ const emit = defineEmits<{
 const columnLabels: Record<SolicitudCompraColumnKey, string> = {
   folio: 'Folio',
   observacion: 'Observación',
-  estado: 'Estado',
+  seguimiento: 'Seguimiento',
   prioridad: 'Prioridad',
   destinos: 'Destino',
   area: 'Área',
@@ -64,7 +64,7 @@ const tableGridClass = computed(() => {
   const widthMap: Record<SolicitudCompraColumnKey, string> = {
     folio: 'minmax(10rem,1fr)',
     observacion: 'minmax(20rem,2.3fr)',
-    estado: 'minmax(8rem,0.9fr)',
+    seguimiento: 'minmax(9rem,0.95fr)',
     prioridad: 'minmax(7rem,0.8fr)',
     destinos: 'minmax(10rem,1fr)',
     area: 'minmax(9rem,0.95fr)',
@@ -213,9 +213,9 @@ const onRowClick = (item: SolicitudCompraListItem): void => {
             <SolicitudObservacionCell :observacion="getSanitizedObservacion(item)" compact />
           </template>
 
-          <template v-else-if="column === 'estado'">
+          <template v-else-if="column === 'seguimiento'">
             <div class="flex min-h-full items-center">
-              <SolicitudEstadoBadge :estado="item.estado" compact />
+              <SolicitudEstadoBadge :seguimiento="item.seguimiento" compact />
             </div>
           </template>
 

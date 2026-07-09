@@ -180,7 +180,7 @@ const onClick = (): void => {
         </p>
       </div>
 
-      <SolicitudEstadoBadge :estado="props.item.estado" compact />
+      <SolicitudEstadoBadge :seguimiento="props.item.seguimiento" compact />
     </div>
 
     <div v-else-if="isSecretaria" class="flex items-start justify-between gap-3">
@@ -192,11 +192,11 @@ const onClick = (): void => {
         {{ displayFolio }}
       </p>
 
-      <SolicitudEstadoBadge :estado="props.item.estado" compact />
+      <SolicitudEstadoBadge :seguimiento="props.item.seguimiento" compact />
     </div>
 
     <div v-else class="flex items-start justify-between gap-3">
-      <SolicitudEstadoBadge :estado="props.item.estado" compact />
+      <SolicitudEstadoBadge :seguimiento="props.item.seguimiento" compact />
 
       <SolicitudBloqueadoCell
         v-if="visibleIndicadores.bloqueado.visible"

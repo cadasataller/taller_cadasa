@@ -110,8 +110,9 @@ export const matchesSolicitudBusqueda = (
     item.folio.folioOcPrincipal,
     ...item.folio.foliosOc,
     item.observacion,
-    item.estado.codigo,
-    item.estado.nombre,
+    item.seguimiento.codigo,
+    item.seguimiento.label,
+    item.seguimiento.fechaLabel,
     item.prioridad.codigo,
     item.prioridad.nombre,
     item.area.codigo,
@@ -120,5 +121,7 @@ export const matchesSolicitudBusqueda = (
     ...item.destinos.items,
     item.ocResumen.ordenesCompraResumen,
     item.ocResumen.proveedorPrincipal,
+    item.badgeDelegacion?.label,
+    item.badgeDelegacion?.tipoDelegacion,
   ].some((value) => includesNeedle(value, normalizedSearch));
 };

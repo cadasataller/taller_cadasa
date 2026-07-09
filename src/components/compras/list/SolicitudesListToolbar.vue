@@ -9,13 +9,12 @@ import {
 } from 'lucide-vue-next';
 
 import SolicitudesGrupoTabs from '@/components/compras/list/SolicitudesGrupoTabs.vue';
-import {
-  getEstadoOptionsForGrupo,
-  prioridadOptions,
-} from '@/components/compras/list/solicitudesListOptions';
+import { prioridadOptions } from '@/components/compras/list/solicitudesListOptions';
 import type {
   SolicitudCompraGrupoListado,
+  SolicitudCompraGrupoOption,
   SolicitudCompraListFilters,
+  SolicitudCompraSeguimientoFilterOption,
 } from '@/stores/db_compras/solicitudes_compra/solicitudesCompra.types';
 
 const props = defineProps<{
@@ -23,6 +22,9 @@ const props = defineProps<{
   loading: boolean;
   searching: boolean;
   activeGrupo: SolicitudCompraGrupoListado;
+  groupOptions: SolicitudCompraGrupoOption[];
+  seguimientoOptions: SolicitudCompraSeguimientoFilterOption[];
+  canUseCreatedByMeFilter: boolean;
   isMobile: boolean;
   canCreate?: boolean;
   createLoading?: boolean;
@@ -32,11 +34,12 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:search', value: string): void;
   (e: 'update:grupo', value: SolicitudCompraGrupoListado): void;
-  (e: 'update:estado', value: string | null): void;
+  (e: 'update:seguimiento', value: string | null): void;
   (e: 'update:prioridad', value: string | null): void;
   (e: 'update:fechaDesde', value: string | null): void;
   (e: 'update:fechaHasta', value: string | null): void;
   (e: 'update:soloBloqueadas', value: boolean): void;
+  (e: 'update:soloCreadasPorMi', value: boolean): void;
   (e: 'update:soloDiferenciaOc', value: boolean): void;
   (e: 'create'): void;
   (e: 'viewDrafts'): void;
@@ -45,9 +48,10 @@ const emit = defineEmits<{
 const desktopSearchPlaceholder = 'Buscar por folio, observación, destino u orden de compra';
 const mobileSearchPlaceholder = 'Buscar folio, observación o destino';
 
-const normalizedEstadoValue = computed(() => props.filters.estadoCodigo ?? '');
+const normalizedSeguimientoValue = computed(() => props.filters.seguimientoCodigo ?? '');
 const normalizedPrioridadValue = computed(() => props.filters.prioridadCodigo ?? '');
-const estadoOptions = computed(() => getEstadoOptionsForGrupo(props.activeGrupo));
+const hasGroupOptions = computed(() => props.groupOptions.length > 0);
+const hasSeguimientoOptions = computed(() => props.seguimientoOptions.length > 0);
 const searchPlaceholder = computed(() =>
   props.isMobile ? mobileSearchPlaceholder : desktopSearchPlaceholder
 );
@@ -55,7 +59,7 @@ const mobileFiltersOpen = ref(false);
 const activeMobileFiltersCount = computed(() => {
   let count = 0;
 
-  if (props.filters.estadoCodigo) {
+  if (props.filters.seguimientoCodigo) {
     count += 1;
   }
 
@@ -68,6 +72,10 @@ const activeMobileFiltersCount = computed(() => {
   }
 
   if (props.filters.soloBloqueadas) {
+    count += 1;
+  }
+
+  if (props.filters.soloCreadasPorMi) {
     count += 1;
   }
 
@@ -89,9 +97,9 @@ const onSearchInput = (event: Event): void => {
   emit('update:search', (event.target as HTMLInputElement).value);
 };
 
-const onEstadoChange = (event: Event): void => {
+const onSeguimientoChange = (event: Event): void => {
   const value = (event.target as HTMLSelectElement).value;
-  emit('update:estado', value || null);
+  emit('update:seguimiento', value || null);
 };
 
 const onPrioridadChange = (event: Event): void => {
@@ -111,6 +119,10 @@ const onFechaHastaChange = (event: Event): void => {
 
 const onSoloBloqueadasChange = (event: Event): void => {
   emit('update:soloBloqueadas', (event.target as HTMLInputElement).checked);
+};
+
+const onSoloCreadasPorMiChange = (event: Event): void => {
+  emit('update:soloCreadasPorMi', (event.target as HTMLInputElement).checked);
 };
 
 const onSoloDiferenciaOcChange = (event: Event): void => {
@@ -141,7 +153,9 @@ const toggleMobileFilters = (): void => {
         </label>
 
         <SolicitudesGrupoTabs
+          v-if="hasGroupOptions"
           :model-value="activeGrupo"
+          :options="groupOptions"
           @update:model-value="emit('update:grupo', $event)"
         />
 
@@ -208,15 +222,18 @@ const toggleMobileFilters = (): void => {
         id="solicitudes-mobile-filters"
         class="flex flex-wrap items-center gap-3 px-3 py-3"
       >
-        <label class="relative flex min-h-8 min-w-[15rem] flex-1 rounded-2xl border border-stone-200 bg-stone-50 px-4 text-stone-700 shadow-sm transition focus-within:border-stone-400 focus-within:bg-white sm:flex-none">
+        <label
+          v-if="hasSeguimientoOptions"
+          class="relative flex min-h-8 min-w-[15rem] flex-1 rounded-2xl border border-stone-200 bg-stone-50 px-4 text-stone-700 shadow-sm transition focus-within:border-stone-400 focus-within:bg-white sm:flex-none"
+        >
           <select
-            :value="normalizedEstadoValue"
+            :value="normalizedSeguimientoValue"
             class="w-full cursor-pointer bg-transparent pr-4 text-sm text-stone-900 outline-none"
-            @change="onEstadoChange"
+            @change="onSeguimientoChange"
           >
             <option
-              v-for="option in estadoOptions"
-              :key="option.value ?? 'all-estados'"
+              v-for="option in seguimientoOptions"
+              :key="option.value ?? 'all-seguimientos'"
               :value="option.value ?? ''"
             >
               {{ option.label }}
@@ -272,6 +289,19 @@ const toggleMobileFilters = (): void => {
             @change="onSoloBloqueadasChange"
           >
           <span>Bloqueadas</span>
+        </label>
+
+        <label
+          v-if="canUseCreatedByMeFilter"
+          class="inline-flex min-h-8 items-center cursor-pointer gap-2 text-sm text-stone-700"
+        >
+          <input
+            :checked="filters.soloCreadasPorMi"
+            type="checkbox"
+            class="h-4 w-4 rounded border-stone-300 cursor-pointer text-stone-900 focus:ring-stone-400"
+            @change="onSoloCreadasPorMiChange"
+          >
+          <span>Creadas por mi</span>
         </label>
 
         <label class="inline-flex min-h-8 items-center cursor-pointer gap-2 text-sm text-stone-700">

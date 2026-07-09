@@ -29,11 +29,11 @@ describe('solicitudListRoleConfig', () => {
     expect(canShowSolicitudListField(unknownRole, 'canSeeFolioOc')).toBe(true);
   });
 
-  it('configura operativo con folio, OC, observacion, estado, prioridad, destinos, fecha, adjuntos y diferencia OC', () => {
+  it('configura operativo con folio, OC, observacion, seguimiento, prioridad, destinos, fecha, adjuntos y diferencia OC', () => {
     expect(getSolicitudDesktopColumnsByRole('operativo')).toEqual([
       'folio',
       'observacion',
-      'estado',
+      'seguimiento',
       'prioridad',
       'destinos',
       'fechaEntrega',
@@ -41,7 +41,7 @@ describe('solicitudListRoleConfig', () => {
     ]);
     expect(getSolicitudMobileFieldsByRole('operativo')).toEqual([
       'folio',
-      'estado',
+      'seguimiento',
       'observacion',
       'prioridad',
       'destinos',
@@ -60,7 +60,7 @@ describe('solicitudListRoleConfig', () => {
     expect(getSolicitudDesktopColumnsByRole('admin')).toEqual([
       'folio',
       'observacion',
-      'estado',
+      'seguimiento',
       'prioridad',
       'destinos',
       'area',
@@ -70,7 +70,7 @@ describe('solicitudListRoleConfig', () => {
     ]);
     expect(getSolicitudMobileFieldsByRole('admin')).toEqual([
       'folio',
-      'estado',
+      'seguimiento',
       'observacion',
       'prioridad',
       'destinos',
@@ -102,7 +102,7 @@ describe('solicitudListRoleConfig', () => {
     expect(getSolicitudDesktopColumnsByRole('gerencia')).toEqual([
       'folio',
       'observacion',
-      'estado',
+      'seguimiento',
       'prioridad',
       'destinos',
       'area',
@@ -111,7 +111,7 @@ describe('solicitudListRoleConfig', () => {
     ]);
     expect(getSolicitudMobileFieldsByRole('gerencia')).toEqual([
       'folio',
-      'estado',
+      'seguimiento',
       'observacion',
       'prioridad',
       'destinos',
@@ -124,8 +124,8 @@ describe('solicitudListRoleConfig', () => {
     expect(canShowSolicitudListField('gerencia', 'canSeeDiferenciaOc')).toBe(true);
   });
 
-  it('configura almacen solo con observacion, area, prioridad, estado y bloqueado', () => {
-    const expectedFields = ['observacion', 'area', 'prioridad', 'estado', 'bloqueado'];
+  it('configura almacen solo con observacion, area, prioridad, seguimiento y bloqueado', () => {
+    const expectedFields = ['observacion', 'area', 'prioridad', 'seguimiento', 'bloqueado'];
 
     expect(getSolicitudDesktopColumnsByRole('almacen')).toEqual(expectedFields);
     expect(getSolicitudMobileFieldsByRole('almacen')).toEqual(expectedFields);
@@ -144,7 +144,7 @@ describe('solicitudListRoleConfig', () => {
       'area',
       'solicitante',
       'prioridad',
-      'estado',
+      'seguimiento',
       'fechaEntrega',
       'bloqueado',
     ];

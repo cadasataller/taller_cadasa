@@ -14,6 +14,7 @@ import SolicitudesListSkeleton from '@/components/compras/list/SolicitudesListSk
 import SolicitudesListToolbar from '@/components/compras/list/SolicitudesListToolbar.vue';
 import SolicitudesMobileList from '@/components/compras/list/mobile/SolicitudesMobileList.vue';
 import { useSolicitudesCompraList } from '@/components/compras/list/useSolicitudesCompraList';
+import { getSolicitudCompraGroupOptions } from '@/stores/db_compras/solicitudes_compra/solicitudesCompra.config.helpers';
 import { solicitudesCompraBorradoresService } from '@/stores/db_compras/solicitudes_compra/borradores/solicitudesCompraBorradores.service';
 import type { SolicitudCompraBorradorListadoItem } from '@/stores/db_compras/solicitudes_compra/borradores/solicitudesCompraBorradores.types';
 import { useSolicitudesCompraCrearStore } from '@/stores/db_compras/solicitudes_compra/crear_solicitud/solicitudesCompraCrear.store';
@@ -35,6 +36,12 @@ const {
   baseEmpty,
   hasMore,
   initialized,
+  configAvailable,
+  visibleGroups,
+  seguimientoOptions,
+  canUseCreatedByMeFilter,
+  uiMessage,
+  configWarningToken,
   loadInitial,
   loadMore,
   onSearchChange,
@@ -63,6 +70,7 @@ const VIEW_DRAFTS_FEATURE = 'ver_borradores_solicitud_compra';
 const roleCodigo = computed<SolicitudCompraRoleCodigo>(
   () => items.value[0]?.viewerRoleCodigo ?? baseItems.value[0]?.viewerRoleCodigo ?? 'operativo'
 );
+const groupOptions = computed(() => getSolicitudCompraGroupOptions(visibleGroups.value));
 const isCreateOverlayOpen = computed(() => route.name === 'SolicitudCompraCrear');
 const createOverlayLabel = computed(() => isCheckingDrafts.value
   ? 'Buscando borradores...'
@@ -70,10 +78,12 @@ const createOverlayLabel = computed(() => isCheckingDrafts.value
 
 const searchActive = computed(() =>
   filters.value.busqueda.trim().length > 0
-  || Boolean(filters.value.estadoCodigo)
+  || Boolean(filters.value.seguimientoCodigo)
   || Boolean(filters.value.prioridadCodigo)
   || filters.value.soloBloqueadas
+  || filters.value.soloCreadasPorMi
   || filters.value.soloDiferenciaOc
+  || Boolean(filters.value.badgeDelegacionCodigo)
 );
 
 const isListRefreshing = computed(() =>
@@ -248,6 +258,22 @@ watch(
   }
 );
 
+watch(
+  configWarningToken,
+  (token) => {
+    if (token <= 0) {
+      return;
+    }
+
+    toast.add({
+      severity: 'info',
+      summary: 'Vista reducida',
+      detail: 'No pudimos cargar la configuracion del listado. Mostraremos una vista reducida.',
+      life: 4200,
+    });
+  }
+);
+
 onBeforeUnmount(() => {
   window.removeEventListener('open-new-solicitud-compra', handleOpenNewSolicitudCompra);
 });
@@ -270,17 +296,21 @@ onBeforeUnmount(() => {
           :loading="loading"
           :searching="searching"
           :active-grupo="activeGrupo"
+          :group-options="groupOptions"
+          :seguimiento-options="seguimientoOptions"
+          :can-use-created-by-me-filter="canUseCreatedByMeFilter"
           :is-mobile="false"
           :can-create="canCreateSolicitud"
           :create-loading="isCreateButtonLoading"
           :can-view-drafts="canViewDrafts"
           @update:search="onSearchChange"
           @update:grupo="handleGrupoChange"
-          @update:estado="onFilterChange({ estadoCodigo: $event })"
+          @update:seguimiento="onFilterChange({ seguimientoCodigo: $event })"
           @update:prioridad="onFilterChange({ prioridadCodigo: $event })"
           @update:fecha-desde="onFilterChange({ fechaDesde: $event })"
           @update:fecha-hasta="onFilterChange({ fechaHasta: $event })"
           @update:solo-bloqueadas="onFilterChange({ soloBloqueadas: $event })"
+          @update:solo-creadas-por-mi="onFilterChange({ soloCreadasPorMi: $event })"
           @update:solo-diferencia-oc="onFilterChange({ soloDiferenciaOc: $event })"
           @create="void handleCreateDirect()"
           @view-drafts="void openDraftsOverlay()"
@@ -293,17 +323,21 @@ onBeforeUnmount(() => {
           :loading="loading"
           :searching="searching"
           :active-grupo="activeGrupo"
+          :group-options="groupOptions"
+          :seguimiento-options="seguimientoOptions"
+          :can-use-created-by-me-filter="canUseCreatedByMeFilter"
           :is-mobile="true"
           :can-create="canCreateSolicitud"
           :create-loading="isCreateButtonLoading"
           :can-view-drafts="canViewDrafts"
           @update:search="onSearchChange"
           @update:grupo="handleGrupoChange"
-          @update:estado="onFilterChange({ estadoCodigo: $event })"
+          @update:seguimiento="onFilterChange({ seguimientoCodigo: $event })"
           @update:prioridad="onFilterChange({ prioridadCodigo: $event })"
           @update:fecha-desde="onFilterChange({ fechaDesde: $event })"
           @update:fecha-hasta="onFilterChange({ fechaHasta: $event })"
           @update:solo-bloqueadas="onFilterChange({ soloBloqueadas: $event })"
+          @update:solo-creadas-por-mi="onFilterChange({ soloCreadasPorMi: $event })"
           @update:solo-diferencia-oc="onFilterChange({ soloDiferenciaOc: $event })"
           @create="void handleCreateDirect()"
           @view-drafts="void openDraftsOverlay()"
@@ -329,6 +363,15 @@ onBeforeUnmount(() => {
         @retry="onRetry"
       />
 
+      <section
+        v-else-if="configAvailable && visibleGroups.length === 0"
+        class="rounded-2xl border border-dashed border-stone-300 bg-white/75 px-5 py-10 text-center shadow-sm"
+      >
+        <p class="text-sm font-medium text-stone-700">
+          Usuario no tiene permitido ver solicitudes
+        </p>
+      </section>
+
       <SolicitudesListEmptyState
         v-else-if="items.length === 0"
         :search-active="searchActive"
@@ -336,6 +379,13 @@ onBeforeUnmount(() => {
       />
 
       <template v-else>
+        <div
+          v-if="uiMessage && !error"
+          class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-800"
+        >
+          {{ uiMessage }}
+        </div>
+
         <div
           v-if="isListRefreshing"
           class="flex items-center justify-end"
