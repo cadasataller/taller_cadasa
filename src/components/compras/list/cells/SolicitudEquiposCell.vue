@@ -1,39 +1,37 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
-import type { SolicitudCompraEquipoPreview } from '@/stores/db_compras/solicitudes_compra/solicitudesCompra.types';
+import type { SolicitudCompraDestinoPreview } from '@/stores/db_compras/solicitudes_compra/solicitudesCompra.types';
 
 const props = withDefaults(defineProps<{
-  equipos: SolicitudCompraEquipoPreview;
+  destinos: SolicitudCompraDestinoPreview;
   compact?: boolean;
 }>(), {
   compact: false,
 });
 
-const visibleCodigos = computed(() => props.equipos.codigos.slice(0, 3));
+const visibleDestinos = computed(() => props.destinos.visibles);
 
-const overflowCount = computed(() =>
-  Math.max(props.equipos.codigos.length - visibleCodigos.value.length, 0)
-);
+const overflowCount = computed(() => props.destinos.ocultos);
 
-const hasError = computed(() => Boolean(props.equipos.error));
+const hasError = computed(() => Boolean(props.destinos.error));
 </script>
 
 <template>
   <div class="flex min-h-full flex-col justify-center">
-    <div v-if="equipos.loading" class="flex items-center gap-2 text-[11px] text-stone-500">
+    <div v-if="destinos.loading" class="flex items-center gap-2 text-[11px] text-stone-500">
       <span class="h-3 w-3 animate-spin rounded-full border border-stone-300 border-t-stone-600" />
-      <span>Cargando equipos...</span>
+      <span>Cargando destinos...</span>
     </div>
 
-    <div v-else-if="visibleCodigos.length > 0" class="flex flex-wrap gap-1.5">
+    <div v-else-if="visibleDestinos.length > 0" class="flex flex-wrap gap-1.5">
       <span
-        v-for="codigo in visibleCodigos"
-        :key="codigo"
+        v-for="destino in visibleDestinos"
+        :key="destino"
         class="inline-flex rounded-full border border-stone-200 bg-stone-100 font-medium text-stone-700"
         :class="compact ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-[11px]'"
       >
-        {{ codigo }}
+        {{ destino }}
       </span>
 
       <span
@@ -49,7 +47,7 @@ const hasError = computed(() => Boolean(props.equipos.error));
       v-else-if="hasError"
       class="text-[11px] text-amber-700"
     >
-      Error equipos
+      Error destinos
     </span>
   </div>
 </template>

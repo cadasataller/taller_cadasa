@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 import { featureAccessService } from './featureAccess.service';
 import type { FeatureAccessState, FuncionalidadPermitida } from './featureAccess.types';
 
+let pendingFeatureAccessRequest: Promise<FuncionalidadPermitida[]> | null = null;
+
 export const useFeatureAccessStore = defineStore('featureAccess', {
   state: (): FeatureAccessState => ({
     funcionalidadesPermitidas: [],
@@ -22,24 +24,34 @@ export const useFeatureAccessStore = defineStore('featureAccess', {
         return this.funcionalidadesPermitidas;
       }
 
+      if (pendingFeatureAccessRequest && !force) {
+        return pendingFeatureAccessRequest;
+      }
+
       this.isLoading = true;
       this.error = null;
 
-      try {
-        const funcionalidades = await featureAccessService.obtenerFuncionalidadesPermitidas();
-        this.funcionalidadesPermitidas = funcionalidades;
-        this.isLoaded = true;
-        return funcionalidades;
-      } catch (error) {
-        const message = error instanceof Error
-          ? error.message
-          : 'No se pudieron obtener las funcionalidades permitidas';
+      pendingFeatureAccessRequest = featureAccessService
+        .obtenerFuncionalidadesPermitidas()
+        .then((funcionalidades) => {
+          this.funcionalidadesPermitidas = funcionalidades;
+          this.isLoaded = true;
+          return funcionalidades;
+        })
+        .catch((error) => {
+          const message = error instanceof Error
+            ? error.message
+            : 'No se pudieron obtener las funcionalidades permitidas';
 
-        this.error = message;
-        throw error;
-      } finally {
-        this.isLoading = false;
-      }
+          this.error = message;
+          throw error;
+        })
+        .finally(() => {
+          this.isLoading = false;
+          pendingFeatureAccessRequest = null;
+        });
+
+      return pendingFeatureAccessRequest;
     },
 
     reset(): void {
@@ -47,6 +59,7 @@ export const useFeatureAccessStore = defineStore('featureAccess', {
       this.isLoading = false;
       this.isLoaded = false;
       this.error = null;
+      pendingFeatureAccessRequest = null;
     }
   }
 });

@@ -62,7 +62,7 @@ type SearchRow =
     key: string;
     localId: string;
     codProducto: string;
-    descripcion: string;
+    nombre: string;
     unidadLabel: string;
     selected: true;
   };
@@ -98,7 +98,7 @@ const selectedProducts = computed(() => props.productos.map((item) => ({
   item,
   localId: item.localId,
   codProducto: item.tipo === 'existente' ? item.codProducto : 'MANUAL',
-  descripcion: item.descripcion,
+  nombre: item.nombre,
   unidadLabel: item.unidadLabel,
   isTemporal: item.tipo === 'temporal',
 })));
@@ -120,7 +120,7 @@ const searchRows = computed<SearchRow[]>(() => {
       key: `selected-${item.localId}`,
       localId: item.localId,
       codProducto: item.codProducto,
-      descripcion: item.descripcion,
+      nombre: item.nombre,
       unidadLabel: item.unidadLabel,
       selected: true,
     }));
@@ -215,7 +215,6 @@ const onSelectRow = (
     <template v-if="!isServicio">
       <div
         ref="searchRoot"
-        class="mt-4"
       >
         
 
@@ -227,7 +226,7 @@ const onSelectRow = (
                 v-model="localQuery"
                 type="text"
                 class="w-full bg-transparent text-sm text-stone-900 outline-none placeholder:text-stone-400"
-                placeholder="Buscar por codigo, descripcion o unidad"
+                placeholder="Buscar por codigo, nombre o unidad"
                 @focus="isSearchFocused = true"
               >
               <button
@@ -265,16 +264,16 @@ const onSelectRow = (
                   :class="row.kind !== 'manual' && row.selected ? 'bg-main/10' : 'bg-white'"
                   @click="onSelectRow(row)"
                 >
-                  <div class="hidden grid-cols-[10rem_minmax(0,1fr)_8rem_3.25rem] items-center gap-4 text-center md:grid">
+                  <div class="hidden grid-cols-[10rem_8rem_minmax(0,1fr)_3.25rem] items-center gap-4 text-center md:grid">
                     <template v-if="row.kind === 'manual'">
                       <p class="break-words text-sm font-semibold text-main">
                         MANUAL
                       </p>
-                      <p class="break-words text-sm text-stone-600">
-                        {{ row.label }}
-                      </p>
                       <p class="break-words text-xs text-stone-500">
                         Sin unidad
+                      </p>
+                      <p class="break-words text-sm text-stone-600">
+                        {{ row.label }}
                       </p>
                     </template>
 
@@ -282,11 +281,11 @@ const onSelectRow = (
                       <p class="break-words font-semibold text-stone-900">
                         {{ row.codProducto }}
                       </p>
-                      <p class="break-words text-stone-700">
-                        {{ row.descripcion }}
-                      </p>
                       <p class="break-words text-xs text-stone-500">
                         {{ row.unidadLabel }}
+                      </p>
+                      <p class="break-words text-stone-700">
+                        {{ row.nombre }}
                       </p>
                     </template>
 
@@ -294,11 +293,11 @@ const onSelectRow = (
                       <p class="break-words font-semibold text-stone-900">
                         {{ row.item.codProducto }}
                       </p>
-                      <p class="break-words text-stone-700">
-                        {{ row.item.descripcion }}
-                      </p>
                       <p class="break-words text-xs text-stone-500">
                         {{ row.item.unidadLabel }}
+                      </p>
+                      <p class="break-words text-stone-700">
+                        {{ row.item.nombre }}
                       </p>
                     </template>
 
@@ -336,14 +335,16 @@ const onSelectRow = (
 
                       <template v-else-if="row.kind === 'selected'">
                         <span class="font-semibold text-stone-900">{{ row.codProducto }}</span>
-                        {{ ' ' }}·{{ ' ' }}{{ row.descripcion }}{{ ' ' }}·{{ ' ' }}
+                        {{ ' ' }}·{{ ' ' }}
                         <span class="text-xs text-stone-500">{{ row.unidadLabel }}</span>
+                        {{ ' ' }}·{{ ' ' }}{{ row.nombre }}
                       </template>
 
                       <template v-else>
                         <span class="font-semibold text-stone-900">{{ row.item.codProducto }}</span>
-                        {{ ' ' }}·{{ ' ' }}{{ row.item.descripcion }}{{ ' ' }}·{{ ' ' }}
+                        {{ ' ' }}·{{ ' ' }}
                         <span class="text-xs text-stone-500">{{ row.item.unidadLabel }}</span>
+                        {{ ' ' }}·{{ ' ' }}{{ row.item.nombre }}
                       </template>
                     </div>
 
@@ -399,7 +400,7 @@ const onSelectRow = (
               Manual
             </span>
             <span class="hidden md:inline">
-              ProductoManual
+              Producto manual
             </span>
           </button>
         </div>
@@ -429,15 +430,15 @@ const onSelectRow = (
             :key="item.localId"
             class="rounded-lg border border-stone-200 bg-white px-3 py-3"
           >
-            <div class="hidden grid-cols-[10rem_minmax(0,1fr)_8rem_3.8rem] items-center gap-4 text-center text-sm md:grid">
+            <div class="hidden grid-cols-[10rem_8rem_minmax(0,1fr)_3.8rem] items-center gap-4 text-center text-sm md:grid">
               <p class="break-words font-semibold text-stone-900">
                 {{ item.codProducto }}
               </p>
-              <p class="break-words text-stone-700">
-                {{ item.descripcion }}
-              </p>
               <p class="break-words text-xs text-stone-500">
                 {{ item.unidadLabel }}
+              </p>
+              <p class="break-words text-stone-700">
+                {{ item.nombre }}
               </p>
               <div class="flex justify-center gap-1">
                 <button
@@ -461,8 +462,9 @@ const onSelectRow = (
             <div class="flex items-center justify-between gap-3 md:hidden">
               <p class="min-w-0 flex-1 break-words text-sm text-stone-700">
                 <span class="font-semibold text-stone-900">{{ item.codProducto }}</span>
-                {{ ' ' }}·{{ ' ' }}{{ item.descripcion }}{{ ' ' }}·{{ ' ' }}
+                {{ ' ' }}·{{ ' ' }}
                 <span class="text-xs text-stone-500">{{ item.unidadLabel }}</span>
+                {{ ' ' }}·{{ ' ' }}{{ item.nombre }}
               </p>
 
               <div class="flex shrink-0 items-center gap-2">
@@ -472,7 +474,7 @@ const onSelectRow = (
                   class="inline-flex h-9 items-center justify-center rounded-lg border border-main/25 px-3 text-xs font-semibold text-main transition hover:bg-main/5"
                   @click="onEditTemporal(item.item)"
                 >
-                  Editar
+                  <SquarePen  class="h-4 w-4" />
                 </button>
                 <button
                   type="button"

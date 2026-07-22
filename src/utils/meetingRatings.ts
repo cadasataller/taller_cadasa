@@ -5,7 +5,7 @@ export const MEETING_CRITERION_ID = 5;
 export const MEETING_WEEKDAY_BY_EMAIL: Record<string, string> = {
   'ivanp@cadasa.com': 'Lunes',
   'joseim@cadasa.com': 'Martes',
-  'sergioq@cadasa.com': 'Miercoles',
+  'equipop@cadasa.com': 'Miercoles',
   'erickq@cadasa.com': 'Jueves',
   'eladiop@cadasa.com': 'Viernes',
 };

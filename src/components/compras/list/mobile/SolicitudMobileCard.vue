@@ -30,6 +30,10 @@ const emit = defineEmits<{
 const roleConfig = computed(() => getSolicitudListRoleConfig(props.roleCodigo));
 
 const displayFolio = computed(() => {
+  if (!roleConfig.value.canSeeFolio) {
+    return '';
+  }
+
   const rawFolio = props.item.folio.folioSol?.trim();
 
   if (rawFolio) {
@@ -38,7 +42,7 @@ const displayFolio = computed(() => {
 
   const label = props.item.folio.folioSolLabel?.trim();
 
-  return label && label.length > 0 ? label : '';
+  return label && label.length > 0 ? label : 'SIN NUM REQ';
 });
 
 const displayOc = computed(() => {
@@ -46,8 +50,19 @@ const displayOc = computed(() => {
     return '';
   }
 
-  return props.item.folio.folioOcPrincipal?.trim() || '';
+  const hasFolio = Boolean(
+    props.item.folio.folioSol?.trim() || props.item.folio.folioSolLabel?.trim()
+  );
+
+  if (!hasFolio) {
+    return '';
+  }
+
+  return props.item.folio.folioOcPrincipal?.trim() || 'SIN OC';
 });
+
+const isMissingFolio = computed(() => displayFolio.value === 'SIN NUM REQ');
+const isMissingOc = computed(() => displayOc.value === 'SIN OC');
 
 const displayObservacion = computed(() => {
   const observacion = props.item.observacion?.trim();
@@ -93,14 +108,14 @@ const hasFechaEntrega = computed(
   () => roleConfig.value.canSeeFechaEntrega && Boolean(props.item.fechaEntrega.fecha)
 );
 
-const hasEquipos = computed(() => {
-  if (!roleConfig.value.canSeeEquipos) {
+const hasDestinos = computed(() => {
+  if (!roleConfig.value.canSeeDestinos) {
     return false;
   }
 
-  return props.item.equipos.loading
-    || props.item.equipos.codigos.length > 0
-    || Boolean(props.item.equipos.error);
+  return props.item.destinos.loading
+    || props.item.destinos.items.length > 0
+    || Boolean(props.item.destinos.error);
 });
 
 const visibleIndicadores = computed<SolicitudCompraIndicadores>(() => ({
@@ -151,34 +166,37 @@ const onClick = (): void => {
       <div v-if="displayFolio || displayOc" class="min-w-0">
         <p
           v-if="displayFolio"
-          class="truncate text-base font-semibold tracking-[-0.02em] text-stone-900"
+          class="truncate text-base font-semibold tracking-[-0.02em]"
+          :class="isMissingFolio ? 'text-stone-400' : 'text-stone-900'"
         >
           {{ displayFolio }}
         </p>
         <p
           v-if="displayOc"
-          class="mt-1 truncate text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500"
+          class="mt-1 truncate text-[11px] font-medium uppercase tracking-[0.12em]"
+          :class="isMissingOc ? 'text-stone-400' : 'text-stone-500'"
         >
-          OC {{ displayOc }}
+          {{ isMissingOc ? displayOc : `OC ${displayOc}` }}
         </p>
       </div>
 
-      <SolicitudEstadoBadge :estado="props.item.estado" compact />
+      <SolicitudEstadoBadge :seguimiento="props.item.seguimiento" compact />
     </div>
 
     <div v-else-if="isSecretaria" class="flex items-start justify-between gap-3">
       <p
         v-if="displayFolio"
-        class="min-w-0 truncate text-base font-semibold tracking-[-0.02em] text-stone-900"
+        class="min-w-0 truncate text-base font-semibold tracking-[-0.02em]"
+        :class="isMissingFolio ? 'text-stone-400' : 'text-stone-900'"
       >
         {{ displayFolio }}
       </p>
 
-      <SolicitudEstadoBadge :estado="props.item.estado" compact />
+      <SolicitudEstadoBadge :seguimiento="props.item.seguimiento" compact />
     </div>
 
     <div v-else class="flex items-start justify-between gap-3">
-      <SolicitudEstadoBadge :estado="props.item.estado" compact />
+      <SolicitudEstadoBadge :seguimiento="props.item.seguimiento" compact />
 
       <SolicitudBloqueadoCell
         v-if="visibleIndicadores.bloqueado.visible"
@@ -223,15 +241,15 @@ const onClick = (): void => {
     </div>
 
     <div
-      v-if="isOperacionFamily && (hasEquipos || hasFechaEntrega)"
+      v-if="isOperacionFamily && (hasDestinos || hasFechaEntrega)"
       class="mt-3 flex flex-wrap gap-2"
     >
       <div v-if="hasFechaEntrega" class="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1">
         <SolicitudFechaEntregaCell :fecha-entrega="props.item.fechaEntrega" compact :show-label="false" />
       </div>
 
-      <div v-if="hasEquipos" class="rounded-2xl border border-stone-200 bg-stone-50 px-2.5 py-1">
-        <SolicitudEquiposCell :equipos="props.item.equipos" compact />
+      <div v-if="hasDestinos" class="rounded-2xl border border-stone-200 bg-stone-50 px-2.5 py-1">
+        <SolicitudEquiposCell :destinos="props.item.destinos" compact />
       </div>
     </div>
 

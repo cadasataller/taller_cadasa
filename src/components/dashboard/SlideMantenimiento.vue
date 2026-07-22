@@ -509,9 +509,41 @@ const getStatusBucket = (order: OrdenMantenimiento): string => {
   const rawStatus = getRawStatus(order);
   const normalizedStatus = rawStatus.toLowerCase();
 
-  if (normalizedStatus === 'detenido') return 'Detenido';
+  if (normalizedStatus === 'detenido' || normalizedStatus === 'espera_repuesto') {
+    return 'Detenido';
+  }
 
   return rawStatus || 'Sin Estatus';
+};
+
+const getDetainedStatusType = (order: OrdenMantenimiento): 'detenido' | 'espera_repuesto' | null => {
+  const normalizedStatus = getRawStatus(order).toLowerCase();
+
+  if (normalizedStatus === 'detenido') return 'detenido';
+  if (normalizedStatus === 'espera_repuesto') return 'espera_repuesto';
+
+  return null;
+};
+
+const formatBucketPercent = (count: number, total: number) => {
+  if (total <= 0) return '0%';
+
+  const value = Number(((count / total) * 100).toFixed(1));
+  return `${Number.isInteger(value) ? value.toFixed(0) : value}%`;
+};
+
+const getGroupedStatusTooltipDetail = (status: string, data: any, multiline = true) => {
+  const lineBreak = multiline ? '<br/>' : ', ';
+
+  if (status === 'Concluida') {
+    return `${lineBreak}Concluida: ${data.concludedCount || 0} (${formatBucketPercent(data.concludedCount || 0, data.count || 0)})${lineBreak}NR: ${data.nrCount || 0} (${formatBucketPercent(data.nrCount || 0, data.count || 0)})`;
+  }
+
+  if (status === 'Detenido') {
+    return `${lineBreak}Detenido: ${data.detenidoCount || 0} (${formatBucketPercent(data.detenidoCount || 0, data.count || 0)})${lineBreak}Esp. Repuesto: ${data.esperaRepuestoCount || 0} (${formatBucketPercent(data.esperaRepuestoCount || 0, data.count || 0)})`;
+  }
+
+  return '';
 };
 
 const getConcludedBreakdown = (orders: OrdenMantenimiento[]) => {
@@ -766,11 +798,17 @@ const statusStats = computed(() => {
   const total = baseChartData.value.length;
   if (total === 0) return [];
 
-  const counts: Record<string, { total: number; concluida: number; nr: number }> = {};
+  const counts: Record<string, {
+    total: number;
+    concluida: number;
+    nr: number;
+    detenido: number;
+    esperaRepuesto: number;
+  }> = {};
   baseChartData.value.forEach(row => {
     const s = getStatusBucket(row);
     if (!counts[s]) {
-      counts[s] = { total: 0, concluida: 0, nr: 0 };
+      counts[s] = { total: 0, concluida: 0, nr: 0, detenido: 0, esperaRepuesto: 0 };
     }
 
     counts[s].total += 1;
@@ -779,6 +817,15 @@ const statusStats = computed(() => {
         counts[s].nr += 1;
       } else {
         counts[s].concluida += 1;
+      }
+    }
+    if (s === 'Detenido') {
+      const detainedStatusType = getDetainedStatusType(row);
+
+      if (detainedStatusType === 'detenido') {
+        counts[s].detenido += 1;
+      } else if (detainedStatusType === 'espera_repuesto') {
+        counts[s].esperaRepuesto += 1;
       }
     }
   });
@@ -793,7 +840,7 @@ const statusStats = computed(() => {
   const defaultColors = { bar: 'bg-gray-300', dot: 'bg-gray-400' };
 
   return ['Programado', 'Concluida', 'En Proceso', 'Detenido'].map(label => {
-    const detail = counts[label] || { total: 0, concluida: 0, nr: 0 };
+    const detail = counts[label] || { total: 0, concluida: 0, nr: 0, detenido: 0, esperaRepuesto: 0 };
     const mappingKey = Object.keys(colorMap).find(k => k.toLowerCase() === label.toLowerCase());
     const colors = mappingKey ? colorMap[mappingKey] : defaultColors;
 
@@ -802,6 +849,8 @@ const statusStats = computed(() => {
       count: detail.total,
       concludedCount: detail.concluida,
       nrCount: detail.nr,
+      detenidoCount: detail.detenido,
+      esperaRepuestoCount: detail.esperaRepuesto,
       percentage: total > 0 ? (detail.total / total) * 100 : 0,
       color: colors.bar,
       dotColor: colors.dot
@@ -836,12 +885,16 @@ const echartBarOption = computed(() => {
     const count = item ? item.count : 0;
     const concludedCount = item ? item.concludedCount : 0;
     const nrCount = item ? item.nrCount : 0;
+    const detenidoCount = item ? item.detenidoCount : 0;
+    const esperaRepuestoCount = item ? item.esperaRepuestoCount : 0;
     const value = item ? Number(item.percentage.toFixed(1)) : 0;
     data.push({
       value,
       count,
       concludedCount,
       nrCount,
+      detenidoCount,
+      esperaRepuestoCount,
       itemStyle: { color: colorMap[label] || '#cbd5e1' }
     });
   });
@@ -856,8 +909,8 @@ const echartBarOption = computed(() => {
       textStyle: { color: '#475569' },
       formatter: (params: any[]) => {
         const p = params[0];
-        const detail = p.axisValue === 'Concluida'
-          ? `<br/>Concluida: ${p.data.concludedCount || 0}<br/>NR: ${p.data.nrCount || 0}`
+        const detail = ['Concluida', 'Detenido'].includes(p.axisValue)
+          ? getGroupedStatusTooltipDetail(p.axisValue, p.data, true)
           : '';
         return `<span style="font-weight:bold;color:#1e293b">${p.axisValue}</span><br/>Total: ${p.data.count} (${p.data.value}%)${detail}`;
       }
@@ -933,6 +986,7 @@ const buildEChartStackedOption = (data: OrdenMantenimiento[], groupKey: keyof Or
     total: number;
     counts: Record<string, number>;
     concludedDetail: { concluida: number; nr: number };
+    detenidoDetail: { detenido: number; esperaRepuesto: number };
   }> = {};
 
   data.forEach(order => {
@@ -940,7 +994,12 @@ const buildEChartStackedOption = (data: OrdenMantenimiento[], groupKey: keyof Or
     if (!key || key === 'null') key = 'Desconocido';
 
     if (!groups[key]) {
-      groups[key] = { total: 0, counts: {}, concludedDetail: { concluida: 0, nr: 0 } };
+      groups[key] = {
+        total: 0,
+        counts: {},
+        concludedDetail: { concluida: 0, nr: 0 },
+        detenidoDetail: { detenido: 0, esperaRepuesto: 0 }
+      };
       uniqueStatuses.forEach(s => groups[key].counts[s] = 0);
     }
 
@@ -954,6 +1013,15 @@ const buildEChartStackedOption = (data: OrdenMantenimiento[], groupKey: keyof Or
         groups[key].concludedDetail.nr += 1;
       } else {
         groups[key].concludedDetail.concluida += 1;
+      }
+    }
+    if (status === 'Detenido') {
+      const detainedStatusType = getDetainedStatusType(order);
+
+      if (detainedStatusType === 'detenido') {
+        groups[key].detenidoDetail.detenido += 1;
+      } else if (detainedStatusType === 'espera_repuesto') {
+        groups[key].detenidoDetail.esperaRepuesto += 1;
       }
     }
   });
@@ -1032,6 +1100,8 @@ const buildEChartStackedOption = (data: OrdenMantenimiento[], groupKey: keyof Or
           status,
           concludedCount: groups[cat].concludedDetail.concluida,
           nrCount: groups[cat].concludedDetail.nr,
+          detenidoCount: groups[cat].detenidoDetail.detenido,
+          esperaRepuestoCount: groups[cat].detenidoDetail.esperaRepuesto,
         };
       }),
       label: {
@@ -1100,8 +1170,8 @@ const buildEChartStackedOption = (data: OrdenMantenimiento[], groupKey: keyof Or
         const lines = params
           .filter(p => (p.data?.count || 0) > 0)
           .map(p => {
-            const detail = p.seriesName === 'Concluida'
-              ? ` <span style="color:#64748b">(Concluida: ${p.data.concludedCount || 0}, NR: ${p.data.nrCount || 0})</span>`
+            const detail = ['Concluida', 'Detenido'].includes(p.seriesName)
+              ? ` <span style="color:#64748b">(${getGroupedStatusTooltipDetail(p.seriesName, p.data, false)})</span>`
               : '';
             return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px"></span>${p.seriesName}: <b>${p.data.count}</b> (${p.value}%)${detail}`;
           })

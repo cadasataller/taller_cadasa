@@ -68,7 +68,7 @@ export const solicitudesCompraCrearService = {
     files: CrearSolicitudAdjuntoLocalItem[]
   ): Promise<CrearSolicitudAdjuntoUploadMetadata[]> {
     const uploads = await Promise.all(files.map(async (item, index) => {
-      const safeFileName = buildSafeFileName(item.file.name, index);
+      const safeFileName = buildSafeFileName(item.displayName, index);
       const storagePath = `${session.base_path}/${safeFileName}`;
       const { error } = await supabaseCompras.storage
         .from(session.bucket_id)
@@ -84,9 +84,9 @@ export const solicitudesCompraCrearService = {
       return {
         bucketId: session.bucket_id,
         storagePath,
-        nombreOriginal: item.file.name,
+        nombreOriginal: item.displayName,
         mimeType: item.file.type || 'application/octet-stream',
-        extension: getFileExtension(item.file.name),
+        extension: getFileExtension(item.displayName),
         sizeBytes: item.file.size,
         tipoAdjuntoCodigo: 'general',
         descripcion: null,

@@ -13,9 +13,9 @@ export type SolicitudCompraGrupoListado =
 export type SolicitudCompraColumnKey =
   | 'folio'
   | 'observacion'
-  | 'estado'
+  | 'seguimiento'
   | 'prioridad'
-  | 'equipos'
+  | 'destinos'
   | 'area'
   | 'solicitante'
   | 'fechaEntrega'
@@ -30,7 +30,6 @@ export type SolicitudCompraFechaEntregaOrigen =
 export interface SolicitudCompraListRpcParams {
   p_busqueda: string | null;
   p_grupo_listado: SolicitudCompraGrupoListado | null;
-  p_estado_codigo: string | null;
   p_prioridad_codigo: string | null;
   p_fecha_desde: string | null;
   p_fecha_hasta: string | null;
@@ -49,8 +48,7 @@ export interface SolicitudCompraListRpcRow {
   folio_oc_principal: string | null;
   folios_oc: string[] | null;
   observacion: string | null;
-  estado_codigo: string | null;
-  estado_nombre: string | null;
+  seguimiento: SolicitudCompraSeguimientoRpc | null;
   badge_codigo: string | null;
   badge_label: string | null;
   prioridad_codigo: string | null;
@@ -61,14 +59,13 @@ export interface SolicitudCompraListRpcRow {
   fecha_entrega_mostrada: string | null;
   fecha_entrega_origen: SolicitudCompraFechaEntregaOrigen | null;
   grupo_listado: SolicitudCompraGrupoListado | null;
-  disponible_desde: string | null;
   bloqueada: boolean;
   locked_by_email: string | null;
   locked_at: string | null;
   cantidad_adjuntos: number;
   tiene_adjuntos: boolean;
   cantidad_oc: number;
-  ordenes_compra_resumen: string | null;
+  ordenes_compra_resumen: unknown[] | null;
   estado_oc_principal: string | null;
   evaluacion_principal: string | null;
   recepcion_principal: string | null;
@@ -79,6 +76,13 @@ export interface SolicitudCompraListRpcRow {
   productos_activos: number;
   servicios_total: number;
   total_count: number;
+  destinos: string[] | null;
+  destinos_total: number;
+  accion_rol: SolicitudCompraAccionRolRpc | null;
+  badge_delegacion: SolicitudCompraBadgeDelegacionRpc | null;
+  es_delegada: boolean;
+  tipo_delegacion: string | null;
+  es_mia: boolean;
 }
 
 export interface SolicitudCompraFolioUi {
@@ -88,14 +92,44 @@ export interface SolicitudCompraFolioUi {
   foliosOc: string[];
 }
 
-export interface SolicitudCompraEstadoUi {
-  codigo: string;
-  nombre: string;
-  badgeCodigo: string;
-  badgeLabel: string;
+export interface SolicitudCompraSeguimientoRpc {
+  tipo: string | null;
+  codigo: string | null;
+  label: string | null;
+  fecha: string | null;
+  fecha_label: string | null;
+  origen: string | null;
+  alcance_codigo: string | null;
 }
 
-export interface SolicitudCompraEstadoFilterOption {
+export interface SolicitudCompraAccionRolRpc {
+  key: string | null;
+  label: string | null;
+  fecha: string | null;
+  actor_email: string | null;
+  role_codigo: string | null;
+}
+
+export interface SolicitudCompraBadgeDelegacionRpc {
+  codigo: string | null;
+  label: string | null;
+  tipo_delegacion: string | null;
+  solicitud_origen_id: string | null;
+  creada_por_email: string | null;
+  creada_para_email: string | null;
+}
+
+export interface SolicitudCompraSeguimientoUi {
+  codigo: string;
+  label: string;
+  tipo: string | null;
+  fecha: string | null;
+  fechaLabel: string | null;
+  origen: string | null;
+  alcanceCodigo: string | null;
+}
+
+export interface SolicitudCompraSeguimientoFilterOption {
   value: string | null;
   label: string;
 }
@@ -124,13 +158,13 @@ export interface SolicitudCompraFechaEntregaUi {
   origen: SolicitudCompraFechaEntregaOrigen | null;
 }
 
-export interface SolicitudCompraEquipoPreview {
+export interface SolicitudCompraDestinoPreview {
   loading: boolean;
-  codigos: string[];
+  items: string[];
   visibles: string[];
   ocultos: number;
   error: string | null;
-  source: 'mock' | 'batch' | 'none';
+  source: 'destinos';
 }
 
 export interface SolicitudCompraIndicadores {
@@ -164,34 +198,57 @@ export interface SolicitudCompraOcResumenUi {
   ordenesCompraResumen: string | null;
 }
 
+export interface SolicitudCompraAccionRolUi {
+  key: string | null;
+  label: string | null;
+  fecha: string | null;
+  actorEmail: string | null;
+  roleCodigo: string | null;
+}
+
+export interface SolicitudCompraBadgeDelegacionUi {
+  codigo: string;
+  label: string;
+  tipoDelegacion: string | null;
+  solicitudOrigenId: string | null;
+  creadaPorEmail: string | null;
+  creadaParaEmail: string | null;
+}
+
 export interface SolicitudCompraListItem {
   id: string | number;
   viewerRoleCodigo: SolicitudCompraRoleCodigo;
   viewerAreaCodigo: string | null;
   folio: SolicitudCompraFolioUi;
   observacion: string | null;
-  estado: SolicitudCompraEstadoUi;
+  seguimiento: SolicitudCompraSeguimientoUi;
   prioridad: SolicitudCompraPrioridadUi;
-  equipos: SolicitudCompraEquipoPreview;
+  destinos: SolicitudCompraDestinoPreview;
   area: SolicitudCompraAreaUi;
   solicitante: SolicitudCompraSolicitanteUi;
   fechaEntrega: SolicitudCompraFechaEntregaUi;
   indicadores: SolicitudCompraIndicadores;
   grupoListado: SolicitudCompraGrupoListado;
-  disponibleDesde: string | null;
   conteos: SolicitudCompraConteosUi;
   ocResumen: SolicitudCompraOcResumenUi;
+  accionRol: SolicitudCompraAccionRolUi | null;
+  badgeDelegacion: SolicitudCompraBadgeDelegacionUi | null;
+  esDelegada: boolean;
+  tipoDelegacion: string | null;
+  esMia: boolean;
 }
 
 export interface SolicitudCompraListFilters {
   busqueda: string;
   grupoListado: SolicitudCompraGrupoListado;
-  estadoCodigo: string | null;
+  seguimientoCodigo: string | null;
   prioridadCodigo: string | null;
   fechaDesde: string | null;
   fechaHasta: string | null;
   soloBloqueadas: boolean;
+  soloCreadasPorMi: boolean;
   soloDiferenciaOc: boolean;
+  badgeDelegacionCodigo: string | null;
 }
 
 export interface SolicitudCompraPagination {
@@ -214,4 +271,9 @@ export interface SolicitudCompraListState {
   baseEmpty: boolean;
   lastRequestKey: string | null;
   initialized: boolean;
+  config: import('./solicitudesCompra.config.types').SolicitudCompraListConfigRpc | null;
+  configAvailable: boolean;
+  configLoadFailed: boolean;
+  configWarningToken: number;
+  uiMessage: string | null;
 }

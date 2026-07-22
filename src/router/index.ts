@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import { supabase } from '@/lib/supabase';
+import { useFeatureAccessStore } from '@/stores/db_mantenimiento/app_feature_access/featureAccess.store';
 
 const EmptyRouteComponent = { template: '<div></div>' };
 
@@ -50,6 +51,9 @@ const router = createRouter({
               path: 'nueva',
               name: 'SolicitudCompraCrear',
               component: () => import('@/views/compras/SolicitudCompraCrearView.vue'),
+              meta: {
+                requiredFeature: 'crear_solicitud_compra',
+              },
             },
           ],
         },
@@ -77,11 +81,30 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const { data: { session } } = await supabase.auth.getSession();
   const isAuthenticated = !!session;
+  const requiredFeature = typeof to.meta.requiredFeature === 'string'
+    ? to.meta.requiredFeature
+    : null;
   
   if (to.name !== 'Login' && !isAuthenticated) {
     next({ name: 'Login' });
   } else if (to.name === 'Login' && isAuthenticated) {
     next({ path: '/' });
+  } else if (requiredFeature) {
+    const featureAccessStore = useFeatureAccessStore();
+
+    try {
+      await featureAccessStore.cargarFuncionalidadesPermitidas();
+    } catch (error) {
+      next({ name: 'Compras' });
+      return;
+    }
+
+    if (!featureAccessStore.tieneFuncionalidad(requiredFeature)) {
+      next({ name: 'Compras' });
+      return;
+    }
+
+    next();
   } else {
     next();
   }

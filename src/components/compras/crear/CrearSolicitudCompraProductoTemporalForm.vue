@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AlertCircle, Check, ChevronDown, LoaderCircle, Search, X } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, onMounted, reactive, useTemplateRef, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, useTemplateRef, watch } from 'vue';
 import { shallowRef } from 'vue';
 
 import { useUnidadMedidaOptions } from '@/composables/compras/useUnidadMedidaOptions';
@@ -18,16 +18,19 @@ const emit = defineEmits<{
 }>();
 
 const formState = reactive<ProductoTemporalDraft>({
+  nombre: props.initialDraft.nombre,
   descripcion: props.initialDraft.descripcion,
   unidadCodigo: props.initialDraft.unidadCodigo,
   unidadLabel: props.initialDraft.unidadLabel,
 });
 
 const fieldErrors = reactive<{
+  nombre?: string;
   descripcion?: string;
   unidadCodigo?: string;
 }>({});
 
+const nombreFieldRef = useTemplateRef<HTMLTextAreaElement>('nombreField');
 const unitFieldOpen = shallowRef(false);
 const unitFieldRef = useTemplateRef<HTMLElement>('unitField');
 
@@ -48,15 +51,36 @@ const title = computed(() => props.mode === 'edit'
   : 'Agregar producto manual');
 const submitLabel = computed(() => props.mode === 'edit' ? 'Guardar cambios' : 'Agregar');
 const shouldShowUnitResults = computed(() => unitFieldOpen.value && !error.value);
+const nombreCharacterCount = computed(() => formState.nombre.length);
+
+const normalizeText = (value: string): string => value.trim().toUpperCase();
+
+const resizeNombreField = (): void => {
+  const textarea = nombreFieldRef.value;
+
+  if (!textarea) {
+    return;
+  }
+
+  textarea.style.height = '0px';
+  textarea.style.height = `${textarea.scrollHeight}px`;
+};
 
 watch(() => props.initialDraft, (nextDraft) => {
+  formState.nombre = nextDraft.nombre;
   formState.descripcion = nextDraft.descripcion;
   formState.unidadCodigo = nextDraft.unidadCodigo;
   formState.unidadLabel = nextDraft.unidadLabel;
   syncSelection(nextDraft.unidadCodigo || null, nextDraft.unidadLabel);
+  fieldErrors.nombre = undefined;
   fieldErrors.descripcion = undefined;
   fieldErrors.unidadCodigo = undefined;
 }, { immediate: true, deep: true });
+
+watch(() => formState.nombre, async () => {
+  await nextTick();
+  resizeNombreField();
+}, { immediate: true });
 
 watch(query, (value) => {
   const normalizedValue = value.trim();
@@ -108,14 +132,16 @@ onBeforeUnmount(() => {
 });
 
 const validateForm = (): boolean => {
-  fieldErrors.descripcion = formState.descripcion.trim()
-    ? undefined
-    : 'La descripcion del producto temporal es obligatoria.';
+  fieldErrors.nombre = formState.nombre.trim()
+    ? (formState.nombre.trim().length <= 56
+      ? undefined
+      : 'El nombre del producto temporal no puede superar los 56 caracteres.')
+    : 'El nombre del producto temporal es obligatorio.';
   fieldErrors.unidadCodigo = formState.unidadCodigo.trim()
     ? undefined
     : 'La unidad del producto temporal es obligatoria.';
 
-  return !fieldErrors.descripcion && !fieldErrors.unidadCodigo;
+  return !fieldErrors.nombre && !fieldErrors.unidadCodigo;
 };
 
 const handleSubmit = (): void => {
@@ -124,7 +150,10 @@ const handleSubmit = (): void => {
   }
 
   emit('submit', {
-    descripcion: formState.descripcion.trim(),
+    nombre: normalizeText(formState.nombre),
+    descripcion: formState.descripcion?.trim()
+      ? normalizeText(formState.descripcion)
+      : null,
     unidadCodigo: formState.unidadCodigo.trim(),
     unidadLabel: formState.unidadCodigo.trim(),
   });
@@ -138,7 +167,7 @@ const handleSubmit = (): void => {
         {{ title }}
       </p>
       <p class="mt-2 text-sm text-stone-600">
-        Completa la descripcion y la unidad.
+        Completa el nombre y la unidad. La descripcion es opcional.
       </p>
     </div>
 
@@ -146,19 +175,50 @@ const handleSubmit = (): void => {
       <div class="space-y-4">
         <div class="space-y-2">
           <label
+            for="producto-temporal-nombre"
+            class="text-sm font-semibold text-stone-900"
+          >
+            Nombre
+          </label>
+          <textarea
+            id="producto-temporal-nombre"
+            ref="nombreField"
+            v-model="formState.nombre"
+            rows="1"
+            class="min-h-8 w-full resize-none overflow-hidden whitespace-pre-wrap break-words rounded-xl border bg-white px-3 py-2 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-main"
+            :class="fieldErrors.nombre ? 'border-danger/40' : 'border-stone-300'"
+            maxlength="56"
+            placeholder="Ej. Producto no catalogado"
+            @input="resizeNombreField"
+          />
+          <div class="flex items-center justify-between gap-3 text-xs text-stone-500">
+            <p class="font-semibold text-stone-600">
+              {{ nombreCharacterCount }}/56
+            </p>
+          </div>
+          <p
+            v-if="fieldErrors.nombre"
+            class="text-sm font-medium text-danger"
+          >
+            {{ fieldErrors.nombre }}
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <label
             for="producto-temporal-descripcion"
             class="text-sm font-semibold text-stone-900"
           >
             Descripcion
           </label>
-          <input
+          <textarea
             id="producto-temporal-descripcion"
             v-model="formState.descripcion"
-            type="text"
-            class="min-h-11 w-full rounded-xl border bg-white px-3 py-2 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-main"
+            rows="2"
+            class="min-h-16 w-full resize-y rounded-xl border bg-white px-3 py-2 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-main"
             :class="fieldErrors.descripcion ? 'border-danger/40' : 'border-stone-300'"
-            placeholder="Ej. Producto no catalogado"
-          >
+            placeholder="Opcional"
+          />
           <p
             v-if="fieldErrors.descripcion"
             class="text-sm font-medium text-danger"

@@ -1,18 +1,31 @@
 <script setup lang="ts">
-import CrearSolicitudEquiposSelector from './CrearSolicitudEquiposSelector.vue';
+import { computed } from 'vue';
+
+import { useCatalogoContextoDestinoOptions } from '@/composables/compras/useCatalogoContextoDestinoOptions';
+import { useCalendarioFeriadosStore } from '@/stores/db_compras/calendario_feriados/calendarioFeriados.store';
+import type { CatalogoContextoDestinoOption } from '@/stores/db_compras/catalogo_contexto_destino/catalogoContextoDestino.types';
+import {
+  isAllowedDeliveryDateInNormalMode,
+  parseIsoDate,
+} from '@/stores/db_compras/solicitudes_compra/crear_solicitud/fechaEntregaRules';
+
+import CrearSolicitudContextosServicioSelector from './CrearSolicitudContextosServicioSelector.vue';
 import CrearSolicitudFechaField from './CrearSolicitudFechaField.vue';
 import CrearSolicitudTipoField from './CrearSolicitudTipoField.vue';
 import type { EquipoOption } from '@/stores/dbequipos/equipos/equipos.types';
 import type {
   CrearSolicitudFieldErrors,
-  EquipoSeleccionado,
+  DestinoSeleccionado,
   SolicitudCompraTipoSolicitud,
 } from '@/stores/db_compras/solicitudes_compra/crear_solicitud/solicitudesCompraCrear.types';
 
-defineProps<{
+const props = defineProps<{
   tipoSolicitud: SolicitudCompraTipoSolicitud | null;
   fechaEntrega: string | null;
-  equipos: EquipoSeleccionado[];
+  fechaEntregaRequiresReview: boolean;
+  fechaEntregaMinima: string | null;
+  isZafraActiva: boolean;
+  destinos: DestinoSeleccionado[];
   validationErrors: CrearSolicitudFieldErrors;
   searchResults: EquipoOption[];
   isSearching: boolean;
@@ -24,7 +37,8 @@ const emit = defineEmits<{
   (e: 'update:fechaEntrega', value: string | null): void;
   (e: 'search:equipos', value: string): void;
   (e: 'add:equipo', item: EquipoOption): void;
-  (e: 'remove:equipo', codEquipo: string): void;
+  (e: 'remove:destino', payload: { codigo: string; tipoOrigen?: string }): void;
+  (e: 'add:destino-contexto', item: CatalogoContextoDestinoOption): void;
 }>();
 
 const emitTipoSolicitud = (
@@ -35,6 +49,42 @@ const emitTipoSolicitud = (
 
 const emitFechaEntrega = (value: string | null | undefined): void => {
   emit('update:fechaEntrega', value ?? null);
+};
+
+const {
+  options: serviceContextOptions,
+  loading: serviceContextLoading,
+  error: serviceContextError,
+} = useCatalogoContextoDestinoOptions(computed(() => props.tipoSolicitud));
+const calendarioFeriadosStore = useCalendarioFeriadosStore();
+
+const minimumDate = computed(() => parseIsoDate(props.fechaEntregaMinima));
+const holidayHighlight = computed(() => ({
+  dates: Object.values(calendarioFeriadosStore.holidaysByYear)
+    .flat()
+    .map((value) => parseIsoDate(value))
+    .filter((value): value is Date => Boolean(value)),
+  options: {
+    highlightDisabled: true,
+  },
+}));
+const disabledDate = (date: Date): boolean => {
+  if (props.isZafraActiva) {
+    return false;
+  }
+
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+
+  if (minimumDate.value && normalized < minimumDate.value) {
+    return true;
+  }
+
+  return !isAllowedDeliveryDateInNormalMode(normalized, calendarioFeriadosStore.holidaysByYear).isValid;
+};
+
+const handleMonthYearUpdate = (payload: { year: number }): void => {
+  void calendarioFeriadosStore.ensureYear(payload.year);
 };
 </script>
 
@@ -51,20 +101,30 @@ const emitFechaEntrega = (value: string | null | undefined): void => {
         <CrearSolicitudFechaField
           :model-value="fechaEntrega"
           :error="validationErrors.fechaEntrega"
+          :show-review-warning="fechaEntregaRequiresReview"
+          :min-date="minimumDate"
+          :is-zafra-activa="isZafraActiva"
+          :disabled-date="disabledDate"
+          :holiday-highlight="holidayHighlight"
           @update:model-value="emitFechaEntrega"
+          @update-month-year="handleMonthYearUpdate"
         />
       </div>
 
-      <CrearSolicitudEquiposSelector
+      <CrearSolicitudContextosServicioSelector
         class="min-h-0 flex-1"
-        :selected-items="equipos"
-        :search-results="searchResults"
-        :is-searching="isSearching"
+        :selected-items="destinos"
+        :context-options="serviceContextOptions"
+        :equipment-search-results="searchResults"
+        :is-loading="serviceContextLoading"
+        :is-searching-equipment="isSearching"
+        :load-error="serviceContextError"
         :search-error="searchError"
-        :field-error="validationErrors.equipos"
-        @search="emit('search:equipos', $event)"
-        @add="emit('add:equipo', $event)"
-        @remove="emit('remove:equipo', $event)"
+        :field-error="validationErrors.destinos"
+        @search:equipos="emit('search:equipos', $event)"
+        @add:equipo="emit('add:equipo', $event)"
+        @add="emit('add:destino-contexto', $event)"
+        @remove="emit('remove:destino', $event)"
       />
     </div>
   </section>

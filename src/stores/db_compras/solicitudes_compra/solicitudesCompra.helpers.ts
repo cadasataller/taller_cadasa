@@ -1,13 +1,11 @@
 import type {
   SolicitudCompraListFilters,
   SolicitudCompraListItem,
-  SolicitudCompraEquipoPreview,
   SolicitudCompraPagination,
 } from './solicitudesCompra.types';
 
 const DEFAULT_PAGE_SIZE = 25;
-const DEFAULT_VISIBLE_EQUIPOS = 3;
-const MOCK_EQUIPOS = ['422005', '422009', '422014'] as const;
+const DEFAULT_VISIBLE_DESTINOS = 3;
 
 export const normalizarTextoVacio = (value: string | null | undefined): string | null => {
   if (typeof value !== 'string') {
@@ -33,29 +31,15 @@ export const safeArrayText = (value: unknown): string[] => {
   return normalizedValue.length > 0 ? [normalizedValue] : [];
 };
 
-export const calcularEquiposVisibles = (
-  codigos: string[],
-  max = DEFAULT_VISIBLE_EQUIPOS
+export const calcularDestinosVisibles = (
+  items: string[],
+  max = DEFAULT_VISIBLE_DESTINOS
 ): { visibles: string[]; ocultos: number } => {
-  const normalizedCodigos = safeArrayText(codigos);
-  const visibles = normalizedCodigos.slice(0, max);
-  const ocultos = Math.max(normalizedCodigos.length - visibles.length, 0);
+  const normalizedItems = safeArrayText(items);
+  const visibles = normalizedItems.slice(0, max);
+  const ocultos = Math.max(normalizedItems.length - visibles.length, 0);
 
   return { visibles, ocultos };
-};
-
-export const crearEquiposMock = (): SolicitudCompraEquipoPreview => {
-  const codigos = [...MOCK_EQUIPOS];
-  const { visibles, ocultos } = calcularEquiposVisibles(codigos);
-
-  return {
-    loading: false,
-    codigos,
-    visibles,
-    ocultos,
-    error: null,
-    source: 'mock',
-  };
 };
 
 export const isSearchMode = (value: string): boolean =>
@@ -126,14 +110,18 @@ export const matchesSolicitudBusqueda = (
     item.folio.folioOcPrincipal,
     ...item.folio.foliosOc,
     item.observacion,
-    item.estado.codigo,
-    item.estado.nombre,
+    item.seguimiento.codigo,
+    item.seguimiento.label,
+    item.seguimiento.fechaLabel,
     item.prioridad.codigo,
     item.prioridad.nombre,
     item.area.codigo,
     item.area.nombre,
     item.solicitante.nombre,
+    ...item.destinos.items,
     item.ocResumen.ordenesCompraResumen,
     item.ocResumen.proveedorPrincipal,
+    item.badgeDelegacion?.label,
+    item.badgeDelegacion?.tipoDelegacion,
   ].some((value) => includesNeedle(value, normalizedSearch));
 };

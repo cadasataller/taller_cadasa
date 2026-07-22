@@ -5,7 +5,7 @@ import type {
   SolicitudCompraRoleCodigo,
 } from './solicitudesCompra.types';
 import {
-  crearEquiposMock,
+  calcularDestinosVisibles,
   formatFolioSol,
   normalizarTextoVacio,
   safeArrayText,
@@ -41,13 +41,19 @@ export const mapSolicitudCompraListRowToItem = (
 ): SolicitudCompraListItem => {
   const foliosOc = safeArrayText(row.folios_oc);
   const ordenesCompraResumenParts = safeArrayText(row.ordenes_compra_resumen);
-  const estadoCodigo = normalizarTextoVacio(row.estado_codigo) ?? 'sin_estado';
-  const estadoNombre = normalizarTextoVacio(row.estado_nombre) ?? 'Sin estado';
+  const destinosItems = safeArrayText(row.destinos);
+  const destinosTotal = Math.max(row.destinos_total, 0);
+  const { visibles, ocultos } = calcularDestinosVisibles(destinosItems);
+  const seguimientoCodigo = normalizarTextoVacio(row.seguimiento?.codigo) ?? 'sin_seguimiento';
+  const seguimientoLabel = normalizarTextoVacio(row.seguimiento?.label) ?? 'Sin seguimiento';
   const prioridadCodigo = normalizarTextoVacio(row.prioridad_codigo) ?? 'sin_prioridad';
   const prioridadNombre = normalizarTextoVacio(row.prioridad_nombre) ?? 'Sin prioridad';
   const cantidadAdjuntos = Math.max(row.cantidad_adjuntos, 0);
   const cantidadDiferencias = Math.max(row.cantidad_diferencias, 0);
   const cantidadOc = Math.max(row.cantidad_oc, 0);
+  const productosTotal = Math.max(row.productos_total, 0);
+  const productosActivos = Math.max(row.productos_activos, 0);
+  const serviciosTotal = Math.max(row.servicios_total, 0);
 
   return {
     id: row.id,
@@ -60,17 +66,27 @@ export const mapSolicitudCompraListRowToItem = (
       foliosOc,
     },
     observacion: normalizarTextoVacio(row.observacion),
-    estado: {
-      codigo: estadoCodigo,
-      nombre: estadoNombre,
-      badgeCodigo: normalizarTextoVacio(row.badge_codigo) ?? estadoCodigo,
-      badgeLabel: normalizarTextoVacio(row.badge_label) ?? estadoNombre,
+    seguimiento: {
+      codigo: seguimientoCodigo,
+      label: seguimientoLabel,
+      tipo: normalizarTextoVacio(row.seguimiento?.tipo),
+      fecha: normalizarTextoVacio(row.seguimiento?.fecha),
+      fechaLabel: normalizarTextoVacio(row.seguimiento?.fecha_label),
+      origen: normalizarTextoVacio(row.seguimiento?.origen),
+      alcanceCodigo: normalizarTextoVacio(row.seguimiento?.alcance_codigo),
     },
     prioridad: {
       codigo: prioridadCodigo,
       nombre: prioridadNombre,
     },
-    equipos: crearEquiposMock(),
+    destinos: {
+      loading: false,
+      items: destinosItems,
+      visibles,
+      ocultos: Math.max(destinosTotal - visibles.length, ocultos, 0),
+      error: null,
+      source: 'destinos',
+    },
     area: {
       codigo: normalizarTextoVacio(row.area_solicitante_codigo),
       nombre: normalizarTextoVacio(row.area_solicitante_nombre),
@@ -101,11 +117,10 @@ export const mapSolicitudCompraListRowToItem = (
       },
     },
     grupoListado: toGrupoListado(row.grupo_listado),
-    disponibleDesde: normalizarTextoVacio(row.disponible_desde),
     conteos: {
-      productosTotal: Math.max(row.productos_total, 0),
-      productosActivos: Math.max(row.productos_activos, 0),
-      serviciosTotal: Math.max(row.servicios_total, 0),
+      productosTotal,
+      productosActivos,
+      serviciosTotal,
       cantidadOc,
     },
     ocResumen: {
@@ -118,6 +133,28 @@ export const mapSolicitudCompraListRowToItem = (
           ? ordenesCompraResumenParts.join(', ')
           : null,
     },
+    accionRol: row.accion_rol
+      ? {
+        key: normalizarTextoVacio(row.accion_rol.key),
+        label: normalizarTextoVacio(row.accion_rol.label),
+        fecha: normalizarTextoVacio(row.accion_rol.fecha),
+        actorEmail: normalizarTextoVacio(row.accion_rol.actor_email),
+        roleCodigo: normalizarTextoVacio(row.accion_rol.role_codigo),
+      }
+      : null,
+    badgeDelegacion: row.badge_delegacion?.codigo
+      ? {
+        codigo: normalizarTextoVacio(row.badge_delegacion.codigo) ?? 'sin_delegacion',
+        label: normalizarTextoVacio(row.badge_delegacion.label) ?? 'Delegada',
+        tipoDelegacion: normalizarTextoVacio(row.badge_delegacion.tipo_delegacion),
+        solicitudOrigenId: normalizarTextoVacio(row.badge_delegacion.solicitud_origen_id),
+        creadaPorEmail: normalizarTextoVacio(row.badge_delegacion.creada_por_email),
+        creadaParaEmail: normalizarTextoVacio(row.badge_delegacion.creada_para_email),
+      }
+      : null,
+    esDelegada: row.es_delegada === true,
+    tipoDelegacion: normalizarTextoVacio(row.tipo_delegacion),
+    esMia: row.es_mia === true,
   };
 };
 

@@ -4,10 +4,10 @@ import { computed, onBeforeUnmount, shallowRef, watch } from 'vue';
 
 import CrearSolicitudEquipoChip from './CrearSolicitudEquipoChip.vue';
 import type { EquipoOption } from '@/stores/dbequipos/equipos/equipos.types';
-import type { EquipoSeleccionado } from '@/stores/db_compras/solicitudes_compra/crear_solicitud/solicitudesCompraCrear.types';
+import type { DestinoSeleccionado } from '@/stores/db_compras/solicitudes_compra/crear_solicitud/solicitudesCompraCrear.types';
 
 defineProps<{
-  selectedItems: EquipoSeleccionado[];
+  selectedItems: DestinoSeleccionado[];
   searchResults: EquipoOption[];
   isSearching: boolean;
   searchError: string | null;
@@ -17,7 +17,7 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'search', value: string): void;
   (e: 'add', item: EquipoOption): void;
-  (e: 'remove', codEquipo: string): void;
+  (e: 'remove', payload: { codigo: string; tipoOrigen?: string }): void;
 }>();
 
 const query = shallowRef('');
@@ -59,7 +59,7 @@ const searchStateMessage = computed(() => {
 <template>
   <div class="flex h-full min-h-0 flex-col gap-3 overflow-y-auto lg:overflow-hidden">
     <label class="block text-xs font-semibold text-stone-800">
-      Equipos <span class="text-danger">*</span>
+      Destino <span class="text-danger">*</span>
     </label>
 
     <div class="grid min-h-0 flex-1 gap-4 lg:grid-cols-2 lg:overflow-hidden">
@@ -104,10 +104,10 @@ const searchStateMessage = computed(() => {
           <div class="flex flex-wrap items-start gap-2">
             <CrearSolicitudEquipoChip
               v-for="item in selectedItems"
-              :key="item.codEquipo"
+              :key="`${item.tipoOrigen}-${item.codigo}`"
               :label="item.label"
               full-width-mobile
-              @remove="emit('remove', item.codEquipo)"
+              @remove="emit('remove', { codigo: item.codigo, tipoOrigen: item.tipoOrigen })"
             />
           </div>
         </div>
@@ -116,7 +116,7 @@ const searchStateMessage = computed(() => {
           v-else
           class="sticky top-0 z-40 -mt-1 rounded-lg border border-dashed border-stone-300 bg-white/95 px-3 py-2 text-xs text-stone-500 shadow-sm backdrop-blur md:text-sm lg:hidden"
         >
-          Aún no has seleccionado equipos.
+          Aún no has seleccionado destinos.
         </div>
 
         <div
@@ -153,9 +153,9 @@ const searchStateMessage = computed(() => {
         >
           <CrearSolicitudEquipoChip
             v-for="item in selectedItems"
-            :key="item.codEquipo"
+            :key="`${item.tipoOrigen}-${item.codigo}`"
             :label="item.label"
-            @remove="emit('remove', item.codEquipo)"
+            @remove="emit('remove', { codigo: item.codigo, tipoOrigen: item.tipoOrigen })"
           />
         </div>
 
@@ -163,7 +163,7 @@ const searchStateMessage = computed(() => {
           v-else
           class="rounded-lg border border-dashed border-stone-300 bg-white px-3 py-2 text-xs text-stone-500 md:text-sm"
         >
-          Aún no has seleccionado equipos.
+          Aún no has seleccionado destinos.
         </div>
       </div>
     </div>

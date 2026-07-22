@@ -2,16 +2,36 @@
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 import { computed } from 'vue';
 import { es } from 'date-fns/locale';
+import { formatLongSpanishDate } from '@/utils/formatterDateHelper';
+
+interface DatepickerMonthYearChangePayload {
+  instance: number;
+  month: number;
+  year: number;
+}
+
+interface DatepickerHighlightConfig {
+  dates: Date[];
+  options: {
+    highlightDisabled: boolean;
+  };
+}
 
 const model = defineModel<string | null>();
 
-defineProps<{
+const props = defineProps<{
   error?: string;
+  showReviewWarning?: boolean;
+  minDate?: Date | null;
+  isZafraActiva?: boolean;
+  disabledDate?: (date: Date) => boolean;
+  holidayHighlight?: DatepickerHighlightConfig;
 }>();
-
-const minDate = new Date();
+const emit = defineEmits<{
+  (e: 'updateMonthYear', value: DatepickerMonthYearChangePayload): void;
+}>();
 const inputFormats = {
-  input: 'dd MMM yyyy',
+  input: formatLongSpanishDate,
 };
 
 const toDateValue = (value: string | null): Date | null => {
@@ -51,7 +71,9 @@ const displayValue = computed<Date | null>({
     >
       <VueDatePicker
         v-model="displayValue"
-        :min-date="minDate"
+        :min-date="props.isZafraActiva ? undefined : (props.minDate ?? undefined)"
+        :disabled-dates="props.disabledDate"
+        :highlight="props.holidayHighlight"
         :enable-time-picker="false"
         :locale="es"
         :formats="inputFormats"
@@ -59,6 +81,7 @@ const displayValue = computed<Date | null>({
         placeholder="Selecciona la fecha de entrega"
         class="crear-solicitud-datepicker "
         input-class-name="crear-solicitud-datepicker-input"
+        @update-month-year="emit('updateMonthYear', $event)"
       />
     </div>
 
@@ -69,5 +92,24 @@ const displayValue = computed<Date | null>({
     >
       {{ error }}
     </p>
+
+    <p
+      v-if="showReviewWarning"
+      class="text-sm font-medium text-danger"
+    >
+      Actualice la fecha de entrega.
+    </p>
   </div>
 </template>
+
+<style scoped>
+:deep(.dp--cell-highlight) {
+  background-color: rgba(192, 57, 43, 0.18);
+  color: #9f2f23;
+}
+
+:deep(.dp--cell-highlight.dp--cell-disabled) {
+  background-color: rgba(192, 57, 43, 0.14);
+  color: #b14a3f;
+}
+</style>

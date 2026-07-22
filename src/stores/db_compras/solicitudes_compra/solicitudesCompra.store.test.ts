@@ -12,6 +12,7 @@ import type {
 
 vi.mock('./solicitudesCompra.service', () => ({
   solicitudesCompraService: {
+    obtenerConfigListado: vi.fn(),
     obtenerSolicitudesListaPagina: vi.fn(),
     buscarSolicitudesLista: vi.fn(),
   },
@@ -34,6 +35,66 @@ const storeSource = readFileSync(
 const mockedService = vi.mocked(solicitudesCompraService);
 const mockedMapper = vi.mocked(mapSolicitudCompraListRowsToItems);
 
+const createConfig = () => ({
+  viewer: {
+    email: 'viewer@cadasa.test',
+    role_codigo: 'operativo',
+    area_codigo: 'cosecha_agricola',
+  },
+  alcances: [],
+  grupos: [
+    {
+      codigo: 'en_proceso' as const,
+      label: 'En Proceso',
+      visible: true,
+      seguimientos: [
+        {
+          codigo: 'borrador',
+          label: 'Borrador',
+          origen: 'estado_actual',
+          fecha_label: 'Disponible desde',
+          aplica_alcance_codigo: 'propia',
+          aplica_alcance_codigos: ['propia'],
+          visible_en_filtro: true,
+        },
+      ],
+    },
+    {
+      codigo: 'completadas' as const,
+      label: 'Completadas',
+      visible: true,
+      seguimientos: [
+        {
+          codigo: 'aprobado_gerencia',
+          label: 'Aprobado gerencia',
+          origen: 'estado_actual',
+          fecha_label: 'Aprobado',
+          aplica_alcance_codigo: 'todas',
+          aplica_alcance_codigos: ['todas'],
+          visible_en_filtro: true,
+        },
+      ],
+    },
+    {
+      codigo: 'descartadas' as const,
+      label: 'Descartadas',
+      visible: true,
+      seguimientos: [
+        {
+          codigo: 'rechazado',
+          label: 'Rechazado',
+          origen: 'estado_actual',
+          fecha_label: 'Cerrado',
+          aplica_alcance_codigo: 'todas',
+          aplica_alcance_codigos: ['todas'],
+          visible_en_filtro: true,
+        },
+      ],
+    },
+  ],
+  badges_delegacion: [],
+});
+
 const createRows = (
   count: number,
   startId: number,
@@ -50,16 +111,23 @@ const createRows = (
     folio_oc_principal: null,
     folios_oc: [],
     observacion: `Observacion ${startId + index}`,
-    estado_codigo: grupoListado === 'completadas'
-      ? 'aprobado_gerencia'
-      : grupoListado === 'descartadas'
-        ? 'rechazado'
-        : 'borrador',
-    estado_nombre: grupoListado === 'completadas'
-      ? 'Aprobado gerencia'
-      : grupoListado === 'descartadas'
-        ? 'Rechazado'
-        : 'Borrador',
+    seguimiento: {
+      tipo: 'estado_actual',
+      codigo: grupoListado === 'completadas'
+        ? 'aprobado_gerencia'
+        : grupoListado === 'descartadas'
+          ? 'rechazado'
+          : 'borrador',
+      label: grupoListado === 'completadas'
+        ? 'Aprobado gerencia'
+        : grupoListado === 'descartadas'
+          ? 'Rechazado'
+          : 'Borrador',
+      fecha: null,
+      fecha_label: null,
+      origen: 'estado_actual',
+      alcance_codigo: 'propia',
+    },
     badge_codigo: grupoListado === 'completadas'
       ? 'aprobado_gerencia'
       : grupoListado === 'descartadas'
@@ -78,7 +146,6 @@ const createRows = (
     fecha_entrega_mostrada: '2026-06-15',
     fecha_entrega_origen: 'solicitud',
     grupo_listado: grupoListado,
-    disponible_desde: null,
     bloqueada: false,
     locked_by_email: null,
     locked_at: null,
@@ -96,6 +163,13 @@ const createRows = (
     productos_activos: 1,
     servicios_total: 0,
     total_count: totalCount,
+    destinos: [],
+    destinos_total: 0,
+    accion_rol: null,
+    badge_delegacion: null,
+    es_delegada: false,
+    tipo_delegacion: null,
+    es_mia: false,
     ...overrides,
   }));
 
@@ -113,23 +187,26 @@ const createItemsFromRows = (
       foliosOc: row.folios_oc ?? [],
     },
     observacion: row.observacion,
-    estado: {
-      codigo: row.estado_codigo ?? 'borrador',
-      nombre: row.estado_nombre ?? 'Borrador',
-      badgeCodigo: row.badge_codigo ?? 'borrador',
-      badgeLabel: row.badge_label ?? 'Borrador',
+    seguimiento: {
+      codigo: row.seguimiento?.codigo ?? 'borrador',
+      label: row.seguimiento?.label ?? 'Borrador',
+      tipo: row.seguimiento?.tipo ?? null,
+      fecha: row.seguimiento?.fecha ?? null,
+      fechaLabel: row.seguimiento?.fecha_label ?? null,
+      origen: row.seguimiento?.origen ?? null,
+      alcanceCodigo: row.seguimiento?.alcance_codigo ?? null,
     },
     prioridad: {
       codigo: row.prioridad_codigo ?? 'alta',
       nombre: row.prioridad_nombre ?? 'Alta',
     },
-    equipos: {
+    destinos: {
       loading: false,
-      codigos: [],
+      items: [],
       visibles: [],
       ocultos: 0,
       error: null,
-      source: 'mock',
+      source: 'destinos',
     },
     area: {
       codigo: row.area_solicitante_codigo,
@@ -158,7 +235,6 @@ const createItemsFromRows = (
       },
     },
     grupoListado: (row.grupo_listado ?? 'en_proceso') as SolicitudCompraGrupoListado,
-    disponibleDesde: row.disponible_desde,
     conteos: {
       productosTotal: row.productos_total,
       productosActivos: row.productos_activos,
@@ -170,8 +246,13 @@ const createItemsFromRows = (
       evaluacionPrincipal: row.evaluacion_principal,
       recepcionPrincipal: row.recepcion_principal,
       proveedorPrincipal: row.proveedor_principal,
-      ordenesCompraResumen: row.ordenes_compra_resumen,
+      ordenesCompraResumen: null,
     },
+    accionRol: null,
+    badgeDelegacion: null,
+    esDelegada: row.es_delegada,
+    tipoDelegacion: row.tipo_delegacion,
+    esMia: row.es_mia,
   }));
 
 describe('solicitudesCompra.store', () => {
@@ -182,6 +263,7 @@ describe('solicitudesCompra.store', () => {
     vi.clearAllMocks();
 
     mockedMapper.mockImplementation((rows) => createItemsFromRows(rows));
+    mockedService.obtenerConfigListado.mockResolvedValue(createConfig());
   });
 
   afterEach(() => {
@@ -205,7 +287,6 @@ describe('solicitudesCompra.store', () => {
       expect.objectContaining({
         p_busqueda: null,
         p_grupo_listado: null,
-        p_estado_codigo: null,
         p_prioridad_codigo: null,
         p_solo_bloqueadas: false,
         p_solo_diferencia_oc: false,
@@ -296,7 +377,7 @@ describe('solicitudesCompra.store', () => {
     expect(store.items.every((item) => item.grupoListado === 'completadas')).toBe(true);
   });
 
-  it('limpia estado invalido al cambiar de grupo', async () => {
+  it('limpia seguimiento invalido al cambiar de grupo', async () => {
     const rows = [
       ...createRows(1, 1, 2, 'en_proceso'),
       ...createRows(1, 2, 2, 'completadas'),
@@ -305,13 +386,13 @@ describe('solicitudesCompra.store', () => {
 
     const store = useSolicitudesCompraStore();
     await store.cargarInicial();
-    await store.actualizarFiltro({ estadoCodigo: 'borrador' });
+    await store.actualizarFiltro({ seguimientoCodigo: 'borrador' });
 
-    expect(store.filters.estadoCodigo).toBe('borrador');
+    expect(store.filters.seguimientoCodigo).toBe('borrador');
 
     await store.cambiarGrupoListado('completadas');
 
-    expect(store.filters.estadoCodigo).toBeNull();
+    expect(store.filters.seguimientoCodigo).toBeNull();
   });
 
   it('marca baseEmpty cuando no llegan solicitudes en el rango', async () => {
@@ -325,6 +406,33 @@ describe('solicitudesCompra.store', () => {
     expect(store.items).toEqual([]);
     expect(store.pagination.totalCount).toBe(0);
     expect(store.pagination.hasMore).toBe(false);
+  });
+
+  it('mantiene el listado en vista reducida cuando falla la config remota', async () => {
+    const rows = [
+      ...createRows(1, 1, 2, 'en_proceso'),
+      ...createRows(1, 2, 2, 'completadas'),
+    ];
+    mockedService.obtenerConfigListado.mockRejectedValue(new Error('config error'));
+    mockedService.obtenerSolicitudesListaPagina.mockResolvedValue(rows);
+
+    const store = useSolicitudesCompraStore();
+    store.filters = {
+      ...store.filters,
+      seguimientoCodigo: 'borrador',
+      soloCreadasPorMi: true,
+      badgeDelegacionCodigo: 'correccion',
+    };
+
+    await store.cargarInicial();
+
+    expect(store.configAvailable).toBe(false);
+    expect(store.configLoadFailed).toBe(true);
+    expect(store.configWarningToken).toBe(1);
+    expect(store.filters.seguimientoCodigo).toBeNull();
+    expect(store.filters.soloCreadasPorMi).toBe(false);
+    expect(store.filters.badgeDelegacionCodigo).toBeNull();
+    expect(store.items).toHaveLength(2);
   });
 
   it('mantiene el store libre de RPC directos, templates y clases Tailwind', () => {

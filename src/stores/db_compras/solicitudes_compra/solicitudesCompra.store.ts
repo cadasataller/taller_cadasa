@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia';
 
 import {
-  isEstadoAllowedForGrupo,
-} from '@/components/compras/list/solicitudesListOptions';
-
+  getSeguimientoOptionsForGrupo,
+  getVisibleSolicitudCompraGroups,
+  isSeguimientoAllowedForGrupo,
+} from './solicitudesCompra.config.helpers';
 import { solicitudesCompraService } from './solicitudesCompra.service';
 import {
   canShowMoreLocal,
@@ -27,11 +28,13 @@ const REMOTE_PAGE_SIZE = 200;
 const createInitialFilters = (): SolicitudCompraListFilters => ({
   busqueda: '',
   grupoListado: 'en_proceso',
-  estadoCodigo: null,
+  seguimientoCodigo: null,
   prioridadCodigo: null,
   ...getDefaultDateRange(),
   soloBloqueadas: false,
+  soloCreadasPorMi: false,
   soloDiferenciaOc: false,
+  badgeDelegacionCodigo: null,
 });
 
 const createInitialState = (): SolicitudCompraListState => ({
@@ -47,6 +50,11 @@ const createInitialState = (): SolicitudCompraListState => ({
   baseEmpty: false,
   lastRequestKey: null,
   initialized: false,
+  config: null,
+  configAvailable: false,
+  configLoadFailed: false,
+  configWarningToken: 0,
+  uiMessage: null,
 });
 
 const createBaseRpcParams = (
@@ -55,7 +63,6 @@ const createBaseRpcParams = (
 ): SolicitudCompraListRpcParams => ({
   p_busqueda: null,
   p_grupo_listado: null,
-  p_estado_codigo: null,
   p_prioridad_codigo: null,
   p_fecha_desde: filters.fechaDesde,
   p_fecha_hasta: filters.fechaHasta,
@@ -77,13 +84,18 @@ const createRequestKey = (
 
 const filterVisibleItems = (
   items: SolicitudCompraListItem[],
-  filters: SolicitudCompraListFilters
+  filters: SolicitudCompraListFilters,
+  configAvailable: boolean
 ): SolicitudCompraListItem[] => items.filter((item) => {
-  if (item.grupoListado !== filters.grupoListado) {
+  if (configAvailable && item.grupoListado !== filters.grupoListado) {
     return false;
   }
 
-  if (filters.estadoCodigo && item.estado.codigo !== filters.estadoCodigo) {
+  if (
+    configAvailable
+    && filters.seguimientoCodigo
+    && item.seguimiento.codigo !== filters.seguimientoCodigo
+  ) {
     return false;
   }
 
@@ -95,7 +107,19 @@ const filterVisibleItems = (
     return false;
   }
 
+  if (configAvailable && filters.soloCreadasPorMi && !item.esMia) {
+    return false;
+  }
+
   if (filters.soloDiferenciaOc && !item.indicadores.diferenciaOc.visible) {
+    return false;
+  }
+
+  if (
+    configAvailable
+    && filters.badgeDelegacionCodigo
+    && item.badgeDelegacion?.codigo !== filters.badgeDelegacionCodigo
+  ) {
     return false;
   }
 
@@ -115,9 +139,79 @@ const getSafeTotalCount = (
 export const useSolicitudesCompraStore = defineStore('solicitudesCompraList', {
   state: (): SolicitudCompraListState => createInitialState(),
 
+  getters: {
+    visibleGroups: (state) => getVisibleSolicitudCompraGroups(state.config),
+
+    seguimientoOptions: (state) => getSeguimientoOptionsForGrupo(
+      getVisibleSolicitudCompraGroups(state.config),
+      state.filters.grupoListado
+    ),
+
+    canUseCreatedByMeFilter: (state) => {
+      if (!state.configAvailable) {
+        return false;
+      }
+
+      const role = state.config?.viewer.role_codigo ?? null;
+
+      return role === 'admin' || role === 'gerencia' || role === 'secretaria';
+    },
+  },
+
   actions: {
+    async cargarConfigRemota(): Promise<void> {
+      try {
+        const config = await solicitudesCompraService.obtenerConfigListado();
+        const visibleGroups = getVisibleSolicitudCompraGroups(config);
+        const currentGroupIsVisible = visibleGroups
+          .some((group) => group.codigo === this.filters.grupoListado);
+
+        this.config = config;
+        this.configAvailable = true;
+        this.configLoadFailed = false;
+        this.uiMessage = visibleGroups.length === 0
+          ? 'Usuario no tiene permitido ver solicitudes'
+          : null;
+
+        if (visibleGroups.length > 0 && !currentGroupIsVisible) {
+          this.filters = {
+            ...this.filters,
+            grupoListado: visibleGroups[0].codigo,
+            seguimientoCodigo: null,
+          };
+        }
+      } catch {
+        this.config = null;
+        this.configAvailable = false;
+        this.configLoadFailed = true;
+        this.configWarningToken += 1;
+        this.uiMessage = 'No pudimos cargar la configuracion del listado. Mostraremos una vista reducida.';
+        this.filters = {
+          ...this.filters,
+          seguimientoCodigo: null,
+          soloCreadasPorMi: false,
+          badgeDelegacionCodigo: null,
+        };
+      }
+    },
+
     applyVisibleItems(): void {
-      const filteredItems = filterVisibleItems(this.baseItems, this.filters);
+      if (this.configAvailable && this.visibleGroups.length === 0) {
+        this.items = [];
+        this.pagination = {
+          ...this.pagination,
+          localVisibleCount: this.pagination.pageSize,
+          totalCount: 0,
+          hasMore: false,
+        };
+        return;
+      }
+
+      const filteredItems = filterVisibleItems(
+        this.baseItems,
+        this.filters,
+        this.configAvailable
+      );
       const nextVisibleCount = Math.max(
         this.pagination.pageSize,
         Math.min(this.pagination.localVisibleCount, filteredItems.length || this.pagination.pageSize)
@@ -147,6 +241,12 @@ export const useSolicitudesCompraStore = defineStore('solicitudesCompraList', {
       this.lastRequestKey = requestKey;
 
       try {
+        await this.cargarConfigRemota();
+
+        if (this.lastRequestKey !== requestKey) {
+          return;
+        }
+
         let allRows: SolicitudCompraListRpcRow[] = [];
         let offset = 0;
         let totalCount = 0;
@@ -206,7 +306,11 @@ export const useSolicitudesCompraStore = defineStore('solicitudesCompraList', {
       try {
         const nextVisibleCount =
           this.pagination.localVisibleCount + this.pagination.pageSize;
-        const filteredItems = filterVisibleItems(this.baseItems, this.filters);
+        const filteredItems = filterVisibleItems(
+          this.baseItems,
+          this.filters,
+          this.configAvailable
+        );
 
         this.items = filteredItems.slice(0, nextVisibleCount);
         this.pagination = {
@@ -234,9 +338,19 @@ export const useSolicitudesCompraStore = defineStore('solicitudesCompraList', {
       const shouldReloadBase =
         partialFilters.fechaDesde !== undefined
         || partialFilters.fechaHasta !== undefined;
+      const visibleGroups = getVisibleSolicitudCompraGroups(this.config);
+      const shouldWarnInvalidSeguimiento =
+        this.configAvailable
+        && nextFilters.seguimientoCodigo !== null
+        && !isSeguimientoAllowedForGrupo(
+          visibleGroups,
+          nextFilters.grupoListado,
+          nextFilters.seguimientoCodigo
+        );
 
-      if (!isEstadoAllowedForGrupo(nextFilters.grupoListado, nextFilters.estadoCodigo)) {
-        nextFilters.estadoCodigo = null;
+      if (shouldWarnInvalidSeguimiento) {
+        nextFilters.seguimientoCodigo = null;
+        this.uiMessage = 'El seguimiento seleccionado ya no aplica para este grupo.';
       }
 
       this.filters = nextFilters;
@@ -261,12 +375,23 @@ export const useSolicitudesCompraStore = defineStore('solicitudesCompraList', {
     async cambiarGrupoListado(
       grupo: SolicitudCompraGrupoListado
     ): Promise<void> {
+      const visibleGroups = getVisibleSolicitudCompraGroups(this.config);
+      const seguimientoCodigo = isSeguimientoAllowedForGrupo(
+        visibleGroups,
+        grupo,
+        this.filters.seguimientoCodigo
+      )
+        ? this.filters.seguimientoCodigo
+        : null;
+
+      if (this.configAvailable && this.filters.seguimientoCodigo && !seguimientoCodigo) {
+        this.uiMessage = 'El seguimiento seleccionado ya no aplica para este grupo.';
+      }
+
       this.filters = {
         ...this.filters,
         grupoListado: grupo,
-        estadoCodigo: isEstadoAllowedForGrupo(grupo, this.filters.estadoCodigo)
-          ? this.filters.estadoCodigo
-          : null,
+        seguimientoCodigo,
       };
       this.resetVisibleItems();
     },

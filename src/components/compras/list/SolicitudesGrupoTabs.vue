@@ -1,23 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-
-import { solicitudCompraGrupoOptions } from '@/components/compras/list/solicitudesListOptions';
-import type { SolicitudCompraGrupoListado } from '@/stores/db_compras/solicitudes_compra/solicitudesCompra.types';
-
-interface TabOption {
-  value: SolicitudCompraGrupoListado;
-  label: string;
-}
+import type {
+  SolicitudCompraGrupoListado,
+  SolicitudCompraGrupoOption,
+} from '@/stores/db_compras/solicitudes_compra/solicitudesCompra.types';
 
 const props = defineProps<{
   modelValue: SolicitudCompraGrupoListado;
+  options: SolicitudCompraGrupoOption[];
 }>();
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: SolicitudCompraGrupoListado): void;
 }>();
-
-const tabOptions = computed<TabOption[]>(() => solicitudCompraGrupoOptions);
 
 const isActiveTab = (value: SolicitudCompraGrupoListado): boolean =>
   props.modelValue === value;
@@ -38,7 +32,7 @@ const selectTab = (value: SolicitudCompraGrupoListado): void => {
     aria-label="Grupo de solicitudes"
   >
     <button
-      v-for="tab in tabOptions"
+      v-for="tab in options"
       :key="tab.value"
       type="button"
       role="tab"

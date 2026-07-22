@@ -39,9 +39,9 @@ const emit = defineEmits<{
 const columnLabels: Record<SolicitudCompraColumnKey, string> = {
   folio: 'Folio',
   observacion: 'Observación',
-  estado: 'Estado',
+  seguimiento: 'Seguimiento',
   prioridad: 'Prioridad',
-  equipos: 'Equipos',
+  destinos: 'Destino',
   area: 'Área',
   solicitante: 'Solicitante',
   fechaEntrega: 'Fecha Entrega',
@@ -64,9 +64,9 @@ const tableGridClass = computed(() => {
   const widthMap: Record<SolicitudCompraColumnKey, string> = {
     folio: 'minmax(10rem,1fr)',
     observacion: 'minmax(20rem,2.3fr)',
-    estado: 'minmax(8rem,0.9fr)',
+    seguimiento: 'minmax(9rem,0.95fr)',
     prioridad: 'minmax(7rem,0.8fr)',
-    equipos: 'minmax(10rem,1fr)',
+    destinos: 'minmax(10rem,1fr)',
     area: 'minmax(9rem,0.95fr)',
     solicitante: 'minmax(9rem,0.95fr)',
     fechaEntrega: 'minmax(9rem,0.9fr)',
@@ -203,6 +203,7 @@ const onRowClick = (item: SolicitudCompraListItem): void => {
           <template v-if="column === 'folio'">
             <SolicitudFolioCell
               :folio="getSanitizedFolio(item)"
+              :can-see-folio="roleVisibility.canSeeFolio"
               :can-see-oc="roleVisibility.canSeeFolioOc"
               compact
             />
@@ -212,9 +213,9 @@ const onRowClick = (item: SolicitudCompraListItem): void => {
             <SolicitudObservacionCell :observacion="getSanitizedObservacion(item)" compact />
           </template>
 
-          <template v-else-if="column === 'estado'">
+          <template v-else-if="column === 'seguimiento'">
             <div class="flex min-h-full items-center">
-              <SolicitudEstadoBadge :estado="item.estado" compact />
+              <SolicitudEstadoBadge :seguimiento="item.seguimiento" compact />
             </div>
           </template>
 
@@ -224,8 +225,8 @@ const onRowClick = (item: SolicitudCompraListItem): void => {
             </div>
           </template>
 
-          <template v-else-if="column === 'equipos'">
-            <SolicitudEquiposCell :equipos="item.equipos" compact />
+          <template v-else-if="column === 'destinos'">
+            <SolicitudEquiposCell :destinos="item.destinos" compact />
           </template>
 
           <template v-else-if="column === 'area'">
