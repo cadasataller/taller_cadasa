@@ -26,7 +26,7 @@ async function retryDetalle() {
 }
 </script>
 <template>
-  <main class="min-h-full bg-second p-3 text-gray-700 md:p-4">
+  <main class="flex h-full min-h-0 flex-col overflow-hidden bg-second p-3 text-gray-700 md:p-4">
     
     <div v-if="f.errorInicial.value" class="rounded-lg border border-danger/30 bg-danger-bg p-4 text-sm text-danger">
       <p>{{ f.errorInicial.value }}</p>
@@ -34,6 +34,7 @@ async function retryDetalle() {
     </div>
     <template v-else>
       <FiltrosEngraseToolbar
+        class="shrink-0"
         :filters="f.filtrosAplicados.value"
         :tipos-equipo="f.tiposEquipo.value"
         :tipos-filtro="f.tiposFiltro.value"
@@ -46,12 +47,13 @@ async function retryDetalle() {
         @select-code-suggestion="f.seleccionarCodigo"
         @clear-code="f.limpiarCodigo"
       />
-      <div class="mt-3 grid min-h-[460px] gap-3 md:h-[calc(100vh-180px)] md:grid-cols-[minmax(220px,.85fr)_minmax(360px,1.8fr)_minmax(210px,.75fr)]">
+      <div class="mt-3 grid min-h-0 flex-1 gap-3 md:grid-cols-[minmax(220px,.85fr)_minmax(360px,1.8fr)_minmax(210px,.75fr)]">
         <div
-          class="min-w-0"
+          class="min-h-0 min-w-0"
           :class="{ 'max-md:hidden': mobileStage === 'filtros' }"
         >
           <EquiposEngrasePanel
+            class="h-full"
             :equipos="f.equiposVisibles.value"
             :selected-equipo-id="f.equipoSeleccionadoId.value"
             :counts-by-tipo="f.conteoPorTipoEquipo.value"
@@ -59,13 +61,16 @@ async function retryDetalle() {
             :error="f.errorEquipos.value"
             @select-equipo="selectEquipo"
             @retry="f.reintentar"
+            @filter-tipo="update({ tipoEquipoId: $event, modelo: '' })"
+            @filter-modelo="update({ modelo: $event })"
           />
         </div>
         <div
-          class="min-w-0"
+          class="min-h-0 min-w-0"
           :class="{ 'max-md:hidden': mobileStage === 'equipos' }"
         >
           <FiltrosEquipoPanel
+            class="h-full"
             :equipo="f.equipoSeleccionado.value"
             :filtros="f.filtrosEquipo.value"
             :equivalencias="f.equivalenciasPorFiltroId.value"
@@ -78,6 +83,7 @@ async function retryDetalle() {
           />
         </div>
         <FiltroDetallePanel
+          class="h-full"
           :open="Boolean(f.filtroSeleccionadoId.value)"
           :equipo="f.equipoSeleccionado.value"
           :filtro="f.filtroSeleccionado.value"
