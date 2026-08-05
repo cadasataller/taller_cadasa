@@ -63,6 +63,12 @@ const router = createRouter({
           component: () => import('@/views/CatalogoView.vue'),
         },
         {
+          path: 'engrase/filtros',
+          name: 'FiltrosEngrase',
+          component: () => import('@/views/engrase/FiltrosEngraseView.vue'),
+          meta: { requiredFeature: 'ver_filtros_engrase' },
+        },
+        {
           path: 'panel-admin',
           name: 'PanelAdmin',
           component: () => import('@/views/PanelAdminView.vue'),

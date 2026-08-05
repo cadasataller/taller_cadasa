@@ -1,0 +1,6 @@
+<script setup lang="ts">
+import EquipoEngraseThumbnail from './EquipoEngraseThumbnail.vue'
+import type { EquipoEngraseListItem } from '@/stores/dbequipos/engrase/filtrosEngrase.types'
+defineProps<{ equipo: EquipoEngraseListItem; selected: boolean }>()
+defineEmits<{ select: [number] }>()
+</script><template><button type="button" class="item" :class="{selected}" :aria-pressed="selected" @click="$emit('select',equipo.id)"><EquipoEngraseThumbnail :src="equipo.imageUrl" :alt="equipo.codigo"/><span class="item-text"><strong>{{equipo.codigo}}</strong><span>{{equipo.tipo_equipo}}</span><small>Modelo: {{equipo.subtipo||'Sin modelo'}}</small></span><b class="status" :class="equipo.estado">{{equipo.estado}}</b></button></template><style scoped>.item{display:flex;width:100%;gap:.65rem;align-items:center;padding:.7rem;text-align:left;border:1px solid #edf1f7;border-radius:.75rem;background:#fff}.item.selected{border-color:#2563eb;background:#eff6ff}.item-text{display:grid;gap:.12rem;min-width:0;flex:1;color:#1e3a70;font-size:.75rem}.item-text strong{color:#0759e8;font-size:.82rem}.item-text small{color:#60729a}.status{font-size:.58rem;text-transform:uppercase;padding:.25rem .35rem;border-radius:.3rem}.status.activo{color:#15803d;background:#dcfce7}.status.descartado{color:#dc2626;background:#fee2e2}</style>

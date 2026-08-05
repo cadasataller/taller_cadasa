@@ -16,6 +16,7 @@ import {
   ShoppingCart,
   ShieldCheck,
   Book // Agregado el icono para Catálogo
+  ,Droplets, ChevronDown, X
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -31,6 +32,10 @@ const userEmail = ref('');
 const PANEL_ADMIN_FEATURE = 'panel_admin';
 const MODULE_CATALOG_FEATURE = 'module_catalog'; // Nueva constante para el feature de catálogo
 const CREATE_SOLICITUD_FEATURE = 'crear_solicitud_compra';
+const MODULE_ENGRASE_FEATURE = 'module_engrase';
+const VIEW_FILTROS_ENGRASE_FEATURE = 'ver_filtros_engrase';
+const engraseDesktopOpen = ref(false);
+const mobileEngraseOpen = ref(false);
 
 const allMenuItems = [
   { name: 'Calificaciones', path: '/calificaciones', icon: BarChart3 },
@@ -40,6 +45,11 @@ const allMenuItems = [
   { name: 'Catálogo', path: '/catalogo', icon: Book, requiredFeature: MODULE_CATALOG_FEATURE }, // Nueva pestaña
   { name: 'Panel Admin', path: '/panel-admin', icon: ShieldCheck, requiredFeature: PANEL_ADMIN_FEATURE },
 ];
+
+const canSeeEngrase = computed(() => isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(MODULE_ENGRASE_FEATURE));
+const canSeeFiltrosEngrase = computed(() => canSeeEngrase.value && featureAccessStore.tieneFuncionalidad(VIEW_FILTROS_ENGRASE_FEATURE));
+const isEngraseRoute = computed(() => route.path.startsWith('/engrase'));
+watch(isEngraseRoute, (active) => { if (active) engraseDesktopOpen.value = true; }, { immediate: true });
 
 const menuItems = computed(() => {
   const area = userProfile.value?.area?.toUpperCase() || '';
@@ -71,6 +81,7 @@ const viewTitle = computed(() => {
   if (route.path.startsWith('/compras')) return 'COMPRAS';
   if (route.path.startsWith('/panel-admin')) return 'PANEL ADMINISTRADOR';
   if (route.path.startsWith('/catalogo')) return 'CATÁLOGO';
+  if (route.path.startsWith('/engrase')) return 'ENGRASE';
   return menuItems.value.find(i => isActive(i.path))?.name || 'Dashboard';
 });
 
@@ -238,6 +249,12 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
           <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
           <span class="font-medium text-sm">{{ item.name }}</span>
         </router-link>
+        <div v-if="canSeeEngrase" class="space-y-1">
+          <button type="button" class="flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all" :class="isEngraseRoute ? 'bg-main text-accent' : 'text-gray-400 hover:bg-main hover:text-white'" @click="engraseDesktopOpen = !engraseDesktopOpen" :aria-expanded="engraseDesktopOpen">
+            <Droplets class="w-5 h-5 flex-shrink-0" /><span class="font-medium text-sm flex-1 text-left">Engrase</span><ChevronDown class="w-4 h-4 transition-transform" :class="{ 'rotate-180': engraseDesktopOpen }" />
+          </button>
+          <router-link v-if="engraseDesktopOpen && canSeeFiltrosEngrase" to="/engrase/filtros" class="ml-5 flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'">Filtros</router-link>
+        </div>
       </nav>
 
       <button 
@@ -361,7 +378,14 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
           <component :is="item.icon" class="w-6 h-6 shrink-0" />
           <span class="text-[10px] font-medium whitespace-nowrap">{{ item.name }}</span>
         </router-link>
+        <div v-if="canSeeEngrase" class="flex flex-col items-center gap-1 flex-shrink-0 min-w-[56px]">
+          <button type="button" class="flex flex-col items-center gap-1 p-2" :class="isEngraseRoute ? 'text-main' : 'text-gray-300'" @click="mobileEngraseOpen = !mobileEngraseOpen" :aria-expanded="mobileEngraseOpen"><Droplets class="w-6 h-6" /><span class="text-[10px] font-medium">Engrase</span></button>
+        </div>
       </nav>
+      <div v-if="mobileEngraseOpen && canSeeEngrase" class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl">
+        <div class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"><span>Engrase</span><button type="button" class="p-2" @click="mobileEngraseOpen = false" aria-label="Cerrar subpestañas"><X class="w-5 h-5" /></button></div>
+        <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="block w-full rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-main" @click="mobileEngraseOpen = false">Filtros</router-link>
+      </div>
 
       <!-- FAB Mobile -->
       <button 

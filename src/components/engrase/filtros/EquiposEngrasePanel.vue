@@ -1,0 +1,11 @@
+<script setup lang="ts">
+import { computed, shallowRef } from 'vue'
+import EquipoEngraseListItem from './EquipoEngraseListItem.vue'
+import type { EquipoEngraseListItem as EquipoItem } from '@/stores/dbequipos/engrase/filtrosEngrase.types'
+const props = defineProps<{ equipos: EquipoItem[]; selectedEquipoId: number | null; countsByTipo: [string, number][]; loading: boolean; error: string | null }>()
+defineEmits<{ selectEquipo: [number]; retry: [] }>()
+const search = shallowRef('')
+const visible = computed(() => { const q = search.value.toLowerCase(); return props.equipos.filter(x => !q || [x.codigo, x.tipo_equipo, x.subtipo ?? ''].some(v => v.toLowerCase().includes(q))) })
+</script>
+<template><section class="panel"><header><div><h2>Equipos</h2><p>{{equipos.length}} resultados</p></div></header><input v-model="search" class="local-search" placeholder="Buscar equipo…" aria-label="Buscar en resultados"><div v-if="countsByTipo.length" class="counts"><span v-for="([name,count]) in countsByTipo" :key="name">{{name}} <b>{{count}}</b></span></div><p v-if="loading" class="message">Cargando equipos…</p><div v-else-if="error" class="message">{{error}} <button @click="$emit('retry')">Reintentar</button></div><p v-else-if="!visible.length" class="message">No hay equipos con estos filtros.</p><div v-else class="list"><EquipoEngraseListItem v-for="equipo in visible" :key="equipo.id" :equipo="equipo" :selected="equipo.id===selectedEquipoId" @select="$emit('selectEquipo',$event)"/></div></section></template>
+<style scoped>.panel{display:flex;min-height:0;flex-direction:column;gap:.8rem;padding:1rem;border:1px solid #e6edf7;border-radius:1rem;background:#fff}.panel header{display:flex;justify-content:space-between}.panel h2{margin:0;color:#14265a;font-size:1.05rem}.panel p{margin:.1rem 0;color:#64748b;font-size:.72rem}.local-search{height:40px;border:1px solid #dbe4f0;border-radius:.65rem;padding:0 .7rem}.counts{display:flex;flex-wrap:wrap;gap:.35rem}.counts span{padding:.3rem .45rem;background:#f3f6fb;border-radius:.4rem;color:#4c6190;font-size:.65rem}.counts b{color:#172554}.list{display:grid;gap:.55rem;overflow:auto}.message{padding:1rem;text-align:center}.message button{color:#0759e8;font-weight:700}</style>
