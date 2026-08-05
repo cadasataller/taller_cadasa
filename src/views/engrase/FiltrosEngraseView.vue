@@ -26,9 +26,9 @@ async function retryDetalle() {
 }
 </script>
 <template>
-  <main class="page">
+  <main class="min-h-full bg-second p-3 text-gray-700 md:p-4">
     
-    <div v-if="f.errorInicial.value" class="initial-error">
+    <div v-if="f.errorInicial.value" class="rounded-lg border border-danger/30 bg-danger-bg p-4 text-sm text-danger">
       <p>{{ f.errorInicial.value }}</p>
       <button @click="f.reintentar">Reintentar</button>
     </div>
@@ -46,10 +46,10 @@ async function retryDetalle() {
         @select-code-suggestion="f.seleccionarCodigo"
         @clear-code="f.limpiarCodigo"
       />
-      <div class="workspace">
+      <div class="mt-3 grid min-h-[460px] gap-3 md:h-[calc(100vh-180px)] md:grid-cols-[minmax(220px,.85fr)_minmax(360px,1.8fr)_minmax(210px,.75fr)]">
         <div
-          class="equipos-stage"
-          :class="{ mobileHidden: mobileStage === 'filtros' }"
+          class="min-w-0"
+          :class="{ 'max-md:hidden': mobileStage === 'filtros' }"
         >
           <EquiposEngrasePanel
             :equipos="f.equiposVisibles.value"
@@ -62,8 +62,8 @@ async function retryDetalle() {
           />
         </div>
         <div
-          class="filters-stage"
-          :class="{ mobileHidden: mobileStage === 'equipos' }"
+          class="min-w-0"
+          :class="{ 'max-md:hidden': mobileStage === 'equipos' }"
         >
           <FiltrosEquipoPanel
             :equipo="f.equipoSeleccionado.value"
@@ -91,92 +91,3 @@ async function retryDetalle() {
     </template>
   </main>
 </template>
-<style scoped>
-.page {
-  padding: 1.5rem;
-  min-height: 100%;
-  background: #f6f8fc;
-  color: #172554;
-}
-
-.title {
-  margin-bottom: 1.1rem;
-}
-
-.title p {
-  margin: 0;
-  color: #0759e8;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-.title h1 {
-  margin: 0.2rem 0;
-  font-size: 1.8rem;
-  letter-spacing: -0.05em;
-}
-
-.title span {
-  color: #64748b;
-  font-size: 0.85rem;
-}
-
-.workspace {
-  display: grid;
-  grid-template-columns: minmax(230px, 0.85fr) minmax(390px, 1.8fr) minmax(
-      220px,
-      0.75fr
-    );
-  gap: 1rem;
-  margin-top: 1rem;
-  height: calc(100vh - 255px);
-  min-height: 460px;
-}
-
-.workspace > * {
-  min-width: 0;
-}
-
-.initial-error {
-  padding: 2rem;
-  border: 1px solid #fecaca;
-  background: #fff;
-  color: #991b1b;
-  border-radius: 1rem;
-}
-
-.initial-error button {
-  padding: 0.5rem 0.8rem;
-  background: #991b1b;
-  color: white;
-  border-radius: 0.5rem;
-}
-
-@media (max-width: 900px) {
-  .workspace {
-    grid-template-columns: minmax(210px, 0.8fr) 1.4fr;
-    height: auto;
-  }
-
-  .workspace > .detail {
-    display: block;
-  }
-}
-
-@media (max-width: 650px) {
-  .page {
-    padding: 1rem;
-    padding-bottom: 5rem;
-  }
-
-  .workspace {
-    display: block;
-    min-height: auto;
-  }
-
-  .mobileHidden {
-    display: none;
-  }
-}
-</style>
