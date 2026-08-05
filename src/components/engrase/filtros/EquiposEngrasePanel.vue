@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from "vue";
+import { storeToRefs } from "pinia";
 import { ArrowLeft, ChevronDown, ChevronUp, Eraser, Plus } from "lucide-vue-next";
 import EquipoEngraseListItem from "./EquipoEngraseListItem.vue";
+import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 import type { EquipoEngraseListItem as EquipoItem } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
 const props = defineProps<{
   equipos: EquipoItem[];
@@ -17,6 +19,12 @@ const emit = defineEmits<{
   filterTipo: [number | null];
   filterModelo: [string];
 }>();
+const featureAccessStore = useFeatureAccessStore();
+const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
+const canEditFiltrosEngrase = computed(() =>
+  isFeatureAccessLoaded.value
+  && featureAccessStore.tieneFuncionalidad("editar_filtros_engrase"),
+);
 const search = shallowRef(""),
   showCounts = shallowRef(false),
   selectedTipoId = shallowRef<number | null>(null),
@@ -116,6 +124,7 @@ function cerrarChips() {
         <span class="font-normal text-gray-500">({{ equipos.length }})</span>
       </h2>
       <button
+        v-if="canEditFiltrosEngrase"
         type="button"
         class="cursor-pointer rounded bg-main/10 p-1 text-main hover:bg-main/20"
         aria-label="Agregar equipo"
