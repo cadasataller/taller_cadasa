@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from "vue";
-import { ArrowLeft, ChevronDown, ChevronUp, Eraser } from "lucide-vue-next";
+import { ArrowLeft, ChevronDown, ChevronUp, Eraser, Plus } from "lucide-vue-next";
 import EquipoEngraseListItem from "./EquipoEngraseListItem.vue";
 import type { EquipoEngraseListItem as EquipoItem } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
 const props = defineProps<{
@@ -20,6 +20,7 @@ const emit = defineEmits<{
 const search = shallowRef(""),
   showCounts = shallowRef(false),
   selectedTipoId = shallowRef<number | null>(null),
+  selectedTipoNombre = shallowRef(""),
   selectedModelo = shallowRef(""),
   modelosDelTipo = shallowRef<[string, number][]>([]);
 const visible = computed(() => {
@@ -58,15 +59,26 @@ const modelosVisibles = computed(() =>
 const modelos = computed(() =>
   selectedTipoId.value === null ? modelosVisibles.value : modelosDelTipo.value,
 );
+const etiquetaCantidad = computed(() =>
+  selectedTipoId.value === null
+    ? "Cantidad por tipo de equipo"
+    : ["Cantidad", selectedTipoNombre.value, selectedModelo.value]
+        .filter(Boolean)
+        .join(" · "),
+);
 watch(() => props.resetSignal, () => {
   search.value = "";
   showCounts.value = false;
   selectedTipoId.value = null;
+  selectedTipoNombre.value = "";
   selectedModelo.value = "";
   modelosDelTipo.value = [];
 });
 function seleccionarTipo(id: number) {
   selectedTipoId.value = id;
+  selectedTipoNombre.value = visible.value.find(
+    (equipo) => equipo.tipo_equipo_id === id,
+  )?.tipo_equipo ?? "";
   selectedModelo.value = "";
   modelosDelTipo.value = modelosVisibles.value;
   emit("filterTipo", id);
@@ -77,6 +89,7 @@ function seleccionarModelo(modelo: string) {
 }
 function volverTipos() {
   selectedTipoId.value = null;
+  selectedTipoNombre.value = "";
   selectedModelo.value = "";
   modelosDelTipo.value = [];
   emit("filterTipo", null);
@@ -97,11 +110,18 @@ function cerrarChips() {
   <section
     class="flex min-h-0 flex-col gap-3 rounded-lg border border-gray-200 bg-white p-3 shadow-sm"
   >
-    <header class="shrink-0">
+    <header class="flex shrink-0 items-center justify-between gap-2">
       <h2 class="text-sm font-bold text-main">
         Equipos
         <span class="font-normal text-gray-500">({{ equipos.length }})</span>
       </h2>
+      <button
+        type="button"
+        class="cursor-pointer rounded bg-main/10 p-1 text-main hover:bg-main/20"
+        aria-label="Agregar equipo"
+      >
+        <Plus class="h-4 w-4" />
+      </button>
     </header>
     <div class="relative shrink-0">
       <input
@@ -126,7 +146,7 @@ function cerrarChips() {
         :aria-expanded="showCounts"
         @click="showCounts = !showCounts"
       >
-        <span>Cantidad por tipo de equipo</span>
+        <span>{{ etiquetaCantidad }}</span>
         <ChevronDown class="h-4 w-4 transition-transform" :class="{ 'rotate-180': showCounts }" />
       </button>
       </div>

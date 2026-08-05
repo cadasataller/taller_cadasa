@@ -53,6 +53,7 @@ async function clearAllFilters() {
         @select-code-suggestion="f.seleccionarCodigo"
         @clear-code="f.limpiarCodigo"
         @clear-all="clearAllFilters"
+        @close-detail="f.seleccionarFiltro(null)"
       />
       <div class="mt-3 grid min-h-0 flex-1 gap-3 md:grid-cols-[minmax(220px,.85fr)_minmax(360px,1.8fr)_minmax(210px,.75fr)]">
         <div

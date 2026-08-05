@@ -24,7 +24,12 @@ const emit = defineEmits<{
   selectCodeSuggestion: [FiltroCodigoSugerencia];
   clearCode: [];
   clearAll: [];
+  closeDetail: [];
 }>();
+function clearAllFilters() {
+  emit('clearAll');
+  emit('closeDetail');
+}
 </script>
 <template>
   <section
@@ -85,7 +90,7 @@ const emit = defineEmits<{
         class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-main/5 hover:text-main"
         aria-label="Limpiar todos los filtros"
         title="Limpiar todos los filtros"
-        @click="emit('clearAll')"
+        @click="clearAllFilters"
       >
         <Eraser class="h-4 w-4" />
       </button>
