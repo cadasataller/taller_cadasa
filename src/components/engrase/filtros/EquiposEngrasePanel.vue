@@ -30,12 +30,21 @@ const visible = computed(() => {
   );
 });
 const tiposOrdenados = computed(() =>
-  [...props.countsByTipo].sort(([a], [b]) => a.localeCompare(b)),
+  Object.entries(visible.value.reduce<Record<string, number>>((counts, equipo) => {
+    counts[equipo.tipo_equipo] = (counts[equipo.tipo_equipo] ?? 0) + 1;
+    return counts;
+  }, {})).sort(([a], [b]) => a.localeCompare(b)),
 );
+const tipoActivoId = computed(() =>
+  selectedTipoId.value ?? (tiposOrdenados.value.length === 1
+    ? visible.value[0]?.tipo_equipo_id ?? null
+    : null),
+);
+const mostrarModelos = computed(() => tipoActivoId.value !== null);
 const modelos = computed(() =>
   Object.entries(
-    props.equipos
-      .filter((x) => x.tipo_equipo_id === selectedTipoId.value)
+    visible.value
+      .filter((x) => x.tipo_equipo_id === tipoActivoId.value)
       .reduce<Record<string, number>>((a, x) => {
         const model = x.subtipo?.trim() || "Sin modelo";
         a[model] = (a[model] ?? 0) + 1;
@@ -72,9 +81,9 @@ function cerrarChips() {
     <input
       v-model="search"
       class="h-8 shrink-0 rounded-md border border-gray-200 px-2 text-sm"
-      placeholder="Buscar equipo…"
+      placeholder="Buscar equipo o tipo de equipo…"
     />
-    <div v-if="countsByTipo.length" class="shrink-0">
+    <div v-if="tiposOrdenados.length" class="shrink-0">
       <div>
       <button
         type="button"
@@ -123,8 +132,8 @@ function cerrarChips() {
             leave-active-class="transition duration-150 ease-in"
             leave-from-class="translate-x-0 opacity-100"
             leave-to-class="-translate-x-4 opacity-0"
-            ><div :key="selectedTipoId ?? 'tipos'" class="flex flex-wrap gap-1">
-              <template v-if="selectedTipoId === null"
+            ><div :key="tipoActivoId ?? 'tipos'" class="flex flex-wrap gap-1">
+              <template v-if="!mostrarModelos"
                 ><button
                   v-for="[name, count] in tiposOrdenados"
                   :key="name"
