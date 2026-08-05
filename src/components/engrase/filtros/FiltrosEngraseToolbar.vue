@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Eraser } from 'lucide-vue-next';
 import FiltroCodigoAutocomplete from "./FiltroCodigoAutocomplete.vue";
 import type {
   EtapaEngrase,
@@ -15,12 +16,14 @@ defineProps<{
   sugerenciasCodigo: FiltroCodigoSugerencia[];
   loading: boolean;
   loadingSugerencias: boolean;
+  resetSignal: number;
 }>();
 const emit = defineEmits<{
   updateFilters: [Partial<FiltrosEngraseQuery>];
   searchCodeSuggestions: [string];
   selectCodeSuggestion: [FiltroCodigoSugerencia];
   clearCode: [];
+  clearAll: [];
 }>();
 </script>
 <template>
@@ -33,6 +36,7 @@ const emit = defineEmits<{
       :model-value="filters.codigoExactoSeleccionado ?? ''"
       :sugerencias="sugerenciasCodigo"
       :loading="loadingSugerencias"
+      :reset-signal="resetSignal"
       @update:model-value="
         emit('updateFilters', { codigoExactoSeleccionado: null })
       "
@@ -75,6 +79,15 @@ const emit = defineEmits<{
         @click="emit('updateFilters', { estadoEquipo: 'descartado' })"
       >
         Descartados
+      </button>
+      <button
+        type="button"
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-main/5 hover:text-main"
+        aria-label="Limpiar todos los filtros"
+        title="Limpiar todos los filtros"
+        @click="emit('clearAll')"
+      >
+        <Eraser class="h-4 w-4" />
       </button>
     </div>
   </section>

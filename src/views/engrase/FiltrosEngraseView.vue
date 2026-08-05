@@ -6,7 +6,8 @@ import FiltrosEquipoPanel from "@/components/engrase/filtros/FiltrosEquipoPanel.
 import FiltroDetallePanel from "@/components/engrase/filtros/FiltroDetallePanel.vue";
 import { useFiltrosEngrase } from "@/composables/engrase/useFiltrosEngrase";
 const f = useFiltrosEngrase(),
-  mobileStage = shallowRef<"equipos" | "filtros">("equipos");
+  mobileStage = shallowRef<"equipos" | "filtros">("equipos"),
+  resetSignal = shallowRef(0);
 const equivalenciasSeleccionadas = computed(() =>
   f.filtroSeleccionado.value
     ? (f.equivalenciasPorFiltroId.value[f.filtroSeleccionado.value.filtro_id] ??
@@ -23,6 +24,10 @@ async function update(filters: any) {
 }
 async function retryDetalle() {
   if (f.equipoSeleccionadoId.value) await f.reintentar();
+}
+async function clearAllFilters() {
+  await f.limpiarFiltros();
+  resetSignal.value += 1;
 }
 </script>
 <template>
@@ -42,10 +47,12 @@ async function retryDetalle() {
         :sugerencias-codigo="f.sugerenciasCodigo.value"
         :loading="f.loadingInicial.value"
         :loading-sugerencias="f.loadingSugerencias.value"
+        :reset-signal="resetSignal"
         @update-filters="update"
         @search-code-suggestions="f.buscarCodigo"
         @select-code-suggestion="f.seleccionarCodigo"
         @clear-code="f.limpiarCodigo"
+        @clear-all="clearAllFilters"
       />
       <div class="mt-3 grid min-h-0 flex-1 gap-3 md:grid-cols-[minmax(220px,.85fr)_minmax(360px,1.8fr)_minmax(210px,.75fr)]">
         <div
@@ -59,6 +66,7 @@ async function retryDetalle() {
             :counts-by-tipo="f.conteoPorTipoEquipo.value"
             :loading="f.loadingEquipos.value"
             :error="f.errorEquipos.value"
+            :reset-signal="resetSignal"
             @select-equipo="selectEquipo"
             @retry="f.reintentar"
             @filter-tipo="update({ tipoEquipoId: $event, modelo: '' })"
@@ -74,6 +82,7 @@ async function retryDetalle() {
             :equipo="f.equipoSeleccionado.value"
             :filtros="f.filtrosEquipo.value"
             :equivalencias="f.equivalenciasPorFiltroId.value"
+            :codigo-buscado="f.filtrosAplicados.value.codigoExactoSeleccionado"
             :selected-filtro-id="f.filtroSeleccionadoId.value"
             :loading="f.loadingDetalleEquipo.value"
             :error="f.errorDetalle.value"

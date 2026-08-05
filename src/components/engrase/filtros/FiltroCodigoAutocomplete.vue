@@ -6,6 +6,7 @@ const props = defineProps<{
   modelValue: string;
   sugerencias: FiltroCodigoSugerencia[];
   loading: boolean;
+  resetSignal: number;
 }>();
 const emit = defineEmits<{
   "update:modelValue": [string];
@@ -24,6 +25,12 @@ watch(
     if (!isEditing.value || value) query.value = value;
   },
 );
+watch(() => props.resetSignal, () => {
+  isEditing.value = false;
+  query.value = "";
+  open.value = false;
+  active.value = -1;
+});
 function input(value: string) {
   isEditing.value = true;
   query.value = value;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef } from "vue";
+import { computed, shallowRef, watch } from "vue";
 import { ArrowLeft, ChevronDown, ChevronUp, Eraser } from "lucide-vue-next";
 import EquipoEngraseListItem from "./EquipoEngraseListItem.vue";
 import type { EquipoEngraseListItem as EquipoItem } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
@@ -9,6 +9,7 @@ const props = defineProps<{
   countsByTipo: [string, number][];
   loading: boolean;
   error: string | null;
+  resetSignal: number;
 }>();
 const emit = defineEmits<{
   selectEquipo: [number];
@@ -57,6 +58,13 @@ const modelosVisibles = computed(() =>
 const modelos = computed(() =>
   selectedTipoId.value === null ? modelosVisibles.value : modelosDelTipo.value,
 );
+watch(() => props.resetSignal, () => {
+  search.value = "";
+  showCounts.value = false;
+  selectedTipoId.value = null;
+  selectedModelo.value = "";
+  modelosDelTipo.value = [];
+});
 function seleccionarTipo(id: number) {
   selectedTipoId.value = id;
   selectedModelo.value = "";
@@ -215,7 +223,7 @@ function cerrarChips() {
     >
       No hay equipos con estos filtros.
     </p>
-    <div v-else class="grid min-h-0 flex-1 gap-2 overflow-y-auto pr-1">
+    <div v-else class="grid min-h-0 flex-1 auto-rows-max content-start gap-2 overflow-y-auto pr-1">
       <EquipoEngraseListItem
         v-for="equipo in visible"
         :key="equipo.id"
