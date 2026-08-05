@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, shallowRef } from "vue";
 import {
   Wind,
   Fuel,
@@ -45,6 +45,10 @@ const filtrosOrdenados = computed(() =>
           Number(coincideConBusqueda(b)) - Number(coincideConBusqueda(a)),
       ),
 );
+const grupoSeleccionado = shallowRef<string | null>(null);
+const soloConEquivalencias = shallowRef(false);
+const soloEnCompras = shallowRef(false);
+const opcionesDeListadoAbiertas = shallowRef(false);
 function esCultivo(nombre: string) {
   return nombre.trim().toLocaleLowerCase() === "cultivo";
 }
@@ -92,6 +96,39 @@ function obtenerIconoTipoFiltro(nombre: string) {
     return { icono: Wind, grupo: "admision_aire", nombreGrupo: "Admisión de aire" };
 
   return { icono: Filter, grupo: "elemento", nombreGrupo: "Elemento / otros" };
+}
+const gruposDeFiltros = computed(() => {
+  const grupos = new Map<
+    string,
+    ReturnType<typeof obtenerIconoTipoFiltro> & { cantidad: number }
+  >();
+
+  props.filtros.forEach((filtro) => {
+    const clasificacion = obtenerIconoTipoFiltro(filtro.tipoFiltro.nombre);
+    const grupoExistente = grupos.get(clasificacion.grupo);
+
+    grupos.set(clasificacion.grupo, {
+      ...clasificacion,
+      cantidad: (grupoExistente?.cantidad ?? 0) + 1,
+    });
+  });
+
+  return [...grupos.values()];
+});
+const filtrosVisibles = computed(() =>
+  filtrosOrdenados.value.filter(
+    (filtro) =>
+      (!grupoSeleccionado.value ||
+        obtenerIconoTipoFiltro(filtro.tipoFiltro.nombre).grupo ===
+          grupoSeleccionado.value) &&
+      (!soloConEquivalencias.value ||
+        (props.equivalencias[filtro.filtro_id] ?? []).length > 0) &&
+      (!soloEnCompras.value || filtro.filtro.esta_en_lista_compras),
+  ),
+);
+function alternarGrupo(grupo: string) {
+  grupoSeleccionado.value =
+    grupoSeleccionado.value === grupo ? null : grupo;
 }
 </script>
 <template>
@@ -142,23 +179,78 @@ function obtenerIconoTipoFiltro(nombre: string) {
           >{{ equipo.estado }}</b
         >
       </header>
-      <div class="my-3 grid grid-cols-3 gap-2">
-        <div class="rounded border border-gray-200 p-2">
-          <span class="block text-xs text-gray-500">Total filtros</span
-          ><b class="text-sm text-main">{{ filtros.length }}</b>
+      <div class="my-3 flex flex-wrap items-center gap-2 text-xs">
+        <p class="whitespace-nowrap text-gray-500">
+          Total filtros: <b class="text-main">{{ filtros.length }}</b>
+        </p>
+        <button
+          type="button"
+          class="cursor-pointer rounded-md border border-gray-200 px-2 py-1 font-medium text-gray-600 transition hover:border-main/40 hover:text-main"
+          :aria-expanded="opcionesDeListadoAbiertas"
+          aria-controls="opciones-de-listado"
+          @click="opcionesDeListadoAbiertas = !opcionesDeListadoAbiertas"
+        >
+          Mostrar por
+        </button>
+      </div>
+      <div
+        id="opciones-de-listado"
+        v-show="opcionesDeListadoAbiertas"
+        class="mb-3"
+      >
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+        <button
+          type="button"
+          class="flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 transition"
+          :class="
+            soloConEquivalencias
+              ? 'border-main bg-main/10 text-main'
+              : 'border-gray-200 text-gray-600 hover:border-main/40'
+          "
+          :aria-pressed="soloConEquivalencias"
+          @click="soloConEquivalencias = !soloConEquivalencias"
+        >
+          Con equivalencias
+          <span class="font-semibold">{{ filtros.filter((x) => (equivalencias[x.filtro_id] ?? []).length).length }}</span>
+        </button>
+        <button
+          type="button"
+          class="flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 transition"
+          :class="
+            soloEnCompras
+              ? 'border-main bg-main/10 text-main'
+              : 'border-gray-200 text-gray-600 hover:border-main/40'
+          "
+          :aria-pressed="soloEnCompras"
+          @click="soloEnCompras = !soloEnCompras"
+        >
+          En compras
+          <span class="font-semibold">{{ filtros.filter((x) => x.filtro.esta_en_lista_compras).length }}</span>
+        </button>
         </div>
-        <div class="rounded border border-gray-200 p-2">
-          <span class="block text-xs text-gray-500">Con equivalencias</span
-          ><b class="text-sm text-main">{{
-            filtros.filter((x) => (equivalencias[x.filtro_id] ?? []).length)
-              .length
-          }}</b>
-        </div>
-        <div class="rounded border border-gray-200 p-2">
-          <span class="block text-xs text-gray-500">En compras</span
-          ><b class="text-sm text-main">{{
-            filtros.filter((x) => x.filtro.esta_en_lista_compras).length
-          }}</b>
+        <div aria-hidden="true" class="my-3 border-t border-gray-200" />
+        <div
+          v-if="gruposDeFiltros.length"
+          class="flex flex-wrap gap-2"
+          aria-label="Filtrar filtros por grupo"
+        >
+          <button
+            v-for="grupo in gruposDeFiltros"
+            :key="grupo.grupo"
+            type="button"
+            class="flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-xs transition"
+            :class="
+              grupoSeleccionado === grupo.grupo
+                ? 'border-main bg-main/10 text-main'
+                : 'border-gray-200 text-gray-600 hover:border-main/40'
+            "
+            :aria-pressed="grupoSeleccionado === grupo.grupo"
+            @click="alternarGrupo(grupo.grupo)"
+          >
+            <component :is="grupo.icono" class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{{ grupo.nombreGrupo }}</span>
+            <span class="font-semibold">{{ grupo.cantidad }}</span>
+          </button>
         </div>
       </div>
       <p v-if="loading" class="p-4 text-center text-xs text-gray-500">
@@ -178,7 +270,7 @@ function obtenerIconoTipoFiltro(nombre: string) {
       </p>
       <div v-else class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         <button
-          v-for="filtro in filtrosOrdenados"
+          v-for="filtro in filtrosVisibles"
           :key="filtro.id"
           class="rounded-md border p-2 text-left text-xs transition hover:border-main/40"
           :class="
