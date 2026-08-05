@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef } from "vue";
+import { computed, shallowRef, watch } from "vue";
 import { Search, X } from "lucide-vue-next";
 import type { FiltroCodigoSugerencia } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
 const props = defineProps<{
@@ -14,17 +14,44 @@ const emit = defineEmits<{
   clear: [];
 }>();
 const open = shallowRef(false),
-  active = shallowRef(-1);
+  active = shallowRef(-1),
+  query = shallowRef(props.modelValue),
+  isEditing = shallowRef(false);
 const hasSuggestions = computed(() => props.sugerencias.length > 0);
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (!isEditing.value || value) query.value = value;
+  },
+);
 function input(value: string) {
+  isEditing.value = true;
+  query.value = value;
   emit("update:modelValue", value);
   open.value = true;
   active.value = -1;
   emit("search", value);
 }
 function choose(item: FiltroCodigoSugerencia) {
+  isEditing.value = false;
+  query.value = item.codigo;
   emit("select", item);
+  emit("search", "");
   open.value = false;
+}
+function clear() {
+  isEditing.value = false;
+  query.value = "";
+  emit("clear");
+  emit("search", "");
+  open.value = false;
+}
+function closeOnFocusOut(event: FocusEvent) {
+  const currentTarget = event.currentTarget as HTMLElement | null;
+  const nextTarget = event.relatedTarget as Node | null;
+  if (!nextTarget || !currentTarget?.contains(nextTarget)) {
+    open.value = false;
+  }
 }
 function keydown(e: KeyboardEvent) {
   if (e.key === "Escape") open.value = false;
@@ -43,11 +70,11 @@ function keydown(e: KeyboardEvent) {
 }
 </script>
 <template>
-  <div class="relative">
+  <div class="relative" @focusout="closeOnFocusOut">
     <div class="relative">
       <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" /><input
         id="codigo-filtro"
-        :value="modelValue"
+        :value="query"
         class="h-9 w-full rounded-md border border-gray-200 bg-white pl-8 pr-8 text-sm text-gray-700 outline-none transition focus:border-main focus:ring-2 focus:ring-main/10"
         role="combobox"
         aria-label="Buscar por código de filtro"
@@ -57,12 +84,9 @@ function keydown(e: KeyboardEvent) {
         @input="input(($event.target as HTMLInputElement).value)"
         @keydown="keydown"
       /><button
-        v-if="modelValue"
+        v-if="query"
         class="absolute right-1.5 top-1.5 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-main"
-        @click="
-          emit('clear');
-          open = false;
-        "
+        @click="clear"
       >
         <X class="h-4 w-4" />
       </button>
