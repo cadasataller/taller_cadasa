@@ -1,8 +1,38 @@
-import { createRouter, createWebHashHistory } from 'vue-router';
+import { createRouter, createWebHashHistory, type RouteLocationNormalized } from 'vue-router';
 import { supabase } from '@/lib/supabase';
 import { useFeatureAccessStore } from '@/stores/db_mantenimiento/app_feature_access/featureAccess.store';
 
 const EmptyRouteComponent = { template: '<div></div>' };
+
+const moduleHomeRoutes = [
+  { path: '/dashboard', requiredFeatures: ['module_dashboard'] },
+  { path: '/calificaciones', requiredFeatures: ['module_calificaciones'] },
+  { path: '/reparaciones', requiredFeatures: ['module_reparaciones'] },
+  { path: '/mantenimiento', requiredFeatures: ['module_mantenimiento'] },
+  { path: '/compras', requiredFeatures: ['module_compras'] },
+  { path: '/catalogo', requiredFeatures: ['module_catalog'] },
+  {
+    path: '/engrase/filtros',
+    requiredFeatures: ['module_engrase', 'ver_filtros_engrase'],
+  },
+  { path: '/panel-admin', requiredFeatures: ['panel_admin'] },
+] as const;
+
+const getRequiredFeatures = (to: RouteLocationNormalized): string[] => {
+  const features = to.matched.flatMap((record) => {
+    const requiredFeature = record.meta.requiredFeature;
+    const requiredFeatures = record.meta.requiredFeatures;
+
+    return [
+      ...(typeof requiredFeature === 'string' ? [requiredFeature] : []),
+      ...(Array.isArray(requiredFeatures)
+        ? requiredFeatures.filter((feature): feature is string => typeof feature === 'string')
+        : []),
+    ];
+  });
+
+  return [...new Set(features)];
+};
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -20,32 +50,37 @@ const router = createRouter({
         {
           path: '',
           name: 'HomeRedirect',
-          component: { template: '<div></div>' } // Empty component because Layout redirects
+          component: EmptyRouteComponent,
         },
         {
           path: 'dashboard',
           name: 'Dashboard',
           component: () => import('@/views/DashboardView.vue'),
+          meta: { requiredFeature: 'module_dashboard' },
         },
         {
           path: 'calificaciones',
           name: 'SupervisorRatings',
           component: () => import('@/views/SupervisorRatingsView.vue'),
+          meta: { requiredFeature: 'module_calificaciones' },
         },
         {
           path: 'reparaciones',
           name: 'RepairHistory',
           component: () => import('@/views/RepairHistoryView.vue'),
+          meta: { requiredFeature: 'module_reparaciones' },
         },
         {
           path: 'mantenimiento',
           name: 'MaintenancePlan',
           component: () => import('@/views/MaintenancePlanView.vue'),
+          meta: { requiredFeature: 'module_mantenimiento' },
         },
         {
           path: 'compras',
           name: 'Compras',
           component: () => import('@/views/compras/SolicitudesCompraView.vue'),
+          meta: { requiredFeature: 'module_compras' },
           children: [
             {
               path: 'nueva',
@@ -61,17 +96,19 @@ const router = createRouter({
           path: 'catalogo',
           name: 'Catalogo',
           component: () => import('@/views/CatalogoView.vue'),
+          meta: { requiredFeature: 'module_catalog' },
         },
         {
           path: 'engrase/filtros',
           name: 'FiltrosEngrase',
           component: () => import('@/views/engrase/FiltrosEngraseView.vue'),
-          meta: { requiredFeature: 'ver_filtros_engrase' },
+          meta: { requiredFeatures: ['module_engrase', 'ver_filtros_engrase'] },
         },
         {
           path: 'panel-admin',
           name: 'PanelAdmin',
           component: () => import('@/views/PanelAdminView.vue'),
+          meta: { requiredFeature: 'panel_admin' },
         },
         {
           path: 'perfil',
@@ -83,37 +120,49 @@ const router = createRouter({
   ],
 });
 
-// Navigation guard for Supabase auth
-router.beforeEach(async (to, from, next) => {
+// Navigation guard for Supabase auth and feature-based module access.
+router.beforeEach(async (to) => {
   const { data: { session } } = await supabase.auth.getSession();
   const isAuthenticated = !!session;
-  const requiredFeature = typeof to.meta.requiredFeature === 'string'
-    ? to.meta.requiredFeature
-    : null;
-  
+
   if (to.name !== 'Login' && !isAuthenticated) {
-    next({ name: 'Login' });
-  } else if (to.name === 'Login' && isAuthenticated) {
-    next({ path: '/' });
-  } else if (requiredFeature) {
-    const featureAccessStore = useFeatureAccessStore();
-
-    try {
-      await featureAccessStore.cargarFuncionalidadesPermitidas();
-    } catch (error) {
-      next({ name: 'Compras' });
-      return;
-    }
-
-    if (!featureAccessStore.tieneFuncionalidad(requiredFeature)) {
-      next({ name: 'Compras' });
-      return;
-    }
-
-    next();
-  } else {
-    next();
+    return { name: 'Login' };
   }
+
+  if (to.name === 'Login' && isAuthenticated) {
+    return { name: 'HomeRedirect' };
+  }
+
+  if (!isAuthenticated) {
+    return true;
+  }
+
+  const featureAccessStore = useFeatureAccessStore();
+
+  try {
+    await featureAccessStore.cargarFuncionalidadesPermitidas();
+  } catch {
+    return to.name === 'Profile' ? true : { name: 'Profile' };
+  }
+
+  const firstAllowedModule = moduleHomeRoutes.find(({ requiredFeatures }) =>
+    requiredFeatures.every((feature) => featureAccessStore.tieneFuncionalidad(feature))
+  );
+
+  if (to.name === 'HomeRedirect') {
+    return firstAllowedModule?.path ?? { name: 'Profile' };
+  }
+
+  const requiredFeatures = getRequiredFeatures(to);
+  const hasAccess = requiredFeatures.every((feature) =>
+    featureAccessStore.tieneFuncionalidad(feature)
+  );
+
+  if (!hasAccess) {
+    return firstAllowedModule?.path ?? { name: 'Profile' };
+  }
+
+  return true;
 });
 
 export default router;

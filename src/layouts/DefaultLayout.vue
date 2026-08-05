@@ -29,8 +29,13 @@ const { dashboardHeaderNavState, selectDashboardHeaderSlide } = useDashboardHead
 
 const userProfile = ref<{ nombre?: string; role?: string; area?: string } | null>(null);
 const userEmail = ref('');
+const MODULE_DASHBOARD_FEATURE = 'module_dashboard';
+const MODULE_CALIFICACIONES_FEATURE = 'module_calificaciones';
+const MODULE_REPARACIONES_FEATURE = 'module_reparaciones';
+const MODULE_MANTENIMIENTO_FEATURE = 'module_mantenimiento';
+const MODULE_COMPRAS_FEATURE = 'module_compras';
 const PANEL_ADMIN_FEATURE = 'panel_admin';
-const MODULE_CATALOG_FEATURE = 'module_catalog'; // Nueva constante para el feature de catálogo
+const MODULE_CATALOG_FEATURE = 'module_catalog';
 const CREATE_SOLICITUD_FEATURE = 'crear_solicitud_compra';
 const MODULE_ENGRASE_FEATURE = 'module_engrase';
 const VIEW_FILTROS_ENGRASE_FEATURE = 'ver_filtros_engrase';
@@ -38,11 +43,12 @@ const engraseDesktopOpen = ref(false);
 const mobileEngraseOpen = ref(false);
 
 const allMenuItems = [
-  { name: 'Calificaciones', path: '/calificaciones', icon: BarChart3 },
-  { name: 'Reparaciones', path: '/reparaciones', icon: Wrench },
-  { name: 'Mantenimiento', path: '/mantenimiento', icon: Calendar },
-  { name: 'Compras', path: '/compras', icon: ShoppingCart },
-  { name: 'Catálogo', path: '/catalogo', icon: Book, requiredFeature: MODULE_CATALOG_FEATURE }, // Nueva pestaña
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, requiredFeature: MODULE_DASHBOARD_FEATURE },
+  { name: 'Calificaciones', path: '/calificaciones', icon: BarChart3, requiredFeature: MODULE_CALIFICACIONES_FEATURE },
+  { name: 'Reparaciones', path: '/reparaciones', icon: Wrench, requiredFeature: MODULE_REPARACIONES_FEATURE },
+  { name: 'Mantenimiento', path: '/mantenimiento', icon: Calendar, requiredFeature: MODULE_MANTENIMIENTO_FEATURE },
+  { name: 'Compras', path: '/compras', icon: ShoppingCart, requiredFeature: MODULE_COMPRAS_FEATURE },
+  { name: 'Catálogo', path: '/catalogo', icon: Book, requiredFeature: MODULE_CATALOG_FEATURE },
   { name: 'Panel Admin', path: '/panel-admin', icon: ShieldCheck, requiredFeature: PANEL_ADMIN_FEATURE },
 ];
 
@@ -51,31 +57,9 @@ const canSeeFiltrosEngrase = computed(() => canSeeEngrase.value && featureAccess
 const isEngraseRoute = computed(() => route.path.startsWith('/engrase'));
 watch(isEngraseRoute, (active) => { if (active) engraseDesktopOpen.value = true; }, { immediate: true });
 
-const menuItems = computed(() => {
-  const area = userProfile.value?.area?.toUpperCase() || '';
-  let items = allMenuItems;
-
-  if (area === 'EVALUADOR') {
-    items = allMenuItems.filter(i => i.name === 'Calificaciones');
-  } else if (area === 'ALMACEN') {
-    items = allMenuItems.filter(i => i.name === 'Compras');
-  } else if (area === 'ALL') {
-    items = [
-      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-      ...allMenuItems
-    ];
-  }
-
-  return items.filter((item) => {
-    const requiredFeature = 'requiredFeature' in item ? item.requiredFeature : undefined;
-
-    if (!requiredFeature) {
-      return true;
-    }
-
-    return isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(requiredFeature);
-  });
-});
+const menuItems = computed(() => allMenuItems.filter((item) =>
+  isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(item.requiredFeature)
+));
 
 const viewTitle = computed(() => {
   if (route.path.startsWith('/compras')) return 'COMPRAS';
@@ -173,17 +157,6 @@ onMounted(async () => {
     }
   }
 
-  // Handle Home Route redirection based on auth
-  if (route.path === '/') {
-    const area = userProfile.value?.area?.toUpperCase() || '';
-    if (area === 'ALL') {
-      router.push('/dashboard');
-    } else if (area === 'ALMACEN') {
-      router.push('/compras');
-    } else {
-      router.push('/calificaciones');
-    }
-  }
 });
 
 onBeforeUnmount(() => {
