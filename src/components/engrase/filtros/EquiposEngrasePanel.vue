@@ -18,7 +18,9 @@ const emit = defineEmits<{
 }>();
 const search = shallowRef(""),
   showCounts = shallowRef(false),
-  selectedTipoId = shallowRef<number | null>(null);
+  selectedTipoId = shallowRef<number | null>(null),
+  selectedModelo = shallowRef(""),
+  modelosDelTipo = shallowRef<[string, number][]>([]);
 const visible = computed(() => {
   const q = search.value.toLowerCase();
   return props.equipos.filter(
@@ -41,7 +43,7 @@ const tipoActivoId = computed(() =>
     : null),
 );
 const mostrarModelos = computed(() => tipoActivoId.value !== null);
-const modelos = computed(() =>
+const modelosVisibles = computed(() =>
   Object.entries(
     visible.value
       .filter((x) => x.tipo_equipo_id === tipoActivoId.value)
@@ -52,16 +54,31 @@ const modelos = computed(() =>
       }, {}),
   ).sort(([a], [b]) => a.localeCompare(b)),
 );
+const modelos = computed(() =>
+  selectedTipoId.value === null ? modelosVisibles.value : modelosDelTipo.value,
+);
 function seleccionarTipo(id: number) {
   selectedTipoId.value = id;
+  selectedModelo.value = "";
+  modelosDelTipo.value = modelosVisibles.value;
   emit("filterTipo", id);
+}
+function seleccionarModelo(modelo: string) {
+  selectedModelo.value = modelo;
+  emit("filterModelo", modelo === "Sin modelo" ? "" : modelo);
 }
 function volverTipos() {
   selectedTipoId.value = null;
+  selectedModelo.value = "";
+  modelosDelTipo.value = [];
   emit("filterTipo", null);
   emit("filterModelo", "");
 }
 function limpiarFiltros() {
+  volverTipos();
+}
+function limpiarBusquedaYFiltros() {
+  search.value = "";
   volverTipos();
 }
 function cerrarChips() {
@@ -78,11 +95,21 @@ function cerrarChips() {
         <span class="font-normal text-gray-500">({{ equipos.length }})</span>
       </h2>
     </header>
-    <input
-      v-model="search"
-      class="h-8 shrink-0 rounded-md border border-gray-200 px-2 text-sm"
-      placeholder="Buscar equipo o tipo de equipo…"
-    />
+    <div class="relative shrink-0">
+      <input
+        v-model="search"
+        class="h-8 w-full rounded-md border border-gray-200 px-2 pr-9 text-sm"
+        placeholder="Buscar equipo o tipo de equipo…"
+      />
+      <button
+        type="button"
+        class="absolute inset-y-0 right-0 flex w-8 items-center justify-center rounded-r-md text-main hover:bg-main/10"
+        aria-label="Limpiar búsqueda y filtros de chips"
+        @click="limpiarBusquedaYFiltros"
+      >
+        <Eraser class="h-4 w-4" />
+      </button>
+    </div>
     <div v-if="tiposOrdenados.length" class="shrink-0">
       <div>
       <button
@@ -153,10 +180,9 @@ function cerrarChips() {
                   v-for="[modelo, count] in modelos"
                   :key="modelo"
                   type="button"
-                  class="rounded bg-white px-1.5 py-1 text-xs text-gray-600 shadow-sm hover:bg-main hover:text-white"
-                  @click="
-                    emit('filterModelo', modelo === 'Sin modelo' ? '' : modelo)
-                  "
+                  class="rounded px-1.5 py-1 text-xs shadow-sm hover:bg-main hover:text-white"
+                  :class="selectedModelo === modelo ? 'bg-main text-white' : 'bg-white text-gray-600'"
+                  @click="seleccionarModelo(modelo)"
                 >
                   {{ modelo }} <b>{{ count }}</b>
                 </button></template
