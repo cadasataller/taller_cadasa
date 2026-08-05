@@ -9,4 +9,4 @@ export interface EquipoFiltroRow { id:number; equipo_id:number; tipo_filtro_id:n
 export interface EquipoFiltroDetalle extends EquipoFiltroRow { tipoFiltro:TipoFiltroEngrase; filtro:FiltroEngrase }
 export interface FiltroEquivalenciaRow { id:number; filtro_original_id:number; filtro_equivalente_id:number; activo:boolean; codigo_equivalente?:string }
 export interface FiltroCodigoSugerencia { codigo:string; esOriginal:boolean; esEquivalente:boolean }
-export interface FiltrosEngraseQuery { estadoEquipo:FiltrosEngraseEstadoEquipo; tipoEquipoId:number|null; tipoFiltroId:number|null; modelo:string; etapaId:number|null; codigoExactoSeleccionado:string|null }
+export interface FiltrosEngraseQuery { estadoEquipo:FiltrosEngraseEstadoEquipo; tipoEquipoId:number|null; tipoFiltroId:number|null; modelo:string; etapaIds:number[]; codigoExactoSeleccionado:string|null }

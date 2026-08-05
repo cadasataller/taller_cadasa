@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { watch, onBeforeUnmount } from "vue";
-import { X } from "lucide-vue-next";
+import { Sprout, Wheat, X } from "lucide-vue-next";
 import FiltroEquivalenciasList from "./FiltroEquivalenciasList.vue";
 import type {
   EquipoEngraseListItem,
@@ -19,6 +19,8 @@ const emit = defineEmits<{ close: []; retryEquivalencias: [] }>();
 const esc = (e: KeyboardEvent) => {
   if (e.key === "Escape" && props.open) emit("close");
 };
+const esCultivo = (nombre: string) => nombre.trim().toLocaleLowerCase() === "cultivo";
+const esZafra = (nombre: string) => nombre.trim().toLocaleLowerCase() === "zafra";
 watch(
   () => props.open,
   (x) =>
@@ -56,8 +58,15 @@ onBeforeUnmount(() => window.removeEventListener("keydown", esc));
           <dt class="text-gray-500">Cantidad</dt>
           <dd class="text-right">x{{ filtro.cantidad }}</dd>
           <dt class="text-gray-500">Etapas</dt>
-          <dd class="text-right">
-            {{ equipo?.etapas.map((x) => x.nombre).join(", ") || "Sin etapa" }}
+          <dd class="flex flex-wrap justify-end gap-x-1 text-right">
+            <template v-if="equipo?.etapas.length">
+              <span v-for="etapa in equipo.etapas" :key="etapa.id" class="inline-flex items-center gap-0.5">
+                <Sprout v-if="esCultivo(etapa.nombre)" class="h-3 w-3 text-main" />
+                <Wheat v-else-if="esZafra(etapa.nombre)" class="h-3 w-3 text-accent" />
+                {{ etapa.nombre }}
+              </span>
+            </template>
+            <template v-else>Sin etapa</template>
           </dd>
           <dt class="text-gray-500">En compras</dt>
           <dd class="text-right">

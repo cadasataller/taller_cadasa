@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Eraser } from 'lucide-vue-next';
+import { Eraser, Sprout, Wheat } from 'lucide-vue-next';
 import FiltroCodigoAutocomplete from "./FiltroCodigoAutocomplete.vue";
 import type {
   EtapaEngrase,
@@ -8,7 +8,7 @@ import type {
   TipoEquipoEngrase,
   TipoFiltroEngrase,
 } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
-defineProps<{
+const props = defineProps<{
   filters: FiltrosEngraseQuery;
   tiposEquipo: TipoEquipoEngrase[];
   tiposFiltro: TipoFiltroEngrase[];
@@ -30,6 +30,17 @@ function clearAllFilters() {
   emit('clearAll');
   emit('closeDetail');
 }
+function toggleEtapa(etapaId: number) {
+  const etapaIds = new Set(props.filters.etapaIds);
+  etapaIds.has(etapaId) ? etapaIds.delete(etapaId) : etapaIds.add(etapaId);
+  emit('updateFilters', { etapaIds: [...etapaIds] });
+}
+function esCultivo(nombre: string) {
+  return nombre.trim().toLocaleLowerCase() === 'cultivo';
+}
+function esZafra(nombre: string) {
+  return nombre.trim().toLocaleLowerCase() === 'zafra';
+}
 </script>
 <template>
   <section
@@ -48,22 +59,28 @@ function clearAllFilters() {
       @search="emit('searchCodeSuggestions', $event)"
       @select="emit('selectCodeSuggestion', $event)"
       @clear="emit('clearCode')"
-    /><select
-      aria-label="Etapa"
-      class="h-9 w-full rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700"
-      :value="filters.etapaId ?? ''"
-      @change="
-        emit('updateFilters', {
-          etapaId: Number(($event.target as HTMLSelectElement).value) || null,
-        })
-      "
-    >
-      <option value="">Etapa</option>
-      <option v-for="item in etapas" :key="item.id" :value="item.id">
+    />
+    <fieldset class="flex min-w-0 gap-1" aria-label="Etapas">
+      <legend class="sr-only">Etapas</legend>
+      <button
+        v-for="item in etapas"
+        :key="item.id"
+        type="button"
+        class="flex h-9 min-w-0 flex-1 items-center justify-center gap-1 truncate rounded-md border px-2 text-xs"
+        :class="
+          filters.etapaIds.includes(item.id)
+            ? 'border-main bg-main/10 text-main'
+            : 'border-gray-200 text-gray-500'
+        "
+        :aria-pressed="filters.etapaIds.includes(item.id)"
+        @click="toggleEtapa(item.id)"
+      >
+        <Sprout v-if="esCultivo(item.nombre)" class="h-3.5 w-3.5 shrink-0 text-main" />
+        <Wheat v-else-if="esZafra(item.nombre)" class="h-3.5 w-3.5 shrink-0 text-accent" />
         {{ item.nombre }}
-      </option>
-    </select>
-    <div class="flex gap-1">
+      </button>
+    </fieldset>
+    <div class="flex gap-1 border-l border-gray-200 pl-2">
       <button
         class="h-9 flex-1 rounded-md border text-xs"
         :class="
