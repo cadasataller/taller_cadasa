@@ -1,2 +1,81 @@
-<script setup lang="ts">import FiltroCodigoAutocomplete from './FiltroCodigoAutocomplete.vue';import type { EtapaEngrase,FiltroCodigoSugerencia,FiltrosEngraseQuery,TipoEquipoEngrase,TipoFiltroEngrase } from '@/stores/dbequipos/engrase/filtrosEngrase.types';defineProps<{filters:FiltrosEngraseQuery;tiposEquipo:TipoEquipoEngrase[];tiposFiltro:TipoFiltroEngrase[];etapas:EtapaEngrase[];sugerenciasCodigo:FiltroCodigoSugerencia[];loading:boolean;loadingSugerencias:boolean}>();const emit=defineEmits<{updateFilters:[Partial<FiltrosEngraseQuery>];searchCodeSuggestions:[string];selectCodeSuggestion:[FiltroCodigoSugerencia];clearCode:[]}>();</script>
-<template><section class="grid gap-2 rounded-lg border border-gray-200 bg-white p-2 shadow-sm lg:grid-cols-4" aria-label="Filtros de equipos"><FiltroCodigoAutocomplete class="lg:col-span-2" :model-value="filters.codigoExactoSeleccionado??''" :sugerencias="sugerenciasCodigo" :loading="loadingSugerencias" @update:model-value="emit('updateFilters',{codigoExactoSeleccionado:null})" @search="emit('searchCodeSuggestions',$event)" @select="emit('selectCodeSuggestion',$event)" @clear="emit('clearCode')"/><select aria-label="Etapa" class="h-9 w-full rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700" :value="filters.etapaId??''" @change="emit('updateFilters',{etapaId:Number(($event.target as HTMLSelectElement).value)||null})"><option value="">Etapa</option><option v-for="item in etapas" :key="item.id" :value="item.id">{{item.nombre}}</option></select><div class="flex gap-1"><button class="h-9 flex-1 rounded-md border text-xs" :class="filters.estadoEquipo==='activo'?'border-success bg-success-bg text-success':'border-gray-200 text-gray-500'" @click="emit('updateFilters',{estadoEquipo:'activo'})">Activos</button><button class="h-9 flex-1 rounded-md border text-xs" :class="filters.estadoEquipo==='descartado'?'border-danger bg-danger-bg text-danger':'border-gray-200 text-gray-500'" @click="emit('updateFilters',{estadoEquipo:'descartado'})">Descartados</button></div></section></template>
+<script setup lang="ts">
+import FiltroCodigoAutocomplete from "./FiltroCodigoAutocomplete.vue";
+import type {
+  EtapaEngrase,
+  FiltroCodigoSugerencia,
+  FiltrosEngraseQuery,
+  TipoEquipoEngrase,
+  TipoFiltroEngrase,
+} from "@/stores/dbequipos/engrase/filtrosEngrase.types";
+defineProps<{
+  filters: FiltrosEngraseQuery;
+  tiposEquipo: TipoEquipoEngrase[];
+  tiposFiltro: TipoFiltroEngrase[];
+  etapas: EtapaEngrase[];
+  sugerenciasCodigo: FiltroCodigoSugerencia[];
+  loading: boolean;
+  loadingSugerencias: boolean;
+}>();
+const emit = defineEmits<{
+  updateFilters: [Partial<FiltrosEngraseQuery>];
+  searchCodeSuggestions: [string];
+  selectCodeSuggestion: [FiltroCodigoSugerencia];
+  clearCode: [];
+}>();
+</script>
+<template>
+  <section
+    class="grid gap-2 rounded-lg border border-gray-200 bg-white p-2 shadow-sm lg:grid-cols-4"
+    aria-label="Filtros de equipos"
+  >
+    <FiltroCodigoAutocomplete
+      class="lg:col-span-2"
+      :model-value="filters.codigoExactoSeleccionado ?? ''"
+      :sugerencias="sugerenciasCodigo"
+      :loading="loadingSugerencias"
+      @update:model-value="
+        emit('updateFilters', { codigoExactoSeleccionado: null })
+      "
+      @search="emit('searchCodeSuggestions', $event)"
+      @select="emit('selectCodeSuggestion', $event)"
+      @clear="emit('clearCode')"
+    /><select
+      aria-label="Etapa"
+      class="h-9 w-full rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700"
+      :value="filters.etapaId ?? ''"
+      @change="
+        emit('updateFilters', {
+          etapaId: Number(($event.target as HTMLSelectElement).value) || null,
+        })
+      "
+    >
+      <option value="">Etapa</option>
+      <option v-for="item in etapas" :key="item.id" :value="item.id">
+        {{ item.nombre }}
+      </option>
+    </select>
+    <div class="flex gap-1">
+      <button
+        class="h-9 flex-1 rounded-md border text-xs"
+        :class="
+          filters.estadoEquipo === 'activo'
+            ? 'border-success bg-success-bg text-success'
+            : 'border-gray-200 text-gray-500'
+        "
+        @click="emit('updateFilters', { estadoEquipo: 'activo' })"
+      >
+        Activos</button
+      ><button
+        class="h-9 flex-1 rounded-md border text-xs"
+        :class="
+          filters.estadoEquipo === 'descartado'
+            ? 'border-danger bg-danger-bg text-danger'
+            : 'border-gray-200 text-gray-500'
+        "
+        @click="emit('updateFilters', { estadoEquipo: 'descartado' })"
+      >
+        Descartados
+      </button>
+    </div>
+  </section>
+</template>
