@@ -1,0 +1,16 @@
+<script setup lang="ts">
+import type { FiltroEquivalenciaRow } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
+defineProps<{ equivalencias: FiltroEquivalenciaRow[] }>();
+</script>
+<template>
+  <ul v-if="equivalencias.length" class="grid gap-1">
+    <li
+      v-for="item in equivalencias"
+      :key="item.id"
+      class="rounded bg-second px-2 py-1 font-mono text-xs font-semibold text-main"
+    >
+      {{ item.codigo_equivalente }}
+    </li>
+  </ul>
+  <p v-else class="text-xs text-gray-500">Sin equivalencias activas</p>
+</template>
