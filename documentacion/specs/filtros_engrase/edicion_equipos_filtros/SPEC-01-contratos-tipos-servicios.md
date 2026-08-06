@@ -24,7 +24,7 @@ Este spec es el primer paso obligatorio. Ningún componente de edición debe con
 
 Incluye:
 
-- tipos de dominio y DTO de las cinco RPC;
+- tipos de dominio, respuestas y argumentos complejos propios de las cinco RPC;
 - contratos del borrador que serán compartidos por store, composables y UI;
 - mappers explícitos y puros;
 - funciones de servicio para lectura, búsqueda, actualización e imagen;
@@ -55,7 +55,7 @@ src/stores/dbequipos/engrase/edicion/
 └── equipoEngraseEdicion.service.test.ts
 ```
 
-Si los tipos generados de Supabase no contienen las RPC del esquema `engrase`, actualizar el mecanismo de tipos generado usado por el proyecto. No crear definiciones parciales basadas en `any`.
+No crear, regenerar ni modificar `database.types.ts`, interfaces `Database` o archivos equivalentes para registrar estas RPC. La ausencia de una RPC en tipos generados no se resuelve ampliando el esquema global del cliente.
 
 ## 6. Reglas técnicas obligatorias
 
@@ -69,8 +69,70 @@ Si los tipos generados de Supabase no contienen las RPC del esquema `engrase`, a
 - No realizar queries desde componentes.
 - No exponer claves `service_role` en frontend.
 - No agregar dependencias nuevas.
+- Tipar los argumentos en la firma de cada método del servicio, siguiendo el patrón de `buscarProductos` y `crearSolicitud` en `solicitudesCompraCrear.service.ts`.
+- Para uno o dos parámetros simples, recibir primitivas directamente y construir el objeto RPC dentro del método.
+- Para payloads complejos, declarar un tipo local dedicado exclusivamente al argumento de esa función en `equipoEngraseEdicion.types.ts`.
+- Los tipos locales no deben agregarse a `Database`, no deben limitar el cliente Supabase global y no deben describir tablas ajenas a esta funcionalidad.
+- Después de revisar `error`, convertir `data` al tipo de respuesta concreto de la funcionalidad, sin pasar datos RPC sin tipo al store.
 
-## 7. Contratos base
+## 7. Patrón obligatorio para RPC
+
+Llamada simple:
+
+```ts
+const RPC_OBTENER_EQUIPO = "rpc_obtener_equipo_para_edicion"
+
+async function obtenerEquipoParaEdicion(
+  codigo: string,
+): Promise<EquipoParaEdicionRespuesta> {
+  const { data, error } = await supabaseEquipos
+    .schema("engrase")
+    .rpc(RPC_OBTENER_EQUIPO, { p_codigo: codigo })
+
+  if (error) {
+    throw new Error(error.message || "No se pudo obtener el equipo")
+  }
+
+  return data as EquipoParaEdicionRespuesta
+}
+```
+
+Llamada con argumento complejo:
+
+```ts
+export interface ActualizarEquipoCompletoArgumento {
+  codigoEquipoOriginal: string
+  cambios: CambiosEquipoPayload
+}
+
+async function actualizarEquipoCompleto(
+  argumento: ActualizarEquipoCompletoArgumento,
+): Promise<ActualizarEquipoCompletoRespuesta> {
+  const { data, error } = await supabaseEquipos
+    .schema("engrase")
+    .rpc(RPC_ACTUALIZAR_EQUIPO, {
+      p_codigo_equipo: argumento.codigoEquipoOriginal,
+      p_cambios: argumento.cambios,
+    })
+
+  if (error) {
+    throw new Error(error.message || "No se pudo actualizar el equipo")
+  }
+
+  return data as ActualizarEquipoCompletoRespuesta
+}
+```
+
+Reglas:
+
+- El objeto local usa nombres TypeScript legibles; el service traduce a `p_*`.
+- No crear un tipo de argumento para una sola cadena si la firma directa es suficiente.
+- No pasar directamente a `.rpc()` un objeto del store o del formulario.
+- No usar tipos generados de `Database["Functions"]` para restringir estas llamadas.
+- No usar genéricos artificiales sobre el cliente Supabase para simular el registro de la función.
+- El cast de respuesta sólo ocurre dentro del service y hacia un tipo local concreto.
+
+## 8. Contratos base
 
 Definir, como mínimo:
 
@@ -119,7 +181,7 @@ export interface EquipoEdicionAceite {
 
 `subtipo` debe normalizarse como cadena editable. En la UI representa indistintamente modelo, subtipo o descripción del equipo. No crear tres campos distintos.
 
-## 8. RPC de carga del equipo
+## 9. RPC de carga del equipo
 
 Servicio:
 
@@ -150,7 +212,7 @@ Error funcional conocido:
 EQUIPO_NO_ENCONTRADO: <codigo>
 ```
 
-## 9. RPC de auxiliares
+## 10. RPC de auxiliares
 
 Servicio:
 
@@ -168,7 +230,7 @@ Debe mapear:
 
 Los arreglos se conservan como `[]`. No convertirlos en `null`.
 
-## 10. RPC de búsqueda de filtro original
+## 11. RPC de búsqueda de filtro original
 
 Servicio:
 
@@ -203,14 +265,13 @@ Reglas:
 - no implementar sugerencias por nombre;
 - no reutilizar `buscarSugerenciasCodigo` del listado, porque su contrato incluye equivalencias y no representa este flujo.
 
-## 11. RPC de actualización integral
+## 12. RPC de actualización integral
 
 Servicio:
 
 ```ts
 actualizarEquipoCompleto(
-  codigoEquipoOriginal: string,
-  cambios: CambiosEquipoPayload,
+  argumento: ActualizarEquipoCompletoArgumento,
 ): Promise<ActualizarEquipoCompletoRespuesta>
 ```
 
@@ -244,7 +305,7 @@ La respuesta debe mapear:
 - `resumen_operaciones`;
 - código y mensaje.
 
-## 12. RPC de imagen
+## 13. RPC de imagen
 
 Servicio:
 
@@ -274,7 +335,7 @@ La respuesta debe conservar:
 
 El servicio RPC no sube, mueve ni elimina archivos físicos. Esa coordinación corresponde al `SPEC-07`.
 
-## 13. IDs temporales
+## 14. IDs temporales
 
 Crear helpers específicos:
 
@@ -296,7 +357,7 @@ tmp_equipo_filtro_<identificador>
 
 Los IDs deben ser únicos durante la sesión de edición y estables mientras el elemento permanezca en el borrador.
 
-## 14. Errores
+## 15. Errores
 
 Crear un mapa tipado de códigos funcionales conocidos. El servicio debe preservar el código original para que la capa de presentación pueda traducirlo.
 
@@ -315,7 +376,7 @@ Errores mínimos a contemplar:
 - archivo inexistente;
 - operación de imagen inválida.
 
-## 15. Pruebas
+## 16. Pruebas
 
 Cubrir al menos:
 
@@ -329,10 +390,13 @@ Cubrir al menos:
 - respuesta `equipo_lista` compatible con el store existente;
 - unión de imagen impidiendo entradas inválidas en compilación;
 - preservación de códigos de error.
+- firmas simples con parámetros primitivos y construcción interna del objeto `p_*`;
+- argumentos complejos tipados con objetos locales de la funcionalidad;
+- ausencia de cambios o dependencias sobre `Database`/`database.types.ts`.
 
 Los mocks deben estar completamente tipados. No usar `any` ni `unknown` en datos de prueba.
 
-## 16. Criterios de aceptación
+## 17. Criterios de aceptación
 
 - Existen contratos únicos para las cinco RPC.
 - Ningún archivo del spec contiene `any` ni `unknown`.
@@ -341,5 +405,6 @@ Los mocks deben estar completamente tipados. No usar `any` ni `unknown` en datos
 - La búsqueda sólo contempla código original.
 - El payload de actualización no agrega secciones vacías.
 - Los servicios no contienen estado visual ni reglas de componentes.
+- Ninguna RPC fue agregada a tipos globales de base de datos.
+- Cada service traduce su firma local al objeto `p_*` dentro del método.
 - No se agregó UI ni se modificó el comportamiento del listado.
-

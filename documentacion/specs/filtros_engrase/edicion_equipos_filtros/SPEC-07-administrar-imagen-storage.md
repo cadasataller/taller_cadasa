@@ -267,6 +267,8 @@ No persistir silenciosamente rutas pendientes en variables sueltas. El estado de
 
 - Composition API y `<script setup lang="ts">`.
 - Prohibido usar `any` y `unknown` en código, File helpers, canvas, eventos, servicios y tests.
+- `administrarImagenEquipo` recibe un objeto local discriminado porque su argumento es complejo; no registrar sus parámetros en `Database` ni modificar tipos generados de Supabase.
+- El service traduce ese objeto a `p_codigo_equipo`, `p_operacion`, `p_storage_path` y `p_descripcion` dentro de la función.
 - Tipar eventos como `Event` y estrechar mediante comprobaciones concretas sin casts inseguros.
 - Usar uniones discriminadas para operación y sincronización.
 - Guardar instancias opacas o archivos en `shallowRef` cuando no necesiten reactividad profunda.

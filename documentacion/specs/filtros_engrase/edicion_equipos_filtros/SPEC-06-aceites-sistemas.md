@@ -230,6 +230,7 @@ Mostrar vacío útil cuando no existan aceites y ofrecer `Agregar aceite`.
 
 - `<script setup lang="ts">`.
 - Prohibido `any` y `unknown` en archivos y tests.
+- No modelar sistemas, aceites ni operaciones como extensiones de `Database`; usar referencias y argumentos locales exclusivos de esta funcionalidad.
 - Usar uniones discriminadas para existentes/nuevos y add/edit.
 - Props inmutables y emits tipados.
 - Filtros locales derivados con `computed`, no dentro del template.

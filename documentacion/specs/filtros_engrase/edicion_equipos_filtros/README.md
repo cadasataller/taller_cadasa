@@ -37,6 +37,10 @@ Cada spec es una unidad de entrega verificable. Deben implementarse en este orde
 - Setup stores de Pinia y `storeToRefs()` para estado/getters.
 - Props hacia abajo, eventos tipados hacia arriba.
 - Servicios como única capa de acceso a Supabase.
+- No crear, generar ni modificar archivos `Database`, `database.types.ts` o equivalentes para registrar, limitar o tipar los argumentos de estas RPC.
+- Tipar cada llamada en la firma de su función de servicio, siguiendo el patrón de `solicitudesCompraCrear.service.ts`: parámetros primitivos directos para llamadas simples y un tipo local de argumento únicamente cuando el payload sea complejo.
+- Los tipos locales de argumentos y respuestas pertenecen a esta funcionalidad; no representan ni intentan reproducir el esquema global de Supabase.
+- La respuesta de una RPC puede convertirse al tipo local concreto después de comprobar `error`, sin introducir `any` ni `unknown`.
 - Usar `vue-multiselect@3.5.0` como base de los selectores de catálogos, sugerencias, multiselección y creación temporal definidos en `SPEC-03` a `SPEC-06`.
 - Encapsular `vue-multiselect` en adaptadores locales con props y emits estrictamente tipados; no propagar tipos laxos de la dependencia al store ni a los formularios.
 - Importar `vue-multiselect/dist/vue-multiselect.css` una sola vez y personalizarlo con los tokens existentes de la aplicación.

@@ -244,6 +244,7 @@ Errores junto al campo y anunciables. Conservar datos ante fallo de búsqueda.
 
 - Composition API y `<script setup lang="ts">`.
 - Prohibido usar `any` o `unknown` en código y pruebas.
+- No agregar filtros o tipos temporales a `Database` ni crear tipos globales de RPC; estas referencias son contratos locales del borrador y del argumento complejo de actualización.
 - Usar uniones discriminadas para las cuatro combinaciones de referencias.
 - No usar casts para esconder contratos incompletos.
 - Props de sólo lectura y emits tipados.

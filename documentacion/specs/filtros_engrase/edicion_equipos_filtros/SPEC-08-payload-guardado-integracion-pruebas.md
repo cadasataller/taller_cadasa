@@ -345,6 +345,9 @@ En todos los tamaños:
 ## 19. TypeScript y arquitectura
 
 - Prohibido usar `any` o `unknown` en cualquier archivo creado o modificado, incluyendo pruebas, mocks, errores, eventos y casts.
+- `CambiosEquipoPayload` y `ActualizarEquipoCompletoArgumento` son tipos locales exclusivos del argumento complejo de la función de servicio; no forman parte de `Database`.
+- No crear, generar ni modificar `database.types.ts` para registrar `rpc_actualizar_equipo_completo` ni ninguna otra RPC de esta serie.
+- El service convierte el argumento local al objeto `{ p_codigo_equipo, p_cambios }` y convierte la respuesta al tipo local después de validar `error`.
 - Usar tipos concretos importados de la capa de edición.
 - El generador de payload es una función pura.
 - La validación es una función pura o conjunto de helpers puros.
@@ -377,6 +380,8 @@ Debe incluir:
 - aceite eliminado;
 - múltiples secciones simultáneas;
 - payload vacío.
+- traducción del argumento local a `{ p_codigo_equipo, p_cambios }` dentro del service;
+- ausencia de cambios en tipos globales `Database`.
 
 ## 21. Pruebas de integración
 

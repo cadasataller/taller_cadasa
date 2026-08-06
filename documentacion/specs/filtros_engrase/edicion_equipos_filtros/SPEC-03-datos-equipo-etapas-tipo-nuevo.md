@@ -296,6 +296,7 @@ Validar al perder foco y al intentar guardar. El error aparece junto al campo y 
 
 - Vue 3 con `<script setup lang="ts">`.
 - Prohibido usar `any` y `unknown` en código, eventos, props, tests o casts.
+- No crear ni modificar tipos `Database` para acciones del borrador o futuras RPC; los componentes sólo usan tipos locales de dominio y las firmas de servicio definidas en `SPEC-01`.
 - Usar contratos importados desde la carpeta de edición.
 - Estado derivado con `computed`.
 - `watch` sólo para side effects, no para duplicar datos derivados.

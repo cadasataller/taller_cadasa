@@ -242,6 +242,8 @@ Responsabilidades:
 - Props de sólo lectura y eventos tipados.
 - Está prohibido usar `any` o `unknown`, incluyendo casts, payloads, mocks y helpers.
 - No usar `Record<string, unknown>`.
+- No crear ni modificar `Database`, `database.types.ts` o equivalentes para la carga RPC; el store consume exclusivamente funciones de servicio tipadas según `SPEC-01`.
+- Los argumentos simples permanecen en la firma del service y los complejos usan tipos locales de la funcionalidad, nunca tipos globales del esquema.
 - Usar `shallowRef` para primitivos locales y `computed` para derivados.
 - No mutar props.
 - No declarar lógica de negocio dentro del template.
@@ -307,4 +309,3 @@ Cubrir:
 - La iconografía usa Lucide.
 - No existe `any` ni `unknown` en archivos creados o modificados.
 - `pnpm typecheck` y las pruebas del spec pasan.
-

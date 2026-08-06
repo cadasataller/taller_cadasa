@@ -255,6 +255,8 @@ Una búsqueda fallida no debe cerrar el drawer ni borrar el código escrito.
 
 - `<script setup lang="ts">` y Composition API.
 - Prohibido `any` y `unknown` en archivos, mocks, props, emits, eventos DOM y casts.
+- La búsqueda RPC se tipa en la firma `buscarFiltroOriginalParaAsignar(codigo, codigoEquipo?)`; no crear un tipo `Database` ni una interfaz global para sus dos argumentos simples.
+- El service construye `{ p_codigo, p_codigo_equipo }` internamente y devuelve el tipo local concreto de resultado.
 - Eventos DOM deben tener tipos concretos.
 - Usar uniones discriminadas para modo `add | edit` y estado de búsqueda.
 - Derivados con `computed`.
