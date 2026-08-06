@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { AlertTriangle, RefreshCw } from "lucide-vue-next";
 import EquipoEdicionShell from "@/components/engrase/edicion/EquipoEdicionShell.vue";
+import EquipoDatosForm from "@/components/engrase/edicion/datos/EquipoDatosForm.vue";
+import EquipoTipoNuevoOverlay from "@/components/engrase/edicion/datos/EquipoTipoNuevoOverlay.vue";
 import { useEquipoEngraseEditor } from "@/composables/engrase/useEquipoEngraseEditor";
 const editor = useEquipoEngraseEditor();
 </script>
@@ -60,6 +62,20 @@ const editor = useEquipoEngraseEditor();
       @back="editor.volver"
       @cancel="editor.volver"
     >
+      <template #datos>
+        <EquipoDatosForm
+          v-if="editor.auxiliares.value"
+          :draft="editor.draft.value"
+          :auxiliares="editor.auxiliares.value"
+          @update-codigo="editor.actualizarCodigo"
+          @select-tipo-equipo="editor.seleccionarTipoEquipo"
+          @update-subtipo="editor.actualizarSubtipo"
+          @update-estado="editor.actualizarEstado"
+          @add-etapa="editor.agregarEtapa"
+          @remove-etapa="editor.quitarEtapa"
+          @open-new-type="editor.abrirNuevoTipoEquipo"
+        />
+      </template>
       <template #overlay
         ><div
           v-if="editor.activeOverlay.value === 'confirmar_salida'"
@@ -94,7 +110,14 @@ const editor = useEquipoEngraseEditor();
               </button>
             </div>
           </section>
-        </div></template
+        </div>
+        <EquipoTipoNuevoOverlay
+          v-if="editor.activeOverlay.value === 'nuevo_tipo_equipo'"
+          :duplicate="editor.esTipoEquipoDuplicado"
+          @close="editor.continuarEditando"
+          @create-and-select="editor.crearYSeleccionarTipoEquipo($event) && editor.continuarEditando()"
+        />
+      </template
       >
     </EquipoEdicionShell>
   </div>

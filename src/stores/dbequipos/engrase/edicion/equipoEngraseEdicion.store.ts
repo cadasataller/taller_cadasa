@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { useFiltrosEngraseStore } from "../filtrosEngrase.store";
 import { extraerCodigoErrorEdicionEquipo } from "./equipoEngraseEdicion.errors";
 import { equipoEngraseEdicionService } from "./equipoEngraseEdicion.service";
+import { crearTempId } from "./equipoEngraseEdicion.tempIds";
 import type {
   AuxiliaresEdicionEquipo,
   EquipoEdicionDraft,
@@ -10,12 +11,15 @@ import type {
   EquipoEdicionOverlay,
   EquipoEdicionSnapshot,
   EquipoImagenPersistida,
-} from "./equipoEngraseEdicion.types";
+  EquipoEstado,
+  } from "./equipoEngraseEdicion.types";
 
 const crearError = (error: Error): EquipoEdicionError => ({
   codigo: extraerCodigoErrorEdicionEquipo(error.message),
   mensaje: error.message,
 });
+const normalizarTexto = (valor: string): string => valor.trim().replace(/\s+/g, " ");
+const claveTexto = (valor: string): string => normalizarTexto(valor).normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase();
 const clonarSnapshot = (
   snapshot: EquipoEdicionSnapshot,
 ): EquipoEdicionSnapshot => ({
@@ -37,6 +41,7 @@ const crearBorrador = (
   snapshot: EquipoEdicionSnapshot,
 ): EquipoEdicionDraft => ({
   ...clonarSnapshot(snapshot),
+  tipoEquipoReferencia: { estado: "existente", id: snapshot.equipo.tipoEquipoId, nombre: snapshot.equipo.tipoEquipo, tempId: null },
   operaciones: {
     datos: "existente",
     etapas: "existente",
@@ -80,14 +85,14 @@ export const useEquipoEngraseEdicionStore = defineStore(
       if (!original.value || !draft.value) return false;
       return (
         JSON.stringify({
-          equipo: original.value.equipo,
-          etapas: original.value.etapas,
+          codigo: normalizarTexto(original.value.equipo.codigo), tipo: original.value.equipo.tipoEquipoId, subtipo: normalizarTexto(original.value.equipo.subtipo), estado: original.value.equipo.estado,
+          etapas: original.value.etapas.map((etapa) => etapa.id).sort((a, b) => a - b),
           filtros: original.value.filtros,
           aceites: original.value.aceites,
         }) !==
         JSON.stringify({
-          equipo: draft.value.equipo,
-          etapas: draft.value.etapas,
+          codigo: normalizarTexto(draft.value.equipo.codigo), tipo: draft.value.tipoEquipoReferencia.estado === "existente" ? draft.value.tipoEquipoReferencia.id : draft.value.tipoEquipoReferencia.tempId, subtipo: normalizarTexto(draft.value.equipo.subtipo), estado: draft.value.equipo.estado,
+          etapas: draft.value.etapas.map((etapa) => etapa.id).sort((a, b) => a - b),
           filtros: draft.value.filtros,
           aceites: draft.value.aceites,
         })
@@ -164,6 +169,15 @@ export const useEquipoEngraseEdicionStore = defineStore(
       draft.value = original.value ? crearBorrador(original.value) : null;
       activeOverlay.value = null;
     }
+    function actualizarCodigo(codigo: string): void { if (draft.value) draft.value.equipo.codigo = codigo.trim(); }
+    function seleccionarTipoEquipo(tipo: EquipoEdicionDraft["tipoEquipoReferencia"]): void { if (!draft.value) return; draft.value.tipoEquipoReferencia = tipo; draft.value.equipo.tipoEquipoId = tipo.estado === "existente" ? tipo.id : 0; draft.value.equipo.tipoEquipo = tipo.nombre; }
+    function actualizarSubtipo(subtipo: string): void { if (draft.value) draft.value.equipo.subtipo = subtipo.trim(); }
+    function actualizarEstado(estado: EquipoEstado): void { if (draft.value) draft.value.equipo.estado = estado; }
+    function agregarEtapa(etapaId: number): void { if (!draft.value || draft.value.etapas.some((etapa) => etapa.id === etapaId)) return; const etapa = auxiliares.value?.etapas.find((item) => item.id === etapaId); if (etapa) draft.value.etapas.push({ ...etapa }); }
+    function quitarEtapa(etapaId: number): void { if (!draft.value || draft.value.etapas.length <= 1) return; draft.value.etapas = draft.value.etapas.filter((etapa) => etapa.id !== etapaId); }
+    function esTipoEquipoDuplicado(nombre: string): boolean { const clave = claveTexto(nombre); return Boolean(clave && (auxiliares.value?.tiposEquipo.some((tipo) => claveTexto(tipo.nombre) === clave) || (draft.value?.tipoEquipoReferencia.estado === "nuevo" && claveTexto(draft.value.tipoEquipoReferencia.nombre) === clave))); }
+    function crearYSeleccionarTipoEquipo(nombre: string): boolean { const normalizado = normalizarTexto(nombre); if (!draft.value || !normalizado || esTipoEquipoDuplicado(normalizado)) return false; seleccionarTipoEquipo({ estado: "nuevo", id: null, tempId: crearTempId("tipo_equipo"), nombre: normalizado, subtiposSugeridos: [] }); return true; }
+    function abrirNuevoTipoEquipo(): void { activeOverlay.value = "nuevo_tipo_equipo"; }
     function reset(): void {
       solicitudActual += 1;
       codigoOriginal.value = null;
@@ -198,6 +212,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
       continuarEditando,
       descartarCambios,
       reset,
+      actualizarCodigo, seleccionarTipoEquipo, actualizarSubtipo, actualizarEstado, agregarEtapa, quitarEtapa, crearYSeleccionarTipoEquipo, esTipoEquipoDuplicado, abrirNuevoTipoEquipo,
     };
   },
 );

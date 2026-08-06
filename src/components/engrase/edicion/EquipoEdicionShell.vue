@@ -22,13 +22,7 @@ const emit = defineEmits<{ back: []; cancel: []; save: [] }>();
     <main
       class="mx-auto grid w-full max-w-5xl flex-1 gap-2.5 p-2.5 pb-20 sm:gap-3 sm:p-3 sm:pb-20"
     >
-      <section class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-        <h2 class="text-sm font-bold text-gray-900">Datos del equipo</h2>
-        <p class="mt-1 text-xs leading-5 text-gray-600">
-          Código, tipo, modelo, estado y etapas se habilitarán en el siguiente
-          paso.
-        </p>
-      </section>
+      <slot name="datos" />
       <section class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
         <div class="flex justify-between gap-2">
           <h2 class="text-sm font-bold text-gray-900">Filtros</h2>

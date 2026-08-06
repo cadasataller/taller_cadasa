@@ -47,7 +47,11 @@ export interface EquipoImagenPersistida {
 export interface EquipoEdicionSnapshot extends EquipoParaEdicion {
   imagen: EquipoImagenPersistida;
 }
+export interface TipoEquipoExistenteDraftReference extends CatalogoIdNombre { estado: "existente"; tempId: null }
+export interface TipoEquipoNuevoDraftReference { estado: "nuevo"; id: null; tempId: string; nombre: string; subtiposSugeridos: string[] }
+export type TipoEquipoDraftReference = TipoEquipoExistenteDraftReference | TipoEquipoNuevoDraftReference;
 export interface EquipoEdicionDraft extends EquipoEdicionSnapshot {
+  tipoEquipoReferencia: TipoEquipoDraftReference;
   operaciones: {
     datos: OperacionDraft;
     etapas: OperacionDraft;
@@ -55,7 +59,7 @@ export interface EquipoEdicionDraft extends EquipoEdicionSnapshot {
     aceites: OperacionDraft;
   };
 }
-export type EquipoEdicionOverlay = "confirmar_salida";
+export type EquipoEdicionOverlay = "confirmar_salida" | "nuevo_tipo_equipo";
 export interface EquipoEdicionError { codigo: string; mensaje: string }
 
 export interface TipoEquipoAuxiliar extends CatalogoIdNombre {

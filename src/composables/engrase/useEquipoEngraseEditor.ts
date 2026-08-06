@@ -33,5 +33,14 @@ export function useEquipoEngraseEditor() {
     descartarYVolver,
     continuarEditando: store.continuarEditando,
     reintentar: cargarRuta,
+    actualizarCodigo: store.actualizarCodigo,
+    seleccionarTipoEquipo: store.seleccionarTipoEquipo,
+    actualizarSubtipo: store.actualizarSubtipo,
+    actualizarEstado: store.actualizarEstado,
+    agregarEtapa: store.agregarEtapa,
+    quitarEtapa: store.quitarEtapa,
+    crearYSeleccionarTipoEquipo: store.crearYSeleccionarTipoEquipo,
+    esTipoEquipoDuplicado: store.esTipoEquipoDuplicado,
+    abrirNuevoTipoEquipo: store.abrirNuevoTipoEquipo,
   };
 }
