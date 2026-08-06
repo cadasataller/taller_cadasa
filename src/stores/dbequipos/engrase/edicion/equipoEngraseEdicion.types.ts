@@ -39,6 +39,24 @@ export interface EquipoParaEdicion {
   filtros: EquipoEdicionFiltro[];
   aceites: EquipoEdicionAceite[];
 }
+export interface EquipoImagenPersistida {
+  mainStoragePath: string | null;
+  tieneImagenMain: boolean;
+  imagenActualizadaEn: string | null;
+}
+export interface EquipoEdicionSnapshot extends EquipoParaEdicion {
+  imagen: EquipoImagenPersistida;
+}
+export interface EquipoEdicionDraft extends EquipoEdicionSnapshot {
+  operaciones: {
+    datos: OperacionDraft;
+    etapas: OperacionDraft;
+    filtros: OperacionDraft;
+    aceites: OperacionDraft;
+  };
+}
+export type EquipoEdicionOverlay = "confirmar_salida";
+export interface EquipoEdicionError { codigo: string; mensaje: string }
 
 export interface TipoEquipoAuxiliar extends CatalogoIdNombre {
   subtiposSugeridos: string[];

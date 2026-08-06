@@ -29,7 +29,7 @@ const props = defineProps<{
   loading: boolean;
   error: string | null;
 }>();
-defineEmits<{ selectFiltro: [number]; retry: []; backToEquipos: [] }>();
+const emit = defineEmits<{ selectFiltro: [number]; retry: []; backToEquipos: []; editarEquipo: [string] }>();
 const featureAccessStore = useFeatureAccessStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
 const canEditFiltrosEngrase = computed(() =>
@@ -146,7 +146,7 @@ function alternarGrupo(grupo: string) {
   >
     <button
       type="button"
-      class="mb-2 text-xs font-semibold text-main md:hidden"
+      class="mb-2 cursor-pointer text-xs font-semibold text-main md:hidden"
       @click="$emit('backToEquipos')"
     >
       ← Equipos
@@ -206,6 +206,7 @@ function alternarGrupo(grupo: string) {
           type="button"
           class="cursor-pointer rounded-md border border-gray-200 p-1 text-main transition hover:border-main/40 hover:bg-main/10"
           aria-label="Editar filtros del equipo"
+          @click="emit('editarEquipo', equipo.codigo)"
         >
           <SquarePen class="h-4 w-4" />
         </button>
@@ -218,7 +219,7 @@ function alternarGrupo(grupo: string) {
         <div class="flex flex-wrap items-center gap-2 text-xs">
         <button
           type="button"
-          class="flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 transition"
+          class="cursor-pointer flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 transition"
           :class="
             soloConEquivalencias
               ? 'border-main bg-main/10 text-main'
@@ -232,7 +233,7 @@ function alternarGrupo(grupo: string) {
         </button>
         <button
           type="button"
-          class="flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 transition"
+          class="cursor-pointer flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-1 transition"
           :class="
             soloEnCompras
               ? 'border-main bg-main/10 text-main'
@@ -255,7 +256,7 @@ function alternarGrupo(grupo: string) {
             v-for="grupo in gruposDeFiltros"
             :key="grupo.grupo"
             type="button"
-            class="flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-xs transition"
+            class="cursor-pointer flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-xs transition"
             :class="
               grupoSeleccionado === grupo.grupo
                 ? 'border-main bg-main/10 text-main'
@@ -275,7 +276,7 @@ function alternarGrupo(grupo: string) {
       </p>
       <p v-else-if="error" class="p-4 text-center text-xs text-danger">
         {{ error }}
-        <button class="font-semibold underline" @click="$emit('retry')">
+        <button class="cursor-pointer font-semibold underline" @click="$emit('retry')">
           Reintentar
         </button>
       </p>
@@ -289,7 +290,7 @@ function alternarGrupo(grupo: string) {
         <button
           v-for="filtro in filtrosVisibles"
           :key="filtro.id"
-          class="rounded-md border p-2 text-left text-xs transition hover:border-main/40"
+          class="cursor-pointer rounded-md border p-2 text-left text-xs transition hover:border-main/40"
           :class="
             selectedFiltroId === filtro.id
               ? 'border-main bg-main/5'

@@ -88,6 +88,7 @@ const router = createRouter({
               component: () => import('@/views/compras/SolicitudCompraCrearView.vue'),
               meta: {
                 requiredFeature: 'crear_solicitud_compra',
+                layout: 'fullscreen',
               },
             },
           ],
@@ -97,6 +98,15 @@ const router = createRouter({
           name: 'Catalogo',
           component: () => import('@/views/CatalogoView.vue'),
           meta: { requiredFeature: 'module_catalog' },
+        },
+        {
+          path: 'engrase/filtros/equipos/:codigo/editar',
+          name: 'EquipoEngraseEditar',
+          component: () => import('@/views/engrase/EquipoEngraseEditarView.vue'),
+          meta: {
+            requiredFeatures: ['module_engrase', 'ver_filtros_engrase', 'editar_filtros_engrase'],
+            layout: 'fullscreen',
+          },
         },
         {
           path: 'engrase/filtros',

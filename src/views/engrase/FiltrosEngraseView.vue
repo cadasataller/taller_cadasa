@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, shallowRef } from "vue";
+import { useRouter } from "vue-router";
 import FiltrosEngraseToolbar from "@/components/engrase/filtros/FiltrosEngraseToolbar.vue";
 import EquiposEngrasePanel from "@/components/engrase/filtros/EquiposEngrasePanel.vue";
 import FiltrosEquipoPanel from "@/components/engrase/filtros/FiltrosEquipoPanel.vue";
 import FiltroDetallePanel from "@/components/engrase/filtros/FiltroDetallePanel.vue";
 import { useFiltrosEngrase } from "@/composables/engrase/useFiltrosEngrase";
+import type { FiltrosEngraseQuery } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
 const f = useFiltrosEngrase(),
   mobileStage = shallowRef<"equipos" | "filtros">("equipos"),
   resetSignal = shallowRef(0);
+const router = useRouter();
 const equivalenciasSeleccionadas = computed(() =>
   f.filtroSeleccionado.value
     ? (f.equivalenciasPorFiltroId.value[f.filtroSeleccionado.value.filtro_id] ??
@@ -19,8 +22,11 @@ async function selectEquipo(id: number) {
   await f.seleccionarEquipo(id);
   mobileStage.value = "filtros";
 }
-async function update(filters: any) {
+async function update(filters: Partial<FiltrosEngraseQuery>) {
   await f.actualizarFiltros(filters);
+}
+function editarEquipo(codigo: string) {
+  router.push({ name: "EquipoEngraseEditar", params: { codigo } });
 }
 async function retryDetalle() {
   if (f.equipoSeleccionadoId.value) await f.reintentar();
@@ -35,7 +41,7 @@ async function clearAllFilters() {
     
     <div v-if="f.errorInicial.value" class="rounded-lg border border-danger/30 bg-danger-bg p-4 text-sm text-danger">
       <p>{{ f.errorInicial.value }}</p>
-      <button @click="f.reintentar">Reintentar</button>
+      <button class="cursor-pointer" @click="f.reintentar">Reintentar</button>
     </div>
     <template v-else>
       <FiltrosEngraseToolbar
@@ -90,6 +96,7 @@ async function clearAllFilters() {
             @select-filtro="f.seleccionarFiltro"
             @retry="retryDetalle"
             @back-to-equipos="mobileStage = 'equipos'"
+            @editar-equipo="editarEquipo"
           />
         </div>
         <FiltroDetallePanel
