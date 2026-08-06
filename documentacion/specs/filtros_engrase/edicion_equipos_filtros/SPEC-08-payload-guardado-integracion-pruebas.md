@@ -325,6 +325,14 @@ En todos los tamaños:
 - backdrop y foco correctos;
 - sin scroll anidado innecesario;
 - animaciones de transform/opacity y respeto a reducción de movimiento.
+- `text-sm` como tamaño operativo general y `text-xs` como mínimo para labels, badges y metadatos;
+- ausencia de texto menor a 12 px y de títulos sobredimensionados;
+- controles de 36–40 px visuales en desktop y objetivos táctiles mínimos de 44 px en móvil;
+- inputs/selectores móviles en `text-base`;
+- ritmo `gap-2`/`gap-3`/`gap-4`, tarjetas `p-3`/`p-4` y radios `rounded-md`/`rounded-lg`.
+- vista y raíces teletransportadas usando el mismo tema principal;
+- colores, sombras y radios provenientes exclusivamente de los tokens base declarados en `@theme`, incluidos menús de `vue-multiselect` y diálogos de confirmación;
+- ausencia de valores cromáticos literales, clases arbitrarias de color y paletas externas.
 
 ## 18. Botones e iconografía
 
@@ -406,6 +414,8 @@ Cubrir:
 - confirmación al salir;
 - navegación móvil completa;
 - teclado y manejo de foco.
+- auditoría de tipografía, alturas, espacios y densidad ERP en desktop, tablet y móvil.
+- auditoría del tema en vista, drawers, bottom sheets, confirmaciones y dropdowns teletransportados.
 
 ## 22. Comandos de verificación
 
@@ -421,9 +431,14 @@ Además:
 
 - buscar `any` y `unknown` en todos los archivos creados o modificados por la funcionalidad;
 - comprobar manualmente desktop, tablet y móvil;
+- comprobar que no existan clases tipográficas menores a `text-xs`, como `text-[10px]`, dentro de los archivos de edición;
+- comprobar que desktop mantenga densidad compacta y que móvil no reduzca controles por debajo de 44 px;
 - confirmar que `vue-multiselect@3.5.0` monta y compila con las versiones actuales de Vue, Vite y `@vitejs/plugin-vue` sin deshabilitar Composition API ni degradar dependencias silenciosamente;
 - confirmar que el CSS base se importa una sola vez y que los menús no quedan recortados dentro de drawers/bottom sheets;
 - comprobar que los dropdowns teletransportados mantienen el `z-index`, el foco y la navegación por teclado dentro del flujo modal;
+- comprobar que la vista, cada raíz teletransportada y los menús del multiselect usan únicamente los tokens base de `@theme`;
+- buscar colores hex/RGB/HSL, clases arbitrarias de color y paletas externas en los archivos de la funcionalidad; el resultado debe estar vacío;
+- comprobar estados normal, hover, foco, seleccionado, deshabilitado, inválido y destructivo usando sólo tokens de `src/index.css` y contraste accesible;
 - verificar agregar/cambiar/eliminar imagen contra un entorno autorizado;
 - verificar que Storage y base coincidan tras cambiar código.
 
@@ -442,6 +457,8 @@ Además:
 - El listado se actualiza con `equipo_lista` sin recarga completa.
 - La caché del detalle queda invalidada.
 - Errores conservan el borrador.
+- La UI completa cumple la escala ERP: `text-sm` general, `text-xs` mínimo, inputs móviles `text-base`, título máximo `text-lg` y espaciado compacto 4/8 px.
+- Toda la UI, incluidos overlays y menús teletransportados, usa el tema principal del bloque `@theme` y no introduce colores literales ni paletas paralelas.
 - Todos los botones disponibles usan `cursor-pointer`.
 - Todos los iconos funcionales requeridos son Lucide.
 - No existe `any` ni `unknown` en archivos creados o modificados.

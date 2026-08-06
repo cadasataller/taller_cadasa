@@ -117,7 +117,7 @@ Reglas obligatorias:
 - el wrapper emite valores concretos del dominio, no el objeto crudo recibido de la librería;
 - si los tipos publicados por la librería son laxos, no copiarlos ni ampliarlos con `any`/`unknown`; mantener la frontera en el wrapper y declarar handlers con los tipos concretos de esta funcionalidad.
 
-El CSS de la librería se personaliza en una capa global específica o mediante clases contenedoras para respetar altura mínima de 44 px, foco visible, tokens de color, estados inválido/deshabilitado y stacking dentro de drawers. No duplicar el CSS base por componente.
+El CSS de la librería se personaliza en una capa global específica o mediante clases contenedoras para respetar altura visual de 36–40 px en escritorio, área táctil mínima de 44 px en móvil, foco visible, tokens de `src/index.css`, estados inválido/deshabilitado y stacking dentro de drawers. En móvil, el input de búsqueda interno debe usar al menos 16 px. No duplicar el CSS base por componente ni introducir colores literales.
 
 `$isDisabled` sólo existe en la opción privada del adaptador porque es el contrato requerido por la librería. El modelo de dominio continúa usando nombres propios como `yaAsignadoAlEquipo`; el mapper es responsable de convertir ese estado a `$isDisabled`.
 
@@ -197,6 +197,7 @@ Si se cancela, no modificar el borrador.
 - Móvil y tablet: bottom sheet.
 - Usar un único formulario interno compartido.
 - Renderizar mediante `<Teleport to="body">` para escapar del layout y cubrir la vista de edición.
+- Los menús de los multiselects se teletransportan a `body` y usan una clase global propia con los tokens base de `@theme`.
 - El backdrop debe mostrar exclusivamente la pantalla de edición debajo.
 - Nunca debe verse el listado como contexto del overlay.
 - Bloquear scroll del body mientras esté abierto.
@@ -273,7 +274,13 @@ Validar al perder foco y al intentar guardar. El error aparece junto al campo y 
 
 ## 15. Reglas visuales
 
-- Mantener la densidad y paleta actuales de Engrase.
+- Mantener la densidad y usar exclusivamente el tema principal del bloque `@theme` de `src/index.css`.
+- Usar `main*`/`accent*` para acciones y foco, `second*`/`gray-*` para superficies y texto, y los pares semánticos para estados. No usar hex/RGB/HSL, colores arbitrarios ni paletas externas.
+- Inputs, valores y botones usan `text-sm` en escritorio; labels, badges y ayudas usan `text-xs`.
+- El mínimo absoluto es 12 px. No usar `text-[10px]` ni equivalentes.
+- Títulos de sección usan `text-base`; el título principal puede usar `text-lg`.
+- En móvil, inputs y búsqueda de multiselect usan `text-base` y altura táctil mínima de 44 px.
+- Usar `gap-2` entre campos relacionados, `gap-3`/`gap-4` entre grupos y padding `p-3`/`p-4`.
 - Etiquetas siempre visibles; no usar placeholder como única etiqueta.
 - Chips de etapa con texto y control `X` de Lucide.
 - Estado mostrado con texto, no sólo color.
@@ -319,12 +326,14 @@ Cubrir:
 - traducción tipada dominio ↔ opción sin propagar objetos crudos de la librería;
 - CSS base cargado una sola vez;
 - montaje y build con la versión actual de Vite y `@vitejs/plugin-vue`;
+- tipografía ERP sin texto menor a `text-xs` y controles responsive 36–40/44 px;
 - duplicado local de tipo;
 - selección inmediata del tipo creado;
 - cancelar sin cambios;
 - confirmación al cerrar overlay sucio;
 - drawer desktop y bottom sheet responsive;
 - accesibilidad básica de labels y botones.
+- tema principal consistente en la vista, overlay y menú teletransportado, sin colores literales.
 
 ## 19. Criterios de aceptación
 
@@ -335,7 +344,9 @@ Cubrir:
 - No se puede considerar válido un borrador sin etapas.
 - Tipo de equipo, subtipo y etapas usan los adaptadores tipados de `vue-multiselect`.
 - `vue-multiselect` está fijado en `3.5.0`, su CSS se importa una vez y el build confirma compatibilidad.
+- Formulario y multiselects respetan la escala ERP 12/14/16/18 px y las alturas 36–40 px desktop/44 px móvil.
 - El overlay cubre la edición, no el listado.
+- Vista, overlay y menú de `vue-multiselect` usan únicamente los tokens base declarados en `@theme`.
 - Todo botón disponible tiene `cursor-pointer`.
 - Los iconos necesarios son de Lucide.
 - No existe `any` ni `unknown` en archivos creados o modificados.

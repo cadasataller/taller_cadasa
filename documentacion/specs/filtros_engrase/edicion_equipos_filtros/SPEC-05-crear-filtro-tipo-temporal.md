@@ -219,11 +219,17 @@ Errores junto al campo y anunciables. Conservar datos ante fallo de búsqueda.
 ## 15. UI y estilo
 
 - Mantener el lenguaje visual operativo de la pantalla.
+- Usar `text-sm` para campos, valores y acciones; `text-xs` para labels, badges, ayudas y mensajes secundarios.
+- No usar texto inferior a 12 px.
+- En escritorio, controles de 36–40 px; en móvil, área táctil mínima de 44 px e inputs `text-base`.
+- Usar `gap-2` entre campos y `gap-3` entre bloques; tarjetas internas con `p-3` y `rounded-md`/`rounded-lg`.
 - Mostrar el aviso de código no encontrado con icono y texto.
 - Agrupar el tipo nuevo dentro de una tarjeta secundaria.
 - Etiquetar claramente lo temporal.
 - No mostrar conteos o campos que no estén en RPC.
 - Desktop drawer y móvil bottom sheet sobre la edición.
+- El overlay y el menú teletransportado del multiselect usan los mismos tokens base de `@theme`.
+- Usar sólo tokens de `src/index.css`: `main*`/`accent*` para acciones/foco, `second*`/`gray-*` para superficies y los pares semánticos para avisos/errores. Prohibidos valores cromáticos literales, colores arbitrarios y paletas externas.
 
 ## 16. Botones e iconos
 
@@ -270,6 +276,8 @@ Cubrir:
 - temp IDs estables;
 - volver/cerrar con confirmación;
 - restauración de foco.
+- densidad ERP consistente en drawer y bottom sheet.
+- tema principal consistente en drawer, bottom sheet y menú teletransportado, sin colores literales.
 
 ## 19. Criterios de aceptación
 
@@ -280,6 +288,8 @@ Cubrir:
 - No se puede agregar un segundo filtro activo del mismo tipo.
 - La UI no busca equivalencias.
 - No se apilan overlays.
+- Drawer y bottom sheet aplican `text-sm`/`text-xs`, espaciado compacto y alturas responsive ERP.
+- Drawer, bottom sheet y menú usan únicamente los tokens base del bloque `@theme` de `src/index.css`.
 - Todo botón disponible usa `cursor-pointer`.
 - Los iconos son Lucide.
 - No existe `any` ni `unknown`.

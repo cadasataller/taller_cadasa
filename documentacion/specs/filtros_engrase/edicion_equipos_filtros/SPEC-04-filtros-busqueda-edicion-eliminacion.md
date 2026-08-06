@@ -49,6 +49,8 @@ Modificar store y tipos de edición.
 
 ## 6. Sección y filas
 
+La sección usa densidad ERP: contenido y valores en `text-sm`, etiquetas auxiliares/badges en `text-xs`, filas compactas con padding vertical moderado y sin texto menor a 12 px. En escritorio debe priorizar lectura horizontal; por debajo de `sm` se reorganiza sin scroll horizontal.
+
 Cada fila debe mostrar:
 
 - tipo de filtro;
@@ -212,12 +214,17 @@ El `draftId` es estable tanto para existentes como nuevos. Los componentes no de
 - Drawer lateral en desktop.
 - Bottom sheet en móvil/tablet.
 - `<Teleport to="body">`.
+- El menú de `vue-multiselect` se teletransporta a `body`, usa una clase global propia y queda fuera del contenedor con overflow.
 - Se superpone siempre a la vista de edición.
 - Formulario interno compartido.
 - Scroll interno sólo en el contenido, con encabezado y acciones visibles.
 - Bloqueo de scroll del body.
 - Restauración de foco al botón `Agregar filtro` o `Editar` que lo abrió.
 - Confirmar descarte si el formulario cambió.
+- Mantener `text-sm` para campos/acciones y `text-xs` para ayuda/estado; inputs de búsqueda usan `text-base` en móvil.
+- Controles visuales de 36–40 px en escritorio y área táctil mínima de 44 px en móvil.
+- Usar `gap-2` en formularios y `gap-3` entre bloques de resultado.
+- Aplicar exclusivamente tokens de `src/index.css`: `main*`/`accent*` para interacción, `second*`/`gray-*` para superficies y `danger*`/`warning*`/`info*` para estados. No usar colores literales ni paletas externas.
 
 ## 14. Estados y errores
 
@@ -286,6 +293,8 @@ Cubrir:
 - reversión elimina motivo;
 - errores conservan datos del formulario;
 - restauración de foco.
+- filas y drawer respetan la escala tipográfica y de densidad ERP.
+- filas, drawer y menú de tipo usan el tema principal y no contienen colores fuera del bloque `@theme` de `src/index.css`.
 
 ## 18. Criterios de aceptación
 
@@ -299,6 +308,8 @@ Cubrir:
 - Los motivos son automáticos y no técnicos.
 - Nunca queda menos de un filtro activo.
 - El overlay está sobre la vista de edición.
+- Filas y formulario conservan densidad ERP sin texto menor a 12 px ni controles táctiles menores a 44 px.
+- El overlay y su multiselect usan únicamente los tokens base de `@theme`.
 - Todo botón disponible usa `cursor-pointer`.
 - Los iconos son Lucide.
 - No existe `any` ni `unknown` en archivos creados o modificados.

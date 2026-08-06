@@ -60,6 +60,8 @@ Modificar store y pantalla de edición para mantener `imagenPersistidaActual`.
 
 ## 6. Estados de UI
 
+El drawer conserva densidad ERP: texto y acciones en `text-sm`, metadatos/ayudas/estados en `text-xs`, mínimo absoluto de 12 px, `gap-2` entre controles y `gap-3` entre bloques. La miniatura no debe forzar una tarjeta sobredimensionada.
+
 ### Sin imagen
 
 Mostrar:
@@ -240,11 +242,15 @@ No persistir silenciosamente rutas pendientes en variables sueltas. El estado de
 
 - Drawer en desktop y bottom sheet en móvil/tablet.
 - `<Teleport to="body">`.
+- El overlay teletransportado usa los mismos tokens base de `@theme` que la vista.
 - Superpuesto sobre la vista de edición.
 - Bloqueo de scroll y manejo de foco.
 - No cerrar mientras una operación está en curso.
 - Si sólo existe una vista previa no persistida, confirmar antes de cerrar.
 - Eliminar requiere confirmación separada.
+- Controles visuales de 36–40 px en escritorio y áreas táctiles de al menos 44 px en móvil.
+- Mantener `rounded-md`/`rounded-lg`, `p-3`/`p-4` y sombras discretas.
+- Usar sólo tokens de `src/index.css`: superficies `second*`/`white`, jerarquía `main*`/`gray-*`, selección `accent*` y acciones destructivas `danger`/`danger-bg`. No usar colores literales ni paletas externas.
 
 ## 16. Botones e iconos
 
@@ -295,6 +301,8 @@ Cubrir:
 - reintento no repite RPC general;
 - botones bloqueados durante proceso;
 - revocación de previews.
+- densidad ERP sin texto menor a 12 px ni controles móviles pequeños.
+- tema principal aplicado al drawer, confirmación y estados de imagen sin valores cromáticos literales.
 
 ## 19. Criterios de aceptación
 
@@ -305,6 +313,8 @@ Cubrir:
 - Existen compensaciones para archivos huérfanos.
 - El cambio de código mueve el archivo después del guardado general.
 - Un fallo de movimiento es recuperable sin repetir la edición.
+- El administrador de imagen usa superficies compactas, mínimo tipográfico de 12 px y controles responsive 36–40/44 px.
+- El drawer y sus confirmaciones usan exclusivamente los tokens base del bloque `@theme` de `src/index.css`.
 - Todo botón disponible tiene `cursor-pointer`.
 - Se usan iconos Lucide.
 - No existe `any` ni `unknown`.

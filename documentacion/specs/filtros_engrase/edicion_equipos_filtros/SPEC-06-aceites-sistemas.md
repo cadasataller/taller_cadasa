@@ -57,6 +57,8 @@ Modificar el store y los tipos de edición.
 
 ## 6. Listado
 
+Aplicar densidad ERP: valores en `text-sm`, labels/estados en `text-xs`, padding compacto y mínimo tipográfico de 12 px. En escritorio las asociaciones se leen horizontalmente; en móvil se apilan sin ocultar acciones.
+
 Cada fila muestra únicamente:
 
 - sistema;
@@ -189,12 +191,17 @@ Si una asociación existente se edita y vuelve exactamente a sus valores origina
 - Drawer derecho en desktop.
 - Bottom sheet en móvil/tablet.
 - Usar `<Teleport to="body">`.
+- Los menús de los dos multiselects se teletransportan a `body`, usan una clase global propia y quedan fuera del área con overflow.
 - Cubrir la vista de edición, nunca el listado.
 - Header y footer visibles; contenido con scroll interno.
 - Bloquear scroll del body.
 - Restaurar foco al disparador.
 - Confirmar al cerrar si el formulario cambió.
 - Un solo overlay activo.
+- Mantener campos y acciones en `text-sm`, ayudas/badges en `text-xs` e inputs de búsqueda en `text-base` en móvil.
+- Usar controles de 36–40 px en escritorio y área táctil mínima de 44 px en móvil.
+- Usar `gap-2` entre campos y `gap-3` entre grupos.
+- Usar exclusivamente tokens de `src/index.css`; no usar valores de color literales, utilidades arbitrarias ni paletas ajenas al tema.
 
 ## 13. Mensajes y estados
 
@@ -258,6 +265,8 @@ Cubrir:
 - creación de sistema y aceite mediante `@tag` sin persistencia inmediata;
 - confirmación de cierre;
 - accesibilidad y foco.
+- densidad y escala tipográfica ERP en lista y overlay.
+- tema principal preservado en lista, overlay y menús teletransportados.
 
 ## 17. Criterios de aceptación
 
@@ -268,6 +277,8 @@ Cubrir:
 - Ambos selectores reutilizan el adaptador tipado de `vue-multiselect`.
 - No aparecen propiedades ajenas al contrato.
 - El overlay se muestra sobre edición.
+- Lista y overlay mantienen densidad ERP, mínimo tipográfico de 12 px y objetivos táctiles móviles de 44 px.
+- Lista, overlay y menús usan únicamente los tokens base del bloque `@theme` de `src/index.css`.
 - Todo botón disponible tiene `cursor-pointer`.
 - La iconografía es Lucide.
 - No existe `any` ni `unknown`.

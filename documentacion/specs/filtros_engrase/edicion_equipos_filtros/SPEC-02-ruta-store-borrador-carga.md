@@ -194,12 +194,20 @@ La imagen se persiste inmediatamente en specs posteriores y no forma parte de `i
 
 La vista debe seguir la intención de `view_edit_equipo.png`:
 
-- fondo operativo claro coherente con la app;
+- nodo raíz con `bg-second text-gray-900`, usando los tokens base definidos dentro de `@theme` en `src/index.css`;
+- fondo operativo claro, superficies, bordes, estados, sombras y focos construidos sólo con esos tokens base;
 - encabezado con regreso, código, tipo, subtipo, estado y etapas;
 - tres secciones principales en tarjetas;
 - barra inferior de acciones;
 - jerarquía compacta de aplicación administrativa, no landing page;
+- `text-sm` como texto operativo predeterminado, `text-xs` para metadatos/ayudas y `text-lg` como máximo para el título principal;
+- ningún texto inferior a 12 px ni títulos `text-xl` o mayores;
+- controles de 36–40 px visuales en desktop y área táctil mínima de 44 px en móvil;
+- separación `gap-2` dentro de grupos y `gap-3`/`gap-4` entre secciones;
+- tarjetas con `p-3`/`p-4`, `rounded-md`/`rounded-lg` y sombra discreta;
 - sin campos adicionales de las otras maquetas.
+
+No usar colores literales, clases arbitrarias de color ni paletas externas como `slate-*`, `blue-*` o `red-*`. Las acciones usan `main*`/`accent*`; las superficies `second*`/`white`; los neutrales `gray-*`; y los estados los pares `success`, `warning`, `danger` e `info` con su correspondiente `*-bg`.
 
 Desktop:
 
@@ -277,6 +285,7 @@ Los botones sólo con icono requieren `aria-label`. Los iconos decorativos usan 
 - Mensajes de carga y error anunciables.
 - Confirmación de salida con foco atrapado y retorno al disparador.
 - Targets táctiles mínimos de 44 px.
+- En móvil, los inputs y selectores usan `text-base` aunque el resto de la interfaz conserve densidad `text-sm`/`text-xs`.
 - No depender sólo de color para estados.
 - Respetar `prefers-reduced-motion`.
 
@@ -295,6 +304,9 @@ Cubrir:
 - salida directa sin cambios;
 - respuesta obsoleta ignorada;
 - layout sin montar listado debajo de edición.
+- escala tipográfica sin valores menores a 12 px;
+- densidad desktop y targets móviles conforme a la escala ERP.
+- uso exclusivo de los tokens base de `@theme` y ausencia de colores ajenos a ellos.
 
 ## 19. Criterios de aceptación
 
@@ -305,6 +317,8 @@ Cubrir:
 - Existe una única fuente de verdad del borrador.
 - El snapshot no se muta.
 - La navegación protege cambios pendientes.
+- El shell aplica la escala ERP: texto general `text-sm`, mínimo `text-xs`, título máximo `text-lg` y densidad responsive definida.
+- El shell usa únicamente el tema principal declarado en `@theme` y no contiene valores cromáticos literales ni paletas paralelas.
 - Todos los botones disponibles muestran `cursor-pointer`.
 - La iconografía usa Lucide.
 - No existe `any` ni `unknown` en archivos creados o modificados.

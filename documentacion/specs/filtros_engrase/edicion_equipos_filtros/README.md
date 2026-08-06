@@ -44,6 +44,11 @@ Cada spec es una unidad de entrega verificable. Deben implementarse en este orde
 - Usar `vue-multiselect@3.5.0` como base de los selectores de catálogos, sugerencias, multiselección y creación temporal definidos en `SPEC-03` a `SPEC-06`.
 - Encapsular `vue-multiselect` en adaptadores locales con props y emits estrictamente tipados; no propagar tipos laxos de la dependencia al store ni a los formularios.
 - Importar `vue-multiselect/dist/vue-multiselect.css` una sola vez y personalizarlo con los tokens existentes de la aplicación.
+- Tratar `src/index.css` como única fuente de verdad visual: no crear paletas locales ni escribir valores hex, RGB, HSL o colores arbitrarios de Tailwind en esta funcionalidad.
+- Usar exclusivamente los tokens declarados dentro del bloque `@theme` de `src/index.css`.
+- Los menús teletransportados de `vue-multiselect` usan una clase global propia y los mismos tokens base de `@theme`.
+- Usar utilidades/variables del tema: `main*` para jerarquía y acciones, `accent*` para interacción/foco, `second*` para superficies, `gray-*` para neutrales y `success`, `warning`, `danger`, `info` con sus fondos para estados.
+- Personalizar librerías de terceros con `var(--color-*)`, `var(--shadow-*)` y `var(--radius-*)` de `src/index.css`, sin duplicar sus valores literales.
 - Está prohibido usar `any` y `unknown` en todos los archivos creados o modificados por esta funcionalidad, incluidos tests, mocks, casts y eventos.
 - Está prohibido usar `Record<string, unknown>`, `as any` o `as unknown`.
 - Todo botón disponible debe declarar `cursor-pointer`.
@@ -54,6 +59,11 @@ Cada spec es una unidad de entrega verificable. Deben implementarse en este orde
 - No usar `v-html`.
 - Mantener targets táctiles mínimos de 44 px, foco visible y mensajes de error cercanos al campo.
 - Respetar `prefers-reduced-motion`.
+- Aplicar la escala ERP definida en `context_view.md`: `text-sm` como tamaño general de escritorio, `text-xs` como mínimo absoluto para labels/metadatos y `text-base` para inputs en móvil.
+- No usar texto menor a 12 px ni `text-xl` o superior en esta funcionalidad sin una excepción documentada.
+- Mantener controles visualmente compactos de 36–40 px en escritorio y áreas táctiles mínimas de 44 × 44 px en móvil.
+- Usar ritmo de espaciado de 4/8 px, normalmente `gap-2` entre controles y `gap-3`/`gap-4` entre grupos.
+- Preferir `rounded-md`/`rounded-lg`, bordes sutiles y sombras discretas; evitar tarjetas, paddings y radios sobredimensionados.
 
 ## Referencias del conjunto
 
