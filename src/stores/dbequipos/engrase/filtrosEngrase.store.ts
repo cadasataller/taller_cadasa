@@ -108,9 +108,7 @@ export const useFiltrosEngraseStore = defineStore(
       loadingEquipos.value = true;
       errorEquipos.value = null;
       try {
-        equipos.value = await filtrosEngraseService.obtenerEquipos(
-          filtrosAplicados.value,
-        );
+        equipos.value = await filtrosEngraseService.obtenerEquipos();
         await asegurarSeleccion();
       } catch (e) {
         errorEquipos.value =

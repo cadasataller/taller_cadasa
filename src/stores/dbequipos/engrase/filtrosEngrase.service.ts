@@ -6,7 +6,6 @@ import type {
   EtapaEngrase,
   FiltroCodigoSugerencia,
   FiltroEquivalenciaRow,
-  FiltrosEngraseQuery,
   TipoEquipoEngrase,
   TipoFiltroEngrase,
 } from "./filtrosEngrase.types";
@@ -14,30 +13,20 @@ const schema = () => supabaseEquipos.schema("engrase");
 const raise = (error: { message?: string } | null, fallback: string) => {
   if (error) throw new Error(error.message || fallback);
 };
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 export const filtrosEngraseService = {
-  async obtenerEquipos(
-    _filters: FiltrosEngraseQuery,
-  ): Promise<EquipoEngraseListItem[]> {
-    const { data, error } = await schema()
-      .from("vw_equipos_con_imagen_main")
-      .select(
-        "id,codigo,tipo_equipo_id,tipo_equipo,subtipo,estado,main_storage_path,tiene_imagen_main,imagen_actualizada_en",
-      )
-      .order("codigo");
+  async obtenerEquipos(): Promise<EquipoEngraseListItem[]> {
+    const { data, error } = await schema().rpc("rpc_obtener_equipos_lista");
     raise(error, "No se pudieron obtener los equipos");
-    const ids = (data ?? []).map((x) => x.id);
-    const { data: rels, error: re } = ids.length
-      ? await schema()
-          .from("equipo_etapa")
-          .select("equipo_id,etapa:etapa_id(id,nombre)")
-          .in("equipo_id", ids)
-      : { data: [], error: null };
-    raise(re, "No se pudieron obtener las etapas");
-    return (data ?? []).map((row) => ({
+    const rows: unknown[] = Array.isArray(data) ? data : [];
+    return rows.filter(isRecord).map((row) => ({
       ...mapEquipo(row),
-      etapas: (rels ?? [])
-        .filter((r) => r.equipo_id === row.id)
-        .flatMap((r) => r.etapa ?? []) as unknown as EtapaEngrase[],
+      etapas: Array.isArray(row.etapas)
+        ? row.etapas
+            .filter(isRecord)
+            .map((etapa) => mapCatalogo<EtapaEngrase>(etapa))
+        : [],
     }));
   },
   async obtenerTiposEquipo() {
