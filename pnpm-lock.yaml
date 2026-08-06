@@ -74,6 +74,9 @@ importers:
       vue-chartjs:
         specifier: 5.3.3
         version: 5.3.3(chart.js@4.5.1)(vue@3.5.32(typescript@5.8.2))
+      vue-multiselect:
+        specifier: ^3.5.0
+        version: 3.5.0
       vue-router:
         specifier: 4.6.4
         version: 4.6.4(vue@3.5.32(typescript@5.8.2))
@@ -2071,6 +2074,10 @@ packages:
       '@vue/composition-api':
         optional: true
 
+  vue-multiselect@3.5.0:
+    resolution: {integrity: sha512-i758SEqWFcFshL1eAg0F3EFeFQ1mOCmh2mgnGCZv1XpHFVIAv8fxo8bQQ4ZnMoaPhMp8KI1A6gPBVHh3YzRg/Q==}
+    engines: {node: '>= 14.18.1', npm: '>= 6.14.15'}
+
   vue-router@4.6.4:
     resolution: {integrity: sha512-Hz9q5sa33Yhduglwz6g9skT8OBPii+4bFn88w6J+J4MfEo4KRRpmiNG/hHHkdbRFlLBOqxN8y8gf2Fb0MTUgVg==}
     peerDependencies:
@@ -3917,6 +3924,8 @@ snapshots:
   vue-demi@0.14.10(vue@3.5.32(typescript@5.8.2)):
     dependencies:
       vue: 3.5.32(typescript@5.8.2)
+
+  vue-multiselect@3.5.0: {}
 
   vue-router@4.6.4(vue@3.5.32(typescript@5.8.2)):
     dependencies:
