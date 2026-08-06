@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef } from "vue";
+import { storeToRefs } from "pinia";
 import {
   Wind,
   Fuel,
@@ -11,7 +12,9 @@ import {
   Snowflake,
   Sprout,
   Wheat,
+  SquarePen,
 } from "lucide-vue-next";
+import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 import type {
   EquipoEngraseListItem,
   EquipoFiltroDetalle,
@@ -27,6 +30,12 @@ const props = defineProps<{
   error: string | null;
 }>();
 defineEmits<{ selectFiltro: [number]; retry: []; backToEquipos: [] }>();
+const featureAccessStore = useFeatureAccessStore();
+const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
+const canEditFiltrosEngrase = computed(() =>
+  isFeatureAccessLoaded.value &&
+  featureAccessStore.tieneFuncionalidad("editar_filtros_engrase"),
+);
 function coincideConBusqueda(filtro: EquipoFiltroDetalle) {
   const codigo = props.codigoBuscado;
   return Boolean(
@@ -191,6 +200,14 @@ function alternarGrupo(grupo: string) {
           @click="opcionesDeListadoAbiertas = !opcionesDeListadoAbiertas"
         >
           Mostrar por
+        </button>
+        <button
+          v-if="canEditFiltrosEngrase"
+          type="button"
+          class="cursor-pointer rounded-md border border-gray-200 p-1 text-main transition hover:border-main/40 hover:bg-main/10"
+          aria-label="Editar filtros del equipo"
+        >
+          <SquarePen class="h-4 w-4" />
         </button>
       </div>
       <div
