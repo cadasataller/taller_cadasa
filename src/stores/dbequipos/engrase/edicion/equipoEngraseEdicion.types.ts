@@ -50,7 +50,37 @@ export interface EquipoEdicionSnapshot extends EquipoParaEdicion {
 export interface TipoEquipoExistenteDraftReference extends CatalogoIdNombre { estado: "existente"; tempId: null }
 export interface TipoEquipoNuevoDraftReference { estado: "nuevo"; id: null; tempId: string; nombre: string; subtiposSugeridos: string[] }
 export type TipoEquipoDraftReference = TipoEquipoExistenteDraftReference | TipoEquipoNuevoDraftReference;
-export interface EquipoEdicionDraft extends EquipoEdicionSnapshot {
+export interface EquipoFiltroDraft extends EquipoEdicionFiltro {
+  draftId: string;
+  estadoOperacion: OperacionDraft;
+  estadoAntesDeEliminar: Exclude<OperacionDraft, "pendiente_eliminacion"> | null;
+  filtroReferencia: FiltroDraftReference;
+  tipoFiltroReferencia: TipoFiltroDraftReference;
+}
+export interface TipoFiltroExistenteDraftReference extends CatalogoIdNombre { estado: "existente"; tempId: null }
+export interface TipoFiltroNuevoDraftReference { estado: "nuevo"; id: null; tempId: string; nombre: string }
+export type TipoFiltroDraftReference = TipoFiltroExistenteDraftReference | TipoFiltroNuevoDraftReference;
+export interface FiltroExistenteDraftReference extends FiltroOriginal { estado: "existente"; tempId: null }
+export interface FiltroNuevoDraftReference { estado: "nuevo"; id: null; tempId: string; codigo: string; estaEnListaCompras: boolean }
+export type FiltroDraftReference = FiltroExistenteDraftReference | FiltroNuevoDraftReference;
+export interface AgregarFiltroExistenteDraft {
+  filtro: FiltroOriginal;
+  tipoFiltro: CatalogoIdNombre;
+  cantidad: number;
+  cantidadEquivalencias?: number;
+}
+export interface EditarAsignacionFiltroDraft {
+  draftId: string;
+  tipoFiltroId: number | null;
+  cantidad: number;
+}
+export interface AgregarFiltroTemporalDraft {
+  filtro: FiltroDraftReference;
+  tipoFiltro: TipoFiltroDraftReference;
+  cantidad: number;
+}
+export interface EquipoEdicionDraft extends Omit<EquipoEdicionSnapshot, "filtros"> {
+  filtros: EquipoFiltroDraft[];
   tipoEquipoReferencia: TipoEquipoDraftReference;
   operaciones: {
     datos: OperacionDraft;
@@ -94,6 +124,7 @@ export interface TipoFiltroPosible {
 }
 export interface ResultadoFiltroEncontrado {
   encontrado: true;
+  coincidenciaExacta: true;
   codigo: string;
   filtro: FiltroOriginal;
   requiereSeleccionarTipo: boolean;
@@ -102,9 +133,11 @@ export interface ResultadoFiltroEncontrado {
 }
 export interface ResultadoFiltroNoEncontrado {
   encontrado: false;
+  coincidenciaExacta: false;
   codigo: string;
   codigoBuscado: string;
   puedeCrearse: boolean;
+  sugerencias: FiltroOriginal[];
 }
 export type ResultadoBusquedaFiltroOriginal =
   | ResultadoFiltroEncontrado
@@ -313,6 +346,8 @@ export interface BuscarFiltroOriginalDto {
   mensaje?: string;
   codigo_buscado?: string;
   puede_crearse?: boolean;
+  coincidencia_exacta?: boolean;
+  sugerencias?: { id: number; codigo: string; esta_en_lista_compras: boolean }[];
   filtro?: { id: number; codigo: string; esta_en_lista_compras: boolean };
   requiere_seleccionar_tipo?: boolean;
   sin_tipos_registrados?: boolean;

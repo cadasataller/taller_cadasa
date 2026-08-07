@@ -94,9 +94,15 @@ export const mapBusquedaFiltroOriginal = (
   if (!dto.encontrado)
     return {
       encontrado: false,
+      coincidenciaExacta: false,
       codigo: dto.codigo,
       codigoBuscado: dto.codigo_buscado ?? "",
       puedeCrearse: dto.puede_crearse === true,
+      sugerencias: (dto.sugerencias ?? []).map((sugerencia) => ({
+        id: sugerencia.id,
+        codigo: sugerencia.codigo,
+        estaEnListaCompras: sugerencia.esta_en_lista_compras,
+      })),
     };
   if (!dto.filtro)
     throw crearErrorEdicionEquipo(
@@ -105,6 +111,7 @@ export const mapBusquedaFiltroOriginal = (
     );
   return {
     encontrado: true,
+    coincidenciaExacta: true,
     codigo: dto.codigo,
     filtro: {
       id: dto.filtro.id,

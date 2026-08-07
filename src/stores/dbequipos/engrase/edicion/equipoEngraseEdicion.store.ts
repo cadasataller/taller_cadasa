@@ -4,6 +4,7 @@ import { useFiltrosEngraseStore } from "../filtrosEngrase.store";
 import { extraerCodigoErrorEdicionEquipo } from "./equipoEngraseEdicion.errors";
 import { equipoEngraseEdicionService } from "./equipoEngraseEdicion.service";
 import { crearTempId } from "./equipoEngraseEdicion.tempIds";
+import { crearMotivoCambioFiltro } from "./equipoEngraseFiltroMotivo";
 import type {
   AuxiliaresEdicionEquipo,
   EquipoEdicionDraft,
@@ -12,6 +13,10 @@ import type {
   EquipoEdicionSnapshot,
   EquipoImagenPersistida,
   EquipoEstado,
+  AgregarFiltroExistenteDraft,
+  AgregarFiltroTemporalDraft,
+  EditarAsignacionFiltroDraft,
+  ResultadoBusquedaFiltroOriginal,
   } from "./equipoEngraseEdicion.types";
 
 const crearError = (error: Error): EquipoEdicionError => ({
@@ -29,6 +34,11 @@ const clonarSnapshot = (
     ...filtro,
     tipoFiltro: { ...filtro.tipoFiltro },
     filtro: { ...filtro.filtro },
+    draftId: `equipo_filtro_${filtro.id}`,
+    estadoOperacion: "existente",
+    estadoAntesDeEliminar: null,
+    filtroReferencia: { estado: "existente", id: filtro.filtro.id, tempId: null, codigo: filtro.filtro.codigo, estaEnListaCompras: filtro.filtro.estaEnListaCompras },
+    tipoFiltroReferencia: { estado: "existente", id: filtro.tipoFiltro.id, tempId: null, nombre: filtro.tipoFiltro.nombre },
   })),
   aceites: snapshot.aceites.map((aceite) => ({
     ...aceite,
@@ -41,6 +51,16 @@ const crearBorrador = (
   snapshot: EquipoEdicionSnapshot,
 ): EquipoEdicionDraft => ({
   ...clonarSnapshot(snapshot),
+  filtros: snapshot.filtros.map((filtro) => ({
+    ...filtro,
+    tipoFiltro: { ...filtro.tipoFiltro },
+    filtro: { ...filtro.filtro },
+    draftId: `equipo_filtro_${filtro.id}`,
+    estadoOperacion: "existente",
+    estadoAntesDeEliminar: null,
+    filtroReferencia: { estado: "existente", id: filtro.filtro.id, tempId: null, codigo: filtro.filtro.codigo, estaEnListaCompras: filtro.filtro.estaEnListaCompras },
+    tipoFiltroReferencia: { estado: "existente", id: filtro.tipoFiltro.id, tempId: null, nombre: filtro.tipoFiltro.nombre },
+  })),
   tipoEquipoReferencia: { estado: "existente", id: snapshot.equipo.tipoEquipoId, nombre: snapshot.equipo.tipoEquipo, tempId: null },
   operaciones: {
     datos: "existente",
@@ -106,7 +126,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
         !saving.value &&
         activeOverlay.value === null,
     );
-    const activeFiltersCount = computed(() => draft.value?.filtros.length ?? 0);
+    const activeFiltersCount = computed(() => draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").length ?? 0);
     const activeStagesCount = computed(() => draft.value?.etapas.length ?? 0);
     const activeOilsCount = computed(() => draft.value?.aceites.length ?? 0);
 
@@ -178,6 +198,60 @@ export const useEquipoEngraseEdicionStore = defineStore(
     function esTipoEquipoDuplicado(nombre: string): boolean { const clave = claveTexto(nombre); return Boolean(clave && (auxiliares.value?.tiposEquipo.some((tipo) => claveTexto(tipo.nombre) === clave) || (draft.value?.tipoEquipoReferencia.estado === "nuevo" && claveTexto(draft.value.tipoEquipoReferencia.nombre) === clave))); }
     function crearYSeleccionarTipoEquipo(nombre: string): boolean { const normalizado = normalizarTexto(nombre); if (!draft.value || !normalizado || esTipoEquipoDuplicado(normalizado)) return false; seleccionarTipoEquipo({ estado: "nuevo", id: null, tempId: crearTempId("tipo_equipo"), nombre: normalizado, subtiposSugeridos: [] }); return true; }
     function abrirNuevoTipoEquipo(): void { activeOverlay.value = "nuevo_tipo_equipo"; }
+    async function buscarFiltroOriginalParaAsignar(codigo: string): Promise<ResultadoBusquedaFiltroOriginal> {
+      return equipoEngraseEdicionService.buscarFiltroOriginalParaAsignar(normalizarTexto(codigo).toUpperCase(), codigoOriginal.value ?? undefined);
+    }
+    function agregarFiltroExistente(entrada: AgregarFiltroExistenteDraft): boolean {
+      if (!draft.value || entrada.cantidad < 1) return false;
+      const asignacionPendiente = draft.value.filtros.find((item) => item.estadoOperacion === "pendiente_eliminacion" && item.filtro.id === entrada.filtro.id && item.tipoFiltro.id === entrada.tipoFiltro.id);
+      if (asignacionPendiente) {
+        asignacionPendiente.estadoOperacion = asignacionPendiente.estadoAntesDeEliminar ?? "existente";
+        asignacionPendiente.estadoAntesDeEliminar = null;
+        return true;
+      }
+      if (draft.value.filtros.some((item) => item.estadoOperacion !== "pendiente_eliminacion" && (item.filtro.id === entrada.filtro.id || item.tipoFiltro.id === entrada.tipoFiltro.id))) return false;
+      draft.value.filtros.push({ id: 0, equipoId: draft.value.equipo.id, tipoFiltro: { ...entrada.tipoFiltro }, filtro: { ...entrada.filtro }, cantidad: entrada.cantidad, cantidadEquivalencias: entrada.cantidadEquivalencias ?? 0, draftId: crearTempId("equipo_filtro"), estadoOperacion: "nuevo", estadoAntesDeEliminar: null, filtroReferencia: { estado: "existente", id: entrada.filtro.id, tempId: null, codigo: entrada.filtro.codigo, estaEnListaCompras: entrada.filtro.estaEnListaCompras }, tipoFiltroReferencia: { estado: "existente", id: entrada.tipoFiltro.id, tempId: null, nombre: entrada.tipoFiltro.nombre } });
+      return true;
+    }
+    function agregarFiltroTemporal(entrada: AgregarFiltroTemporalDraft): boolean {
+      if (!draft.value || entrada.cantidad < 1) return false;
+      const tipoRepetido = draft.value.filtros.some((item) => item.estadoOperacion !== "pendiente_eliminacion" && claveTexto(item.tipoFiltroReferencia.nombre) === claveTexto(entrada.tipoFiltro.nombre));
+      if (tipoRepetido) return false;
+      draft.value.filtros.push({ id: 0, equipoId: draft.value.equipo.id, tipoFiltro: { id: entrada.tipoFiltro.estado === "existente" ? entrada.tipoFiltro.id : 0, nombre: entrada.tipoFiltro.nombre }, filtro: { id: entrada.filtro.estado === "existente" ? entrada.filtro.id : 0, codigo: entrada.filtro.codigo, estaEnListaCompras: entrada.filtro.estaEnListaCompras }, cantidad: entrada.cantidad, cantidadEquivalencias: 0, draftId: crearTempId("equipo_filtro"), estadoOperacion: "nuevo", estadoAntesDeEliminar: null, filtroReferencia: entrada.filtro, tipoFiltroReferencia: entrada.tipoFiltro });
+      return true;
+    }
+    function actualizarAsignacionFiltro(entrada: EditarAsignacionFiltroDraft): void {
+      if (!draft.value || entrada.cantidad < 1) return;
+      const item = draft.value.filtros.find((filtro) => filtro.draftId === entrada.draftId && filtro.estadoOperacion !== "pendiente_eliminacion");
+      if (!item) return;
+      if (entrada.tipoFiltroId === null) {
+        if (item.tipoFiltroReferencia.estado !== "nuevo") return;
+        item.cantidad = entrada.cantidad;
+        return;
+      }
+      const tipo = auxiliares.value?.tiposFiltro.find((filtro) => filtro.id === entrada.tipoFiltroId);
+      if (!tipo || draft.value.filtros.some((filtro) => filtro.draftId !== item.draftId && filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.tipoFiltro.id === tipo.id)) return;
+      item.tipoFiltro = { id: tipo.id, nombre: tipo.nombre };
+      item.tipoFiltroReferencia = { estado: "existente", id: tipo.id, tempId: null, nombre: tipo.nombre };
+      item.cantidad = entrada.cantidad;
+      if (item.estadoOperacion !== "nuevo") {
+        const originalFiltro = original.value?.filtros.find((filtro) => filtro.id === item.id);
+        item.estadoOperacion = originalFiltro && crearMotivoCambioFiltro(originalFiltro, item) ? "actualizado" : "existente";
+      }
+    }
+    function marcarFiltroParaEliminar(draftId: string): void {
+      if (!draft.value || activeFiltersCount.value <= 1) return;
+      const item = draft.value.filtros.find((filtro) => filtro.draftId === draftId);
+      if (!item || item.estadoOperacion === "pendiente_eliminacion") return;
+      item.estadoAntesDeEliminar = item.estadoOperacion;
+      item.estadoOperacion = "pendiente_eliminacion";
+    }
+    function deshacerEliminacionFiltro(draftId: string): void {
+      const item = draft.value?.filtros.find((filtro) => filtro.draftId === draftId);
+      if (!item || item.estadoOperacion !== "pendiente_eliminacion") return;
+      item.estadoOperacion = item.estadoAntesDeEliminar ?? "existente";
+      item.estadoAntesDeEliminar = null;
+    }
     function reset(): void {
       solicitudActual += 1;
       codigoOriginal.value = null;
@@ -212,7 +286,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
       continuarEditando,
       descartarCambios,
       reset,
-      actualizarCodigo, seleccionarTipoEquipo, actualizarSubtipo, actualizarEstado, agregarEtapa, quitarEtapa, crearYSeleccionarTipoEquipo, esTipoEquipoDuplicado, abrirNuevoTipoEquipo,
+      actualizarCodigo, seleccionarTipoEquipo, actualizarSubtipo, actualizarEstado, agregarEtapa, quitarEtapa, crearYSeleccionarTipoEquipo, esTipoEquipoDuplicado, abrirNuevoTipoEquipo, buscarFiltroOriginalParaAsignar, agregarFiltroExistente, agregarFiltroTemporal, actualizarAsignacionFiltro, marcarFiltroParaEliminar, deshacerEliminacionFiltro,
     };
   },
 );

@@ -1,10 +1,37 @@
 <script setup lang="ts">
 import { AlertTriangle, RefreshCw } from "lucide-vue-next";
+import { computed, shallowRef } from "vue";
 import EquipoEdicionShell from "@/components/engrase/edicion/EquipoEdicionShell.vue";
 import EquipoDatosForm from "@/components/engrase/edicion/datos/EquipoDatosForm.vue";
 import EquipoTipoNuevoOverlay from "@/components/engrase/edicion/datos/EquipoTipoNuevoOverlay.vue";
+import EquipoFiltrosSection from "@/components/engrase/edicion/filtros/EquipoFiltrosSection.vue";
+import EquipoFiltroOverlay from "@/components/engrase/edicion/filtros/EquipoFiltroOverlay.vue";
+import type { FiltroExistenteDraftReference, FiltroNuevoDraftReference, ResultadoFiltroEncontrado, TipoFiltroDraftReference } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.types";
 import { useEquipoEngraseEditor } from "@/composables/engrase/useEquipoEngraseEditor";
 const editor = useEquipoEngraseEditor();
+const filtroOverlay = shallowRef<"add" | "edit" | null>(null);
+const filtroEditadoId = shallowRef<string | null>(null);
+const errorAgregarFiltro = shallowRef<string | null>(null);
+const filtroEditado = computed(() => editor.draft.value?.filtros.find((filtro) => filtro.draftId === filtroEditadoId.value));
+const tiposOcupados = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.draftId !== filtroEditadoId.value).map((filtro) => filtro.tipoFiltro.id) ?? []);
+const filtrosOcupadosId = computed(() => editor.draft.value?.filtros.flatMap((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.filtroReferencia.estado === "existente" ? [filtro.filtroReferencia.id] : []) ?? []);
+const filtrosOcupadosCodigo = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").map((filtro) => filtro.filtroReferencia.codigo) ?? []);
+const sugerenciasBorrador = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").map((filtro) => ({ id: filtro.filtroReferencia.estado === "existente" ? filtro.filtroReferencia.id : null, codigo: filtro.filtroReferencia.codigo, estaEnListaCompras: filtro.filtroReferencia.estaEnListaCompras })) ?? []);
+const nombresTiposActivos = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").map((filtro) => filtro.tipoFiltroReferencia.nombre) ?? []);
+const filtrosPendientesClave = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion === "pendiente_eliminacion").map((filtro) => `${filtro.filtro.id}:${filtro.tipoFiltro.id}`) ?? []);
+function cerrarFiltroOverlay(): void { filtroOverlay.value = null; filtroEditadoId.value = null; errorAgregarFiltro.value = null; }
+function abrirAgregarFiltro(): void { errorAgregarFiltro.value = null; filtroOverlay.value = "add"; }
+function agregarFiltroDesdeOverlay(resultado: ResultadoFiltroEncontrado, cantidad: number, tipoId: number): void {
+  const tipo = editor.auxiliares.value?.tiposFiltro.find((item) => item.id === tipoId);
+  if (!tipo) return;
+  const agregado = editor.agregarFiltroExistente({ filtro: resultado.filtro, tipoFiltro: { id: tipo.id, nombre: tipo.nombre }, cantidad });
+  if (agregado) cerrarFiltroOverlay();
+  else errorAgregarFiltro.value = "Este filtro ya está asignado al equipo."
+}
+function agregarFiltroTemporalDesdeOverlay(filtro: FiltroNuevoDraftReference | FiltroExistenteDraftReference, tipoFiltro: TipoFiltroDraftReference, cantidad: number): void {
+  if (editor.agregarFiltroTemporal({ filtro, tipoFiltro, cantidad })) cerrarFiltroOverlay();
+  else errorAgregarFiltro.value = "Ya existe una asignación activa para este tipo de filtro."
+}
 </script>
 <template>
   <div class="h-full overflow-auto bg-second">
@@ -76,6 +103,16 @@ const editor = useEquipoEngraseEditor();
           @open-new-type="editor.abrirNuevoTipoEquipo"
         />
       </template>
+      <template #filtros>
+        <EquipoFiltrosSection
+          :filtros="editor.draft.value.filtros"
+          :active-count="editor.activeFiltersCount.value"
+          @add="abrirAgregarFiltro"
+          @edit="(draftId) => { filtroEditadoId = draftId; filtroOverlay = 'edit' }"
+          @remove="editor.marcarFiltroParaEliminar"
+          @undo="editor.deshacerEliminacionFiltro"
+        />
+      </template>
       <template #overlay
         ><div
           v-if="editor.activeOverlay.value === 'confirmar_salida'"
@@ -116,6 +153,24 @@ const editor = useEquipoEngraseEditor();
           :duplicate="editor.esTipoEquipoDuplicado"
           @close="editor.continuarEditando"
           @create-and-select="editor.crearYSeleccionarTipoEquipo($event) && editor.continuarEditando()"
+        />
+        <EquipoFiltroOverlay
+          v-if="filtroOverlay && editor.auxiliares.value"
+          :mode="filtroOverlay"
+          :filtro="filtroEditado"
+          :tipos="editor.auxiliares.value.tiposFiltro"
+          :occupied-type-ids="tiposOcupados"
+          :occupied-filter-ids="filtrosOcupadosId"
+          :occupied-filter-codes="filtrosOcupadosCodigo"
+          :draft-suggestions="sugerenciasBorrador"
+          :active-type-names="nombresTiposActivos"
+          :pending-filter-type-keys="filtrosPendientesClave"
+          :search="editor.buscarFiltroOriginalParaAsignar"
+          :add-error="errorAgregarFiltro"
+          @close="cerrarFiltroOverlay"
+          @add="agregarFiltroDesdeOverlay"
+          @add-temporal="agregarFiltroTemporalDesdeOverlay"
+          @edit="(tipoFiltroId, cantidad) => { if (filtroEditadoId) editor.actualizarAsignacionFiltro({ draftId: filtroEditadoId, tipoFiltroId, cantidad }); cerrarFiltroOverlay() }"
         />
       </template
       >

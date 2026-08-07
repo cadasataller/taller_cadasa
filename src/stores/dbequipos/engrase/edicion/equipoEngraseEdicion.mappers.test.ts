@@ -173,14 +173,21 @@ describe("mappers de edición de equipos", () => {
         ok: true,
         encontrado: false,
         codigo: "FILTRO_NO_ENCONTRADO",
-        codigo_buscado: "XYZ123",
-        puede_crearse: true,
+      codigo_buscado: "XYZ123",
+      puede_crearse: true,
+      sugerencias: [
+        { id: 35, codigo: "LFP3191", esta_en_lista_compras: true },
+      ],
       }),
     ).toEqual({
       encontrado: false,
+      coincidenciaExacta: false,
       codigo: "FILTRO_NO_ENCONTRADO",
       codigoBuscado: "XYZ123",
       puedeCrearse: true,
+      sugerencias: [
+        { id: 35, codigo: "LFP3191", estaEnListaCompras: true },
+      ],
     });
   });
   it("mapea una actualización al contrato del listado existente", () => {

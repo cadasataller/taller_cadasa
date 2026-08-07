@@ -28,7 +28,7 @@ onBeforeUnmount(() => {
   <Teleport to="body"
     ><div class="fixed inset-0 z-50 bg-main-dark/40" @click.self="cerrar">
       <aside
-        class="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-auto rounded-t-lg bg-white p-4 shadow-xl lg:inset-y-0 lg:left-auto lg:right-0 lg:w-[26rem] lg:rounded-none"
+        class="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-auto rounded-t-lg bg-white p-4 shadow-xl lg:inset-y-0 lg:left-auto lg:right-0 lg:max-h-none lg:w-[26rem] lg:rounded-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby="nuevo-tipo-title"

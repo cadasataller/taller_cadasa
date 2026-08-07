@@ -42,5 +42,11 @@ export function useEquipoEngraseEditor() {
     crearYSeleccionarTipoEquipo: store.crearYSeleccionarTipoEquipo,
     esTipoEquipoDuplicado: store.esTipoEquipoDuplicado,
     abrirNuevoTipoEquipo: store.abrirNuevoTipoEquipo,
+    buscarFiltroOriginalParaAsignar: store.buscarFiltroOriginalParaAsignar,
+    agregarFiltroExistente: store.agregarFiltroExistente,
+    agregarFiltroTemporal: store.agregarFiltroTemporal,
+    actualizarAsignacionFiltro: store.actualizarAsignacionFiltro,
+    marcarFiltroParaEliminar: store.marcarFiltroParaEliminar,
+    deshacerEliminacionFiltro: store.deshacerEliminacionFiltro,
   };
 }

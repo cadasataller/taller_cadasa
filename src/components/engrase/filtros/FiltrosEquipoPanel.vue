@@ -2,19 +2,12 @@
 import { computed, shallowRef } from "vue";
 import { storeToRefs } from "pinia";
 import {
-  Wind,
-  Fuel,
-  Gauge,
-  Droplet,
-  Cog,
-  Filter,
-  Fan,
-  Snowflake,
   Sprout,
   Wheat,
   SquarePen,
 } from "lucide-vue-next";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
+import { obtenerIconoTipoFiltro } from "@/utils/filtrosEngraseIconos";
 import type {
   EquipoEngraseListItem,
   EquipoFiltroDetalle,
@@ -63,48 +56,6 @@ function esCultivo(nombre: string) {
 }
 function esZafra(nombre: string) {
   return nombre.trim().toLocaleLowerCase() === "zafra";
-}
-function normalizarNombreTipoFiltro(nombre: string) {
-  return nombre
-    .toLocaleLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-function obtenerIconoTipoFiltro(nombre: string) {
-  const nombreNormalizado = normalizarNombreTipoFiltro(nombre);
-
-  if (
-    nombreNormalizado.includes("aire acondicionado") ||
-    nombreNormalizado.includes("cabina")
-  )
-    return { icono: Fan, grupo: "climatizacion", nombreGrupo: "Cabina y climatización" };
-  if (
-    nombreNormalizado.includes("coolant") ||
-    nombreNormalizado.includes("refrigerante") ||
-    nombreNormalizado.includes("refrigeracion")
-  )
-    return { icono: Snowflake, grupo: "refrigeracion", nombreGrupo: "Refrigeración" };
-  if (nombreNormalizado.includes("hidraulic") || nombreNormalizado.includes("hidraul"))
-    return { icono: Gauge, grupo: "hidraulico", nombreGrupo: "Sistema hidráulico" };
-  if (
-    nombreNormalizado.includes("diesel") ||
-    nombreNormalizado.includes("gasolina") ||
-    nombreNormalizado.includes("combustible")
-  )
-    return { icono: Fuel, grupo: "combustible", nombreGrupo: "Combustible" };
-  if (nombreNormalizado.includes("aceite"))
-    return { icono: Droplet, grupo: "lubricacion", nombreGrupo: "Lubricación del motor" };
-  if (
-    nombreNormalizado.includes("transmision") ||
-    nombreNormalizado.includes("diferencial")
-  )
-    return { icono: Cog, grupo: "transmision", nombreGrupo: "Transmisión y tren motriz" };
-  if (nombreNormalizado.includes("aire"))
-    return { icono: Wind, grupo: "admision_aire", nombreGrupo: "Admisión de aire" };
-
-  return { icono: Filter, grupo: "elemento", nombreGrupo: "Elemento / otros" };
 }
 const gruposDeFiltros = computed(() => {
   const grupos = new Map<
