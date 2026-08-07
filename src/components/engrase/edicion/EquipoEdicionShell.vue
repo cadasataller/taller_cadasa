@@ -20,7 +20,7 @@ const emit = defineEmits<{ back: []; cancel: []; save: [] }>();
       @back="emit('back')"
     />
     <main
-      class="mx-auto grid w-full max-w-5xl flex-1 gap-2.5 p-2.5 pb-20 sm:gap-3 sm:p-3 sm:pb-20"
+      class="mx-auto grid w-full max-w-5xl flex-1 gap-2.5 p-2.5 sm:gap-3 sm:p-3 sm:pb-20"
     >
       <slot name="datos" />
       <slot name="filtros" />

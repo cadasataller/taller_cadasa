@@ -3,7 +3,6 @@ import { AlertTriangle, RefreshCw } from "lucide-vue-next";
 import { computed, shallowRef } from "vue";
 import EquipoEdicionShell from "@/components/engrase/edicion/EquipoEdicionShell.vue";
 import EquipoDatosForm from "@/components/engrase/edicion/datos/EquipoDatosForm.vue";
-import EquipoTipoNuevoOverlay from "@/components/engrase/edicion/datos/EquipoTipoNuevoOverlay.vue";
 import EquipoFiltrosSection from "@/components/engrase/edicion/filtros/EquipoFiltrosSection.vue";
 import EquipoFiltroOverlay from "@/components/engrase/edicion/filtros/EquipoFiltroOverlay.vue";
 import type { FiltroExistenteDraftReference, FiltroNuevoDraftReference, ResultadoFiltroEncontrado, TipoFiltroDraftReference } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.types";
@@ -94,13 +93,14 @@ function agregarFiltroTemporalDesdeOverlay(filtro: FiltroNuevoDraftReference | F
           v-if="editor.auxiliares.value"
           :draft="editor.draft.value"
           :auxiliares="editor.auxiliares.value"
+          :is-duplicate-tipo-equipo="editor.esTipoEquipoDuplicado"
           @update-codigo="editor.actualizarCodigo"
           @select-tipo-equipo="editor.seleccionarTipoEquipo"
           @update-subtipo="editor.actualizarSubtipo"
           @update-estado="editor.actualizarEstado"
           @add-etapa="editor.agregarEtapa"
           @remove-etapa="editor.quitarEtapa"
-          @open-new-type="editor.abrirNuevoTipoEquipo"
+          @create-tipo-equipo="editor.crearYSeleccionarTipoEquipo"
         />
       </template>
       <template #filtros>
@@ -148,12 +148,6 @@ function agregarFiltroTemporalDesdeOverlay(filtro: FiltroNuevoDraftReference | F
             </div>
           </section>
         </div>
-        <EquipoTipoNuevoOverlay
-          v-if="editor.activeOverlay.value === 'nuevo_tipo_equipo'"
-          :duplicate="editor.esTipoEquipoDuplicado"
-          @close="editor.continuarEditando"
-          @create-and-select="editor.crearYSeleccionarTipoEquipo($event) && editor.continuarEditando()"
-        />
         <EquipoFiltroOverlay
           v-if="filtroOverlay && editor.auxiliares.value"
           :mode="filtroOverlay"

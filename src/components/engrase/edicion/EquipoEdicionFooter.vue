@@ -5,7 +5,7 @@ const emit = defineEmits<{ cancel: []; save: [] }>();
 </script>
 <template>
   <footer
-    class="sticky bottom-0 z-10 flex flex-col gap-1.5 border-t border-gray-200 bg-white/95 px-3 py-2 backdrop-blur sm:flex-row sm:justify-end sm:px-4"
+    class="flex flex-col gap-1.5 border-t border-gray-200 bg-white/95 px-3 py-2 backdrop-blur sm:sticky sm:bottom-0 sm:z-10 sm:flex-row sm:justify-end sm:px-4"
   >
     <button
       type="button"

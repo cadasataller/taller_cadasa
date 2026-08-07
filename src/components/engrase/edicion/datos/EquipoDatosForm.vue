@@ -12,6 +12,7 @@ import type {
 const props = defineProps<{
   draft: EquipoEdicionDraft;
   auxiliares: AuxiliaresEdicionEquipo;
+  isDuplicateTipoEquipo: (nombre: string) => boolean;
 }>();
 const emit = defineEmits<{
   updateCodigo: [string];
@@ -20,7 +21,7 @@ const emit = defineEmits<{
   updateEstado: [EquipoEstado];
   addEtapa: [number];
   removeEtapa: [number];
-  openNewType: [];
+  createTipoEquipo: [string];
 }>();
 const codigoInvalido = computed(() => !props.draft.equipo.codigo.trim());
 const subtipoInvalido = computed(() => !props.draft.equipo.subtipo.trim());
@@ -60,8 +61,9 @@ const subtipo = computed({
       <EquipoTipoField
         :tipos="auxiliares.tiposEquipo"
         :selected="draft.tipoEquipoReferencia"
+        :is-duplicate="isDuplicateTipoEquipo"
         @select="emit('selectTipoEquipo', $event)"
-        @open-new="emit('openNewType')"
+        @create="emit('createTipoEquipo', $event)"
       />
       <div class="grid gap-1.5">
         <label for="equipo-subtipo" class="text-xs font-semibold text-gray-700"
