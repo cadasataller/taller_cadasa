@@ -5,12 +5,16 @@ import EquipoEdicionShell from "@/components/engrase/edicion/EquipoEdicionShell.
 import EquipoDatosForm from "@/components/engrase/edicion/datos/EquipoDatosForm.vue";
 import EquipoFiltrosSection from "@/components/engrase/edicion/filtros/EquipoFiltrosSection.vue";
 import EquipoFiltroOverlay from "@/components/engrase/edicion/filtros/EquipoFiltroOverlay.vue";
-import type { FiltroExistenteDraftReference, FiltroNuevoDraftReference, ResultadoFiltroEncontrado, TipoFiltroDraftReference } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.types";
+import EquipoAceitesSection from "@/components/engrase/edicion/aceites/EquipoAceitesSection.vue";
+import EquipoAceiteOverlay from "@/components/engrase/edicion/aceites/EquipoAceiteOverlay.vue";
+import type { CatalogoAceiteDraftReference, EquipoAceiteFormMode, FiltroExistenteDraftReference, FiltroNuevoDraftReference, ResultadoFiltroEncontrado, TipoFiltroDraftReference } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.types";
 import { useEquipoEngraseEditor } from "@/composables/engrase/useEquipoEngraseEditor";
 const editor = useEquipoEngraseEditor();
 const filtroOverlay = shallowRef<"add" | "edit" | null>(null);
 const filtroEditadoId = shallowRef<string | null>(null);
 const errorAgregarFiltro = shallowRef<string | null>(null);
+const aceiteOverlay = shallowRef<EquipoAceiteFormMode | null>(null);
+const errorAceite = shallowRef<string | null>(null);
 const filtroEditado = computed(() => editor.draft.value?.filtros.find((filtro) => filtro.draftId === filtroEditadoId.value));
 const tiposOcupados = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.draftId !== filtroEditadoId.value).map((filtro) => filtro.tipoFiltro.id) ?? []);
 const filtrosOcupadosId = computed(() => editor.draft.value?.filtros.flatMap((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.filtroReferencia.estado === "existente" ? [filtro.filtroReferencia.id] : []) ?? []);
@@ -30,6 +34,20 @@ function agregarFiltroDesdeOverlay(resultado: ResultadoFiltroEncontrado, cantida
 function agregarFiltroTemporalDesdeOverlay(filtro: FiltroNuevoDraftReference | FiltroExistenteDraftReference, tipoFiltro: TipoFiltroDraftReference, cantidad: number): void {
   if (editor.agregarFiltroTemporal({ filtro, tipoFiltro, cantidad })) cerrarFiltroOverlay();
   else errorAgregarFiltro.value = "Ya existe una asignación activa para este tipo de filtro."
+}
+const aceiteEditado = computed(() => {
+  const modo = aceiteOverlay.value;
+  return modo?.kind === "edit" ? editor.draft.value?.aceites.find((aceite) => aceite.draftId === modo.draftId) : undefined;
+});
+function conflictoSistemaAceite(sistema: CatalogoAceiteDraftReference): boolean {
+  const modo = aceiteOverlay.value;
+  return editor.draft.value?.aceites.some((aceite) => aceite.estadoOperacion !== "pendiente_eliminacion" && aceite.draftId !== (modo?.kind === "edit" ? modo.draftId : undefined) && (sistema.estado === "existente" ? aceite.sistemaReferencia.estado === "existente" && aceite.sistemaReferencia.id === sistema.id : aceite.sistemaReferencia.estado === "nuevo" && aceite.sistemaReferencia.tempId === sistema.tempId)) ?? false;
+}
+function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: CatalogoAceiteDraftReference): void {
+  const modo = aceiteOverlay.value;
+  if (!modo) return;
+  const aplicado = modo.kind === "add" ? editor.agregarAceite({ sistema, aceite }) : editor.actualizarAceite({ draftId: modo.draftId, sistema, aceite });
+  if (aplicado) { aceiteOverlay.value = null; errorAceite.value = null; } else errorAceite.value = "Este equipo ya tiene un aceite asociado a ese sistema.";
 }
 </script>
 <template>
@@ -113,6 +131,9 @@ function agregarFiltroTemporalDesdeOverlay(filtro: FiltroNuevoDraftReference | F
           @undo="editor.deshacerEliminacionFiltro"
         />
       </template>
+      <template #aceites>
+        <EquipoAceitesSection :aceites="editor.draft.value.aceites" :active-count="editor.activeOilsCount.value" @add="aceiteOverlay = { kind: 'add' }" @edit="(draftId) => aceiteOverlay = { kind: 'edit', draftId }" @remove="editor.marcarAceiteParaEliminar" @undo="editor.deshacerEliminacionAceite" />
+      </template>
       <template #overlay
         ><div
           v-if="editor.activeOverlay.value === 'confirmar_salida'"
@@ -166,6 +187,7 @@ function agregarFiltroTemporalDesdeOverlay(filtro: FiltroNuevoDraftReference | F
           @add-temporal="agregarFiltroTemporalDesdeOverlay"
           @edit="(tipoFiltroId, cantidad) => { if (filtroEditadoId) editor.actualizarAsignacionFiltro({ draftId: filtroEditadoId, tipoFiltroId, cantidad }); cerrarFiltroOverlay() }"
         />
+        <EquipoAceiteOverlay v-if="aceiteOverlay && editor.auxiliares.value" :mode="aceiteOverlay" :aceite="aceiteEditado" :sistemas="editor.auxiliares.value.sistemasAceite" :aceites="editor.auxiliares.value.aceites" :has-system-conflict="conflictoSistemaAceite" @close="aceiteOverlay = null" @confirm="confirmarAceite" />
       </template
       >
     </EquipoEdicionShell>

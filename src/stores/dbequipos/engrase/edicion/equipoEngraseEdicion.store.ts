@@ -16,6 +16,9 @@ import type {
   AgregarFiltroExistenteDraft,
   AgregarFiltroTemporalDraft,
   EditarAsignacionFiltroDraft,
+  AgregarAceiteDraft,
+  ActualizarAceiteDraft,
+  CatalogoAceiteDraftReference,
   ResultadoBusquedaFiltroOriginal,
   } from "./equipoEngraseEdicion.types";
 
@@ -25,6 +28,7 @@ const crearError = (error: Error): EquipoEdicionError => ({
 });
 const normalizarTexto = (valor: string): string => valor.trim().replace(/\s+/g, " ");
 const claveTexto = (valor: string): string => normalizarTexto(valor).normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase();
+const referenciaClave = (referencia: { estado: "existente"; id: number } | { estado: "nuevo"; tempId: string }): string => referencia.estado === "existente" ? `id:${referencia.id}` : `temp:${referencia.tempId}`;
 const clonarSnapshot = (
   snapshot: EquipoEdicionSnapshot,
 ): EquipoEdicionSnapshot => ({
@@ -40,11 +44,7 @@ const clonarSnapshot = (
     filtroReferencia: { estado: "existente", id: filtro.filtro.id, tempId: null, codigo: filtro.filtro.codigo, estaEnListaCompras: filtro.filtro.estaEnListaCompras },
     tipoFiltroReferencia: { estado: "existente", id: filtro.tipoFiltro.id, tempId: null, nombre: filtro.tipoFiltro.nombre },
   })),
-  aceites: snapshot.aceites.map((aceite) => ({
-    ...aceite,
-    sistema: { ...aceite.sistema },
-    aceite: { ...aceite.aceite },
-  })),
+  aceites: snapshot.aceites.map((aceite) => ({ ...aceite, sistema: { ...aceite.sistema }, aceite: { ...aceite.aceite } })),
   imagen: { ...snapshot.imagen },
 });
 const crearBorrador = (
@@ -60,6 +60,16 @@ const crearBorrador = (
     estadoAntesDeEliminar: null,
     filtroReferencia: { estado: "existente", id: filtro.filtro.id, tempId: null, codigo: filtro.filtro.codigo, estaEnListaCompras: filtro.filtro.estaEnListaCompras },
     tipoFiltroReferencia: { estado: "existente", id: filtro.tipoFiltro.id, tempId: null, nombre: filtro.tipoFiltro.nombre },
+  })),
+  aceites: snapshot.aceites.map((aceite) => ({
+    ...aceite,
+    sistema: { ...aceite.sistema },
+    aceite: { ...aceite.aceite },
+    draftId: `equipo_aceite_${aceite.equipoAceiteId}`,
+    estadoOperacion: "existente",
+    estadoAntesDeEliminar: null,
+    sistemaReferencia: { estado: "existente", id: aceite.sistema.id, tempId: null, nombre: aceite.sistema.nombre },
+    aceiteReferencia: { estado: "existente", id: aceite.aceite.id, tempId: null, nombre: aceite.aceite.nombre },
   })),
   tipoEquipoReferencia: { estado: "existente", id: snapshot.equipo.tipoEquipoId, nombre: snapshot.equipo.tipoEquipo, tempId: null },
   operaciones: {
@@ -103,18 +113,30 @@ export const useEquipoEngraseEdicionStore = defineStore(
     );
     const isDirty = computed(() => {
       if (!original.value || !draft.value) return false;
+      const filtrosOriginales = original.value.filtros.map((filtro) => `existente:${filtro.id}:id:${filtro.tipoFiltro.id}:id:${filtro.filtro.id}:${filtro.cantidad}`).sort();
+      const filtrosBorrador = draft.value.filtros.flatMap((filtro) => {
+        if (filtro.estadoOperacion === "pendiente_eliminacion") return filtro.id ? [`eliminado:${filtro.id}`] : [];
+        const tipo = referenciaClave(filtro.tipoFiltroReferencia);
+        const referenciaFiltro = filtro.filtroReferencia.estado === "existente" ? `id:${filtro.filtroReferencia.id}` : `temp:${filtro.filtroReferencia.tempId}`;
+        return [`${filtro.id ? `existente:${filtro.id}` : `nuevo:${filtro.draftId}`}:${tipo}:${referenciaFiltro}:${filtro.cantidad}`];
+      }).sort();
+      const aceitesOriginales = original.value.aceites.map((aceite) => `existente:${aceite.equipoAceiteId}:id:${aceite.sistema.id}:id:${aceite.aceite.id}`).sort();
+      const aceitesBorrador = draft.value.aceites.flatMap((aceite) => {
+        if (aceite.estadoOperacion === "pendiente_eliminacion") return aceite.equipoAceiteId ? [`eliminado:${aceite.equipoAceiteId}`] : [];
+        return [`${aceite.equipoAceiteId ? `existente:${aceite.equipoAceiteId}` : `nuevo:${aceite.draftId}`}:${referenciaClave(aceite.sistemaReferencia)}:${referenciaClave(aceite.aceiteReferencia)}`];
+      }).sort();
       return (
         JSON.stringify({
           codigo: normalizarTexto(original.value.equipo.codigo), tipo: original.value.equipo.tipoEquipoId, subtipo: normalizarTexto(original.value.equipo.subtipo), estado: original.value.equipo.estado,
           etapas: original.value.etapas.map((etapa) => etapa.id).sort((a, b) => a - b),
-          filtros: original.value.filtros,
-          aceites: original.value.aceites,
+          filtros: filtrosOriginales,
+          aceites: aceitesOriginales,
         }) !==
         JSON.stringify({
           codigo: normalizarTexto(draft.value.equipo.codigo), tipo: draft.value.tipoEquipoReferencia.estado === "existente" ? draft.value.tipoEquipoReferencia.id : draft.value.tipoEquipoReferencia.tempId, subtipo: normalizarTexto(draft.value.equipo.subtipo), estado: draft.value.equipo.estado,
           etapas: draft.value.etapas.map((etapa) => etapa.id).sort((a, b) => a - b),
-          filtros: draft.value.filtros,
-          aceites: draft.value.aceites,
+          filtros: filtrosBorrador,
+          aceites: aceitesBorrador,
         })
       );
     });
@@ -128,7 +150,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
     );
     const activeFiltersCount = computed(() => draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").length ?? 0);
     const activeStagesCount = computed(() => draft.value?.etapas.length ?? 0);
-    const activeOilsCount = computed(() => draft.value?.aceites.length ?? 0);
+    const activeOilsCount = computed(() => draft.value?.aceites.filter((aceite) => aceite.estadoOperacion !== "pendiente_eliminacion").length ?? 0);
 
     async function cargar(codigo: string): Promise<void> {
       const codigoNormalizado = codigo.trim();
@@ -252,6 +274,50 @@ export const useEquipoEngraseEdicionStore = defineStore(
       item.estadoOperacion = item.estadoAntesDeEliminar ?? "existente";
       item.estadoAntesDeEliminar = null;
     }
+    function referenciaAceiteActiva(referencia: CatalogoAceiteDraftReference): string {
+      return referencia.estado === "existente" ? `id:${referencia.id}` : `temp:${referencia.tempId}`;
+    }
+    function existeSistemaActivo(sistema: CatalogoAceiteDraftReference, excluirDraftId?: string): boolean {
+      const clave = referenciaAceiteActiva(sistema);
+      return draft.value?.aceites.some((aceite) => aceite.draftId !== excluirDraftId && aceite.estadoOperacion !== "pendiente_eliminacion" && referenciaAceiteActiva(aceite.sistemaReferencia) === clave) ?? false;
+    }
+    function agregarAceite(entrada: AgregarAceiteDraft): boolean {
+      if (!draft.value || existeSistemaActivo(entrada.sistema)) return false;
+      draft.value.aceites.push({
+        equipoAceiteId: 0,
+        sistema: { id: entrada.sistema.estado === "existente" ? entrada.sistema.id : 0, nombre: entrada.sistema.nombre },
+        aceite: { id: entrada.aceite.estado === "existente" ? entrada.aceite.id : 0, nombre: entrada.aceite.nombre },
+        draftId: crearTempId("equipo_aceite"), estadoOperacion: "nuevo", estadoAntesDeEliminar: null,
+        sistemaReferencia: entrada.sistema, aceiteReferencia: entrada.aceite,
+      });
+      return true;
+    }
+    function actualizarAceite(entrada: ActualizarAceiteDraft): boolean {
+      const item = draft.value?.aceites.find((aceite) => aceite.draftId === entrada.draftId && aceite.estadoOperacion !== "pendiente_eliminacion");
+      if (!item || existeSistemaActivo(entrada.sistema, entrada.draftId)) return false;
+      item.sistema = { id: entrada.sistema.estado === "existente" ? entrada.sistema.id : 0, nombre: entrada.sistema.nombre };
+      item.aceite = { id: entrada.aceite.estado === "existente" ? entrada.aceite.id : 0, nombre: entrada.aceite.nombre };
+      item.sistemaReferencia = entrada.sistema;
+      item.aceiteReferencia = entrada.aceite;
+      if (item.estadoOperacion !== "nuevo") {
+        const originalAceite = original.value?.aceites.find((aceite) => aceite.equipoAceiteId === item.equipoAceiteId);
+        item.estadoOperacion = originalAceite && originalAceite.sistema.id === item.sistema.id && originalAceite.aceite.id === item.aceite.id ? "existente" : "actualizado";
+      }
+      return true;
+    }
+    function marcarAceiteParaEliminar(draftId: string): void {
+      const item = draft.value?.aceites.find((aceite) => aceite.draftId === draftId);
+      if (!item || item.estadoOperacion === "pendiente_eliminacion") return;
+      item.estadoAntesDeEliminar = item.estadoOperacion;
+      item.estadoOperacion = "pendiente_eliminacion";
+    }
+    function deshacerEliminacionAceite(draftId: string): boolean {
+      const item = draft.value?.aceites.find((aceite) => aceite.draftId === draftId);
+      if (!item || item.estadoOperacion !== "pendiente_eliminacion" || existeSistemaActivo(item.sistemaReferencia, item.draftId)) return false;
+      item.estadoOperacion = item.estadoAntesDeEliminar ?? "existente";
+      item.estadoAntesDeEliminar = null;
+      return true;
+    }
     function reset(): void {
       solicitudActual += 1;
       codigoOriginal.value = null;
@@ -286,7 +352,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
       continuarEditando,
       descartarCambios,
       reset,
-      actualizarCodigo, seleccionarTipoEquipo, actualizarSubtipo, actualizarEstado, agregarEtapa, quitarEtapa, crearYSeleccionarTipoEquipo, esTipoEquipoDuplicado, abrirNuevoTipoEquipo, buscarFiltroOriginalParaAsignar, agregarFiltroExistente, agregarFiltroTemporal, actualizarAsignacionFiltro, marcarFiltroParaEliminar, deshacerEliminacionFiltro,
+      actualizarCodigo, seleccionarTipoEquipo, actualizarSubtipo, actualizarEstado, agregarEtapa, quitarEtapa, crearYSeleccionarTipoEquipo, esTipoEquipoDuplicado, abrirNuevoTipoEquipo, buscarFiltroOriginalParaAsignar, agregarFiltroExistente, agregarFiltroTemporal, actualizarAsignacionFiltro, marcarFiltroParaEliminar, deshacerEliminacionFiltro, agregarAceite, actualizarAceite, marcarAceiteParaEliminar, deshacerEliminacionAceite,
     };
   },
 );

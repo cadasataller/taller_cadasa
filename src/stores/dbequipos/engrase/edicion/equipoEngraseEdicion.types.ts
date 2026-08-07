@@ -33,6 +33,36 @@ export interface EquipoEdicionAceite {
   sistema: CatalogoIdNombre;
   aceite: CatalogoIdNombre;
 }
+export interface CatalogoTemporalReference {
+  estado: "nuevo";
+  id: null;
+  tempId: string;
+  nombre: string;
+}
+export interface CatalogoExistenteReference extends CatalogoIdNombre {
+  estado: "existente";
+  tempId: null;
+}
+export type CatalogoAceiteDraftReference =
+  | CatalogoExistenteReference
+  | CatalogoTemporalReference;
+export interface EquipoAceiteDraft extends EquipoEdicionAceite {
+  draftId: string;
+  estadoOperacion: OperacionDraft;
+  estadoAntesDeEliminar: Exclude<OperacionDraft, "pendiente_eliminacion"> | null;
+  sistemaReferencia: CatalogoAceiteDraftReference;
+  aceiteReferencia: CatalogoAceiteDraftReference;
+}
+export interface AgregarAceiteDraft {
+  sistema: CatalogoAceiteDraftReference;
+  aceite: CatalogoAceiteDraftReference;
+}
+export interface ActualizarAceiteDraft extends AgregarAceiteDraft {
+  draftId: string;
+}
+export type EquipoAceiteFormMode =
+  | { kind: "add" }
+  | { kind: "edit"; draftId: string };
 export interface EquipoParaEdicion {
   equipo: EquipoEdicionDatos;
   etapas: CatalogoIdNombre[];
@@ -79,8 +109,9 @@ export interface AgregarFiltroTemporalDraft {
   tipoFiltro: TipoFiltroDraftReference;
   cantidad: number;
 }
-export interface EquipoEdicionDraft extends Omit<EquipoEdicionSnapshot, "filtros"> {
+export interface EquipoEdicionDraft extends Omit<EquipoEdicionSnapshot, "filtros" | "aceites"> {
   filtros: EquipoFiltroDraft[];
+  aceites: EquipoAceiteDraft[];
   tipoEquipoReferencia: TipoEquipoDraftReference;
   operaciones: {
     datos: OperacionDraft;

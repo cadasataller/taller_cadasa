@@ -7,8 +7,9 @@ const props = defineProps<{
   modelValue: string | null;
   placeholder: string;
   invalid?: boolean;
+  taggable?: boolean;
 }>();
-const emit = defineEmits<{ "update:modelValue": [string | null] }>();
+const emit = defineEmits<{ "update:modelValue": [string | null]; tag: [string] }>();
 const selected = computed({
   get: (): EquipoMultiselectOption | null =>
     props.options.find((option) => option.key === props.modelValue) ?? null,
@@ -24,6 +25,9 @@ const selected = computed({
     label="label"
     :searchable="true"
     :allow-empty="false"
+    :taggable="taggable"
+    :append-to-body="true"
+    :options-limit="200"
     :placeholder="placeholder"
     select-label="Seleccionar"
     selected-label="Seleccionado"
@@ -31,6 +35,8 @@ const selected = computed({
     tag-placeholder="Agregar"
     no-options="No hay opciones"
     no-result="Sin resultados"
+    class="equipo-catalog-select-menu"
     :class="{ 'multiselect-invalid': invalid }"
+    @tag="emit('tag', $event)"
   />
 </template>

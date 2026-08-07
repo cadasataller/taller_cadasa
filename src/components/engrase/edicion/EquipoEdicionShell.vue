@@ -24,18 +24,7 @@ const emit = defineEmits<{ back: []; cancel: []; save: [] }>();
     >
       <slot name="datos" />
       <slot name="filtros" />
-      <section class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-        <div class="flex justify-between gap-2">
-          <h2 class="text-sm font-bold text-gray-900">Aceites</h2>
-          <span
-            class="rounded-full bg-main/10 px-2 py-0.5 text-[11px] font-bold text-main"
-            >{{ oilsCount }}</span
-          >
-        </div>
-        <p class="mt-1 text-xs leading-5 text-gray-600">
-          La administración de aceites estará disponible próximamente.
-        </p>
-      </section>
+      <slot name="aceites" />
     </main>
     <EquipoEdicionFooter
       :can-save="canSave"

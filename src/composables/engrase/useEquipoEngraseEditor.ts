@@ -48,5 +48,9 @@ export function useEquipoEngraseEditor() {
     actualizarAsignacionFiltro: store.actualizarAsignacionFiltro,
     marcarFiltroParaEliminar: store.marcarFiltroParaEliminar,
     deshacerEliminacionFiltro: store.deshacerEliminacionFiltro,
+    agregarAceite: store.agregarAceite,
+    actualizarAceite: store.actualizarAceite,
+    marcarAceiteParaEliminar: store.marcarAceiteParaEliminar,
+    deshacerEliminacionAceite: store.deshacerEliminacionAceite,
   };
 }

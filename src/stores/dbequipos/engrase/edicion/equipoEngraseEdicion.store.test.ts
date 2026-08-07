@@ -146,4 +146,18 @@ describe("store de edición de equipo", () => {
       tipoFiltroReferencia: { estado: "nuevo", tempId: "tipo_filtro_1", nombre: "Combustible" },
     });
   });
+  it("administra aceites locales, valida sistema único y conserva el cambio al deshacer", async () => {
+    obtenerEquipo.mockResolvedValue({ ...equipo, aceites: [{ equipoAceiteId: 11, sistema: { id: 1, nombre: "Motor" }, aceite: { id: 1, nombre: "15W-40" } }] });
+    obtenerAuxiliares.mockResolvedValue({ ...auxiliares, sistemasAceite: [{ id: 1, nombre: "Motor" }, { id: 2, nombre: "Transmisión" }], aceites: [{ id: 1, nombre: "15W-40" }, { id: 2, nombre: "Hy-Tran" }] });
+    const store = useEquipoEngraseEdicionStore();
+    await store.cargar("410002");
+    expect(store.isDirty).toBe(false);
+    expect(store.agregarAceite({ sistema: { estado: "existente", id: 1, tempId: null, nombre: "Motor" }, aceite: { estado: "existente", id: 2, tempId: null, nombre: "Hy-Tran" } })).toBe(false);
+    expect(store.agregarAceite({ sistema: { estado: "nuevo", id: null, tempId: "sistema_1", nombre: "Hidráulico" }, aceite: { estado: "nuevo", id: null, tempId: "aceite_1", nombre: "ISO 46" } })).toBe(true);
+    const nuevo = store.draft?.aceites.find((aceite) => aceite.estadoOperacion === "nuevo");
+    if (!nuevo) throw new Error("No se agregó el aceite.");
+    store.marcarAceiteParaEliminar(nuevo.draftId);
+    expect(store.deshacerEliminacionAceite(nuevo.draftId)).toBe(true);
+    expect(nuevo.estadoOperacion).toBe("nuevo");
+  });
 });
