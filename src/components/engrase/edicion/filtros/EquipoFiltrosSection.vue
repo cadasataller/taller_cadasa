@@ -16,11 +16,7 @@ const emit = defineEmits<{
       class="flex flex-wrap items-center justify-between gap-2 border-b border-second-deep p-3"
     >
       <div>
-        <h2 class="text-base font-bold text-gray-900">2. Filtros del equipo</h2>
-        <p class="mt-0.5 inline-flex items-center gap-1 text-xs text-gray-600">
-          <Info class="h-3.5 w-3.5" />Mínimo 1 filtro activo requerido ·
-          {{ activeCount }} activo{{ activeCount === 1 ? "" : "s" }}
-        </p>
+        <h2 class="text-base font-bold text-gray-900">Filtros del equipo</h2>
       </div>
       <button
         type="button"
@@ -31,11 +27,12 @@ const emit = defineEmits<{
       </button>
     </header>
     <p
-      v-if="activeCount <= 1"
+      v-if="filtros.length === 0"
       class="mx-3 mt-2 rounded-md bg-info-bg px-2 py-1.5 text-xs text-info"
       role="status"
     >
-      No puede quitar el último filtro activo del equipo.
+      <Info class="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+      Mínimo 1 filtro activo requerido.
     </p>
     <ul>
       <EquipoFiltroDraftRow

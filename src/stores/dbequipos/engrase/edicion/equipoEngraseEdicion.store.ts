@@ -193,6 +193,9 @@ export const useEquipoEngraseEdicionStore = defineStore(
         !loading.value,
     );
     const cambiosPendientes = computed(() => original.value && draft.value ? construirCambiosEquipo(original.value, draft.value) : {});
+    const erroresDeBorrador = computed(() =>
+      draft.value ? validarEquipoEngrase(draft.value).errores : [],
+    );
     const isDirty = computed(() => hayCambiosEquipo(cambiosPendientes.value));
     const hasDataChanges = computed(
       () =>
@@ -201,6 +204,24 @@ export const useEquipoEngraseEdicionStore = defineStore(
     );
     const hasFilterChanges = computed(() => Boolean(cambiosPendientes.value.filtros));
     const hasOilChanges = computed(() => Boolean(cambiosPendientes.value.aceites));
+    const hasDataErrors = computed(() =>
+      [...erroresDeBorrador.value, ...validationErrors.value].some(
+        (error) =>
+          error.seccion === "datos" ||
+          error.seccion === "etapas" ||
+          error.seccion === "general",
+      ),
+    );
+    const hasFilterErrors = computed(() =>
+      [...erroresDeBorrador.value, ...validationErrors.value].some(
+        (error) => error.seccion === "filtros",
+      ),
+    );
+    const hasOilErrors = computed(() =>
+      [...erroresDeBorrador.value, ...validationErrors.value].some(
+        (error) => error.seccion === "aceites",
+      ),
+    );
     const hasActiveOverlay = computed(() => activeOverlay.value !== null);
     const canSave = computed(() => isReady.value && hayCambiosEquipo(cambiosPendientes.value) && !saving.value && activeOverlay.value === null && imagenSyncState.value.kind !== "move_pending");
     const activeFiltersCount = computed(() => draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").length ?? 0);
@@ -474,6 +495,9 @@ export const useEquipoEngraseEdicionStore = defineStore(
       hasDataChanges,
       hasFilterChanges,
       hasOilChanges,
+      hasDataErrors,
+      hasFilterErrors,
+      hasOilErrors,
       hasActiveOverlay,
       canSave,
       activeFiltersCount,

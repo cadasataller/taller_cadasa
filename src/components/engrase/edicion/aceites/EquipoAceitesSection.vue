@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { Droplet, Info, Plus } from "lucide-vue-next";
+import { Droplet, Plus } from "lucide-vue-next";
 import EquipoAceiteDraftRow from "./EquipoAceiteDraftRow.vue";
 import type { EquipoAceiteDraft } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.types";
 
-defineProps<{ aceites: EquipoAceiteDraft[]; activeCount: number }>();
+defineProps<{ aceites: EquipoAceiteDraft[] }>();
 const emit = defineEmits<{
   add: [];
   edit: [string];
@@ -18,14 +18,10 @@ const emit = defineEmits<{
       class="flex flex-wrap items-center justify-between gap-2 border-b border-second-deep p-3"
     >
       <div>
-        <h2 class="text-sm font-bold text-gray-900">3. Aceites asociados</h2>
-        <p class="mt-0.5 inline-flex items-center gap-1 text-xs text-gray-600">
-          <Info class="h-3.5 w-3.5" />{{ activeCount }} activo{{
-            activeCount === 1 ? "" : "s"
-          }}
-        </p>
+        <h2 class="text-sm font-bold text-gray-900">Aceites asociados</h2>
       </div>
       <button
+        v-if="aceites.length > 0"
         type="button"
         class="inline-flex min-h-9 cursor-pointer items-center gap-1 rounded-md bg-main px-3 text-xs font-semibold text-white hover:bg-main-light"
         @click="emit('add')"

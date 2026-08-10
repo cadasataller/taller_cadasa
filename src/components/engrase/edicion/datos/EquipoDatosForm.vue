@@ -40,7 +40,7 @@ const subtipo = computed({
     <h2
       class="mb-2 text-xs font-bold uppercase tracking-wide text-main sm:text-sm"
     >
-      1. Datos del equipo
+      Datos del equipo
     </h2>
     <div
       class="grid gap-3 lg:grid-cols-[minmax(180px,240px)_minmax(0,1fr)] lg:items-stretch"

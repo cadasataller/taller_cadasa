@@ -32,7 +32,10 @@ watch(
   () => editor.validationErrors.value[0],
   (error) => {
     if (!error) return;
-    pestanaActiva.value = error.seccion === "etapas" ? "datos" : error.seccion;
+    pestanaActiva.value =
+      error.seccion === "filtros" || error.seccion === "aceites"
+        ? error.seccion
+        : "datos";
   },
 );
 const tipoMensajeGuardado = computed<"error" | "success" | "partial" | null>(() => {
@@ -129,6 +132,9 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
       :has-data-changes="editor.hasDataChanges.value"
       :has-filter-changes="editor.hasFilterChanges.value"
       :has-oil-changes="editor.hasOilChanges.value"
+      :has-data-errors="editor.hasDataErrors.value"
+      :has-filter-errors="editor.hasFilterErrors.value"
+      :has-oil-errors="editor.hasOilErrors.value"
       :can-save="editor.canSave.value"
       :saving="editor.saving.value"
       :message="mensajeGuardado"
@@ -187,7 +193,7 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
       <template #aceites>
         <div data-validation-section="aceites" tabindex="-1">
           <p v-for="error in erroresAceites" :key="`${error.codigo}-${error.mensaje}`" class="mb-2 rounded-md bg-danger-bg px-3 py-2 text-xs text-danger" role="alert">{{ error.mensaje }}</p>
-          <EquipoAceitesSection :aceites="editor.draft.value.aceites" :active-count="editor.activeOilsCount.value" @add="aceiteOverlay = { kind: 'add' }" @edit="(draftId) => aceiteOverlay = { kind: 'edit', draftId }" @remove="editor.marcarAceiteParaEliminar" @undo="editor.deshacerEliminacionAceite" />
+          <EquipoAceitesSection :aceites="editor.draft.value.aceites" @add="aceiteOverlay = { kind: 'add' }" @edit="(draftId) => aceiteOverlay = { kind: 'edit', draftId }" @remove="editor.marcarAceiteParaEliminar" @undo="editor.deshacerEliminacionAceite" />
         </div>
       </template>
       <template #overlay

@@ -11,6 +11,9 @@ defineProps<{
   hasDataChanges: boolean;
   hasFilterChanges: boolean;
   hasOilChanges: boolean;
+  hasDataErrors: boolean;
+  hasFilterErrors: boolean;
+  hasOilErrors: boolean;
   canSave: boolean;
   saving: boolean;
   message: string | null;
@@ -48,8 +51,10 @@ const emit = defineEmits<{
         @click="emit('updateActiveTab', 'datos')"
       >
         Datos del equipo
-        <span v-if="hasDataChanges" class="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
-        <span v-if="hasDataChanges" class="sr-only">Cambios pendientes</span>
+        <span v-if="hasDataErrors" class="h-1.5 w-1.5 rounded-full bg-danger" aria-hidden="true" />
+        <span v-else-if="hasDataChanges" class="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
+        <span v-if="hasDataErrors" class="sr-only">Errores por corregir</span>
+        <span v-else-if="hasDataChanges" class="sr-only">Cambios pendientes</span>
       </button>
       <button
         id="tab-filtros"
@@ -62,8 +67,10 @@ const emit = defineEmits<{
         @click="emit('updateActiveTab', 'filtros')"
       >
         Filtros ({{ filtersCount }})
-        <span v-if="hasFilterChanges" class="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
-        <span v-if="hasFilterChanges" class="sr-only">Cambios pendientes</span>
+        <span v-if="hasFilterErrors" class="h-1.5 w-1.5 rounded-full bg-danger" aria-hidden="true" />
+        <span v-else-if="hasFilterChanges" class="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
+        <span v-if="hasFilterErrors" class="sr-only">Errores por corregir</span>
+        <span v-else-if="hasFilterChanges" class="sr-only">Cambios pendientes</span>
       </button>
       <button
         id="tab-aceites"
@@ -76,8 +83,10 @@ const emit = defineEmits<{
         @click="emit('updateActiveTab', 'aceites')"
       >
         Aceites ({{ oilsCount }})
-        <span v-if="hasOilChanges" class="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
-        <span v-if="hasOilChanges" class="sr-only">Cambios pendientes</span>
+        <span v-if="hasOilErrors" class="h-1.5 w-1.5 rounded-full bg-danger" aria-hidden="true" />
+        <span v-else-if="hasOilChanges" class="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden="true" />
+        <span v-if="hasOilErrors" class="sr-only">Errores por corregir</span>
+        <span v-else-if="hasOilChanges" class="sr-only">Cambios pendientes</span>
       </button>
     </nav>
     <main

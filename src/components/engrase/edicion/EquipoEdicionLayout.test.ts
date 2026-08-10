@@ -75,7 +75,7 @@ describe("cabecera y datos del editor", () => {
       },
     });
 
-    expect(wrapper.get("h2").text()).toBe("1. Datos del equipo");
+    expect(wrapper.get("h2").text()).toBe("Datos del equipo");
     expect(wrapper.find('[data-test="imagen-integrada"]').exists()).toBe(true);
     await wrapper.get('button[aria-pressed="false"]').trigger("click");
     expect(wrapper.emitted("updateEstado")).toEqual([["descartado"]]);
@@ -91,6 +91,9 @@ describe("cabecera y datos del editor", () => {
         hasDataChanges: false,
         hasFilterChanges: true,
         hasOilChanges: false,
+        hasDataErrors: false,
+        hasFilterErrors: true,
+        hasOilErrors: false,
         canSave: true,
         saving: false,
         message: null,
@@ -109,7 +112,7 @@ describe("cabecera y datos del editor", () => {
     expect(wrapper.get("[role=tab][aria-selected=true]").text()).toContain("Datos del equipo");
     expect(wrapper.get("#panel-datos").isVisible()).toBe(true);
     expect(wrapper.get("#panel-filtros").isVisible()).toBe(false);
-    expect(wrapper.get("#tab-filtros").text()).toContain("Cambios pendientes");
+    expect(wrapper.get("#tab-filtros").text()).toContain("Errores por corregir");
 
     await wrapper.get("#tab-filtros").trigger("click");
     expect(wrapper.emitted("updateActiveTab")).toEqual([["filtros"]]);
