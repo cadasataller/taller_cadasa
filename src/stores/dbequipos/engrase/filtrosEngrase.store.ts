@@ -41,6 +41,7 @@ export const useFiltrosEngraseStore = defineStore(
     let catalogosCargados = false,
       idsCodigo = ref<Set<number> | null>(null),
       filtrosCache = new Map<number, EquipoFiltroDetalle[]>(),
+      imagenesRequest = new Map<string, Promise<void>>(),
       request: Promise<void> | null = null,
       sugerenciasRequest = 0;
     const equiposVisibles = computed(() =>
@@ -117,6 +118,38 @@ export const useFiltrosEngraseStore = defineStore(
       } finally {
         loadingEquipos.value = false;
       }
+    }
+    async function cargarImagenEquipo(equipoId: number): Promise<void> {
+      const equipo = equipos.value.find((item) => item.id === equipoId);
+      if (
+        !equipo ||
+        !equipo.tiene_imagen_main ||
+        !equipo.main_storage_path ||
+        equipo.imageUrl
+      ) return;
+      const pathSolicitado = equipo.main_storage_path;
+      const requestKey = `${equipoId}:${pathSolicitado}`;
+      const pendiente = imagenesRequest.get(requestKey);
+      if (pendiente) return pendiente;
+      const solicitud = (async () => {
+        try {
+          const imageUrl = await filtrosEngraseService.crearUrlFirmadaImagen(
+            pathSolicitado,
+          );
+          const indice = equipos.value.findIndex((item) => item.id === equipoId);
+          if (
+            indice < 0 ||
+            equipos.value[indice]?.main_storage_path !== pathSolicitado
+          ) return;
+          equipos.value[indice] = { ...equipos.value[indice], imageUrl };
+        } catch {
+          // La imagen es complementaria: un fallo no debe romper el listado.
+        } finally {
+          imagenesRequest.delete(requestKey);
+        }
+      })();
+      imagenesRequest.set(requestKey, solicitud);
+      return solicitud;
     }
     async function asegurarSeleccion() {
       if (
@@ -257,6 +290,7 @@ export const useFiltrosEngraseStore = defineStore(
         main_storage_path: imagen.mainStoragePath,
         tiene_imagen_main: imagen.tieneImagenMain,
         imagen_actualizada_en: imagen.imagenActualizadaEn,
+        imageUrl: null,
       };
     }
     async function reintentarCarga() {
@@ -275,6 +309,7 @@ export const useFiltrosEngraseStore = defineStore(
       filtrosAplicados.value = initialFiltrosEngraseQuery();
       catalogosCargados = false;
       filtrosCache.clear();
+      imagenesRequest.clear();
       idsCodigo.value = null;
     }
     return {
@@ -306,6 +341,7 @@ export const useFiltrosEngraseStore = defineStore(
       inicializar,
       cargarCatalogos,
       cargarEquipos,
+      cargarImagenEquipo,
       cargarFiltrosEquipo,
       buscarSugerencias,
       limpiarSugerencias,

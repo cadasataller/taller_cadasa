@@ -28,6 +28,9 @@ async function update(filters: Partial<FiltrosEngraseQuery>) {
 function editarEquipo(codigo: string) {
   router.push({ name: "EquipoEngraseEditar", params: { codigo } });
 }
+function cargarImagenVisible(equipoId: number): void {
+  void f.cargarImagenEquipo(equipoId);
+}
 async function retryDetalle() {
   if (f.equipoSeleccionadoId.value) await f.reintentar();
 }
@@ -75,6 +78,7 @@ async function clearAllFilters() {
             :error="f.errorEquipos.value"
             :reset-signal="resetSignal"
             @select-equipo="selectEquipo"
+            @image-visible="cargarImagenVisible"
             @retry="f.reintentar"
             @filter-tipo="update({ tipoEquipoId: $event, modelo: '' })"
             @filter-modelo="update({ modelo: $event })"

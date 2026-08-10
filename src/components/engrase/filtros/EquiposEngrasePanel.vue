@@ -15,6 +15,7 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   selectEquipo: [number];
+  imageVisible: [number];
   retry: [];
   filterTipo: [number | null];
   filterModelo: [string];
@@ -259,6 +260,7 @@ function cerrarChips() {
         :equipo="equipo"
         :selected="equipo.id === selectedEquipoId"
         @select="$emit('selectEquipo', $event)"
+        @image-visible="$emit('imageVisible', $event)"
       />
     </div>
   </section>
