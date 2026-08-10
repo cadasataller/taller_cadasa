@@ -100,10 +100,13 @@ function crearTemporal(nombre: string, tipo: "sistema" | "aceite"): void {
     error.value = `Ingresa un nombre para crear el ${etiqueta}.`;
     return;
   }
-  if (
-    existentes.value.some((item) => clave(item.nombre) === clave(normalizado))
-  ) {
-    error.value = `Ya existe un ${etiqueta} con este nombre.`;
+  const existente = existentes.value.find(
+    (item) => clave(item.nombre) === clave(normalizado),
+  );
+  if (existente) {
+    if (tipo === "sistema") sistema.value = existente;
+    else aceite.value = existente;
+    error.value = "";
     return;
   }
   const nuevo: CatalogoAceiteDraftReference = {
