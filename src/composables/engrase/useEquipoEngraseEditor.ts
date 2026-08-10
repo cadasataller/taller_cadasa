@@ -1,7 +1,8 @@
-import { onBeforeUnmount, watch } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import { useEquipoEngraseEdicionStore } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.store";
+import type { MoverImagenEquipo } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.store";
 
 export function useEquipoEngraseEditor() {
   const route = useRoute();
@@ -25,14 +26,38 @@ export function useEquipoEngraseEditor() {
     store.descartarCambios();
     router.push({ name: "FiltrosEngrase" });
   };
+  const enfocarPrimerError = async (): Promise<void> => {
+    await nextTick();
+    const error = store.validationErrors[0];
+    const objetivo = error?.fieldId
+      ? document.getElementById(error.fieldId)
+      : error
+        ? document.querySelector<HTMLElement>(`[data-validation-section="${error.seccion === "etapas" ? "datos" : error.seccion}"]`)
+        : null;
+    objetivo?.focus();
+  };
+  const guardar = async (moverImagen: MoverImagenEquipo): Promise<void> => {
+    const resultado = await store.guardar(moverImagen);
+    if (resultado.kind === "invalid" || resultado.kind === "error") await enfocarPrimerError();
+    if (resultado.kind === "success") await router.push({ name: "FiltrosEngrase" });
+  };
+  const prevenirCierre = (event: BeforeUnloadEvent): void => {
+    if (!store.isDirty && !store.saving) return;
+    event.preventDefault();
+  };
+  onMounted(() => window.addEventListener("beforeunload", prevenirCierre));
   onBeforeRouteLeave(() => store.solicitarSalida());
-  onBeforeUnmount(() => store.continuarEditando());
+  onBeforeUnmount(() => {
+    window.removeEventListener("beforeunload", prevenirCierre);
+    store.continuarEditando();
+  });
   return {
     ...state,
     volver,
     descartarYVolver,
     continuarEditando: store.continuarEditando,
     reintentar: cargarRuta,
+    guardar,
     actualizarCodigo: store.actualizarCodigo,
     seleccionarTipoEquipo: store.seleccionarTipoEquipo,
     actualizarSubtipo: store.actualizarSubtipo,

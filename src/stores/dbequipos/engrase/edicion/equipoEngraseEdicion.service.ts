@@ -11,6 +11,7 @@ import type {
   AdministrarImagenEquipoDto,
   AdministrarImagenEquipoEntrada,
   AdministrarImagenEquipoRespuesta,
+  ActualizarEquipoCompletoArgumento,
   ActualizarEquipoCompletoDto,
   ActualizarEquipoCompletoRespuesta,
   AuxiliaresEdicionEquipo,
@@ -98,12 +99,11 @@ export const equipoEngraseEdicionService = {
     );
   },
   async actualizarEquipoCompleto(
-    codigoEquipoOriginal: string,
-    cambios: CambiosEquipoPayload,
+    argumento: ActualizarEquipoCompletoArgumento,
   ): Promise<ActualizarEquipoCompletoRespuesta> {
     const parametros: ActualizarEquipoParametros = {
-      p_codigo_equipo: codigoEquipoOriginal,
-      p_cambios: cambios,
+      p_codigo_equipo: argumento.codigoOriginal,
+      p_cambios: argumento.cambios,
     };
     const { data, error } = await callDbEngrase().rpc(RPC_ACTUALIZAR_EQUIPO, parametros);
     asegurarSinError(error, "No se pudo actualizar el equipo.");

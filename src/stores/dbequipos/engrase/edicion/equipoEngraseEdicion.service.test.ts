@@ -96,10 +96,10 @@ describe("servicio de edición de equipos", () => {
       },
       error: null,
     });
-    await equipoEngraseEdicionService.actualizarEquipoCompleto(
-      "410002",
+    await equipoEngraseEdicionService.actualizarEquipoCompleto({
+      codigoOriginal: "410002",
       cambios,
-    );
+    });
     expect(rpcMock).toHaveBeenCalledWith("rpc_actualizar_equipo_completo", {
       p_codigo_equipo: "410002",
       p_cambios: cambios,

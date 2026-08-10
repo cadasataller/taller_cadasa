@@ -7,7 +7,7 @@ import {
   shallowRef,
   useTemplateRef,
 } from "vue";
-import { Droplet, X } from "lucide-vue-next";
+import { AlertTriangle, Droplet, X } from "lucide-vue-next";
 import EquipoAceiteForm from "./EquipoAceiteForm.vue";
 import type {
   CatalogoAceiteDraftReference,
@@ -28,17 +28,29 @@ const emit = defineEmits<{
   confirm: [CatalogoAceiteDraftReference, CatalogoAceiteDraftReference];
 }>();
 const trigger = useTemplateRef<HTMLButtonElement>("closeButton");
+const continueButton = useTemplateRef<HTMLButtonElement>("continueButton");
 const formChanged = shallowRef(false);
+const showDiscardConfirmation = shallowRef(false);
 let overflowPrevio = "";
 const title = computed(() =>
   props.mode.kind === "add" ? "Agregar aceite" : "Editar aceite",
 );
-function cerrar(): void {
-  if (
-    !formChanged.value ||
-    window.confirm("Se perderán los cambios escritos. ¿Continuar?")
-  )
+async function cerrar(): Promise<void> {
+  if (!formChanged.value) {
     emit("close");
+    return;
+  }
+  showDiscardConfirmation.value = true;
+  await nextTick();
+  continueButton.value?.focus();
+}
+function continuarEditando(): void {
+  showDiscardConfirmation.value = false;
+  trigger.value?.focus();
+}
+function descartarYCerrar(): void {
+  showDiscardConfirmation.value = false;
+  emit("close");
 }
 function confirmar(
   sistema: CatalogoAceiteDraftReference,
@@ -47,7 +59,9 @@ function confirmar(
   emit("confirm", sistema, aceite);
 }
 function onKeydown(event: KeyboardEvent): void {
-  if (event.key === "Escape") cerrar();
+  if (event.key !== "Escape") return;
+  if (showDiscardConfirmation.value) continuarEditando();
+  else cerrar();
 }
 onMounted(async () => {
   overflowPrevio = document.body.style.overflow;
@@ -110,6 +124,42 @@ onBeforeUnmount(() => {
           />
         </div>
       </aside>
+      <div
+        v-if="showDiscardConfirmation"
+        class="absolute inset-0 z-10 grid place-items-center bg-main-dark/40 p-3"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="discard-oil-title"
+        aria-describedby="discard-oil-description"
+        @click.self="continuarEditando"
+      >
+        <section class="w-full max-w-sm rounded-lg bg-white p-4 shadow-xl">
+          <AlertTriangle class="h-5 w-5 text-warning" aria-hidden="true" />
+          <h3 id="discard-oil-title" class="mt-2 text-sm font-bold text-gray-900">
+            Descartar cambios del aceite
+          </h3>
+          <p id="discard-oil-description" class="mt-1 text-xs leading-5 text-gray-600">
+            Los cambios escritos en este formulario no se conservarán.
+          </p>
+          <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              ref="continueButton"
+              type="button"
+              class="min-h-11 cursor-pointer rounded-md border border-gray-300 px-3 text-xs font-semibold text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main"
+              @click="continuarEditando"
+            >
+              Seguir editando
+            </button>
+            <button
+              type="button"
+              class="min-h-11 cursor-pointer rounded-md bg-danger px-3 text-xs font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main"
+              @click="descartarYCerrar"
+            >
+              Descartar cambios
+            </button>
+          </div>
+        </section>
+      </div>
     </div>
   </Teleport>
 </template>

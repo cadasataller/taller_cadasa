@@ -15,11 +15,11 @@ const emit = defineEmits<{ back: [] }>();
     </button>
     <div class="mt-1.5 flex flex-wrap items-end justify-between gap-2">
       <div>
-        <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-main">
+        <p class="text-xs font-bold uppercase tracking-[0.14em] text-main">
           Edición operativa
         </p>
         <h1
-          class="font-mono text-lg font-bold leading-tight text-gray-900 sm:text-xl"
+          class="font-mono text-lg font-bold leading-tight text-gray-900"
         >
           Editar equipo · {{ draft.equipo.codigo }}
         </h1>
@@ -28,7 +28,7 @@ const emit = defineEmits<{ back: [] }>();
           {{ draft.equipo.subtipo || "Sin modelo / subtipo" }}
         </p>
       </div>
-      <div class="flex items-center gap-1.5 text-[11px] font-semibold">
+      <div class="flex items-center gap-1.5 text-xs font-semibold">
         <span
           class="rounded-full px-2 py-0.5"
           :class="

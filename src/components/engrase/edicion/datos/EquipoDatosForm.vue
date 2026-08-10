@@ -82,6 +82,7 @@ const subtipo = computed({
       <EquipoEtapasField
         :etapas="auxiliares.etapas"
         :seleccionadas="draft.etapas"
+        :invalid="draft.etapas.length === 0"
         @add="emit('addEtapa', $event)"
         @remove="emit('removeEtapa', $event)"
       />

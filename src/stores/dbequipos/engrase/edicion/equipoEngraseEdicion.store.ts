@@ -1,10 +1,12 @@
-import { computed, ref, shallowRef } from "vue";
+import { computed, ref, shallowRef, toRaw } from "vue";
 import { defineStore } from "pinia";
 import { useFiltrosEngraseStore } from "../filtrosEngrase.store";
 import { extraerCodigoErrorEdicionEquipo } from "./equipoEngraseEdicion.errors";
 import { equipoEngraseEdicionService } from "./equipoEngraseEdicion.service";
 import { crearTempId } from "./equipoEngraseEdicion.tempIds";
 import { crearMotivoCambioFiltro } from "./equipoEngraseFiltroMotivo";
+import { construirCambiosEquipo, hayCambiosEquipo } from "./equipoEngraseEdicion.payload";
+import { mapearErrorRpcEquipo, validarEquipoEngrase } from "./equipoEngraseEdicion.validation";
 import type { ImagenSyncState } from "./equipoEngraseImagen.types";
 import type {
   AuxiliaresEdicionEquipo,
@@ -21,7 +23,15 @@ import type {
   ActualizarAceiteDraft,
   CatalogoAceiteDraftReference,
   ResultadoBusquedaFiltroOriginal,
+  EquipoEdicionValidationIssue,
+  ActualizarEquipoCompletoRespuesta,
   } from "./equipoEngraseEdicion.types";
+
+export type ResultadoGuardadoEquipo =
+  | { kind: "success"; respuesta: ActualizarEquipoCompletoRespuesta }
+  | { kind: "partial"; respuesta: ActualizarEquipoCompletoRespuesta }
+  | { kind: "invalid" | "empty" | "busy" | "error" };
+export type MoverImagenEquipo = (sourcePath: string, destinationPath: string) => Promise<void>;
 
 const crearError = (error: Error): EquipoEdicionError => ({
   codigo: extraerCodigoErrorEdicionEquipo(error.message),
@@ -29,7 +39,6 @@ const crearError = (error: Error): EquipoEdicionError => ({
 });
 const normalizarTexto = (valor: string): string => valor.trim().replace(/\s+/g, " ");
 const claveTexto = (valor: string): string => normalizarTexto(valor).normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase();
-const referenciaClave = (referencia: { estado: "existente"; id: number } | { estado: "nuevo"; tempId: string }): string => referencia.estado === "existente" ? `id:${referencia.id}` : `temp:${referencia.tempId}`;
 const clonarSnapshot = (
   snapshot: EquipoEdicionSnapshot,
 ): EquipoEdicionSnapshot => ({
@@ -90,6 +99,42 @@ const imagenDelListado = (codigo: string): EquipoImagenPersistida => {
     imagenActualizadaEn: equipo?.imagen_actualizada_en ?? null,
   };
 };
+const crearSnapshotPersistido = (
+  borrador: EquipoEdicionDraft,
+  respuesta: ActualizarEquipoCompletoRespuesta,
+): EquipoEdicionSnapshot => ({
+  equipo: {
+    id: respuesta.equipoLista.id,
+    codigo: respuesta.equipoLista.codigo,
+    tipoEquipoId: respuesta.equipoLista.tipo_equipo_id,
+    tipoEquipo: respuesta.equipoLista.tipo_equipo,
+    subtipo: respuesta.equipoLista.subtipo ?? "",
+    estado: respuesta.equipoLista.estado,
+  },
+  etapas: respuesta.equipoLista.etapas.map((etapa) => ({ ...etapa })),
+  filtros: borrador.filtros
+    .filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion")
+    .map((filtro) => ({
+      id: filtro.id,
+      equipoId: respuesta.equipoLista.id,
+      tipoFiltro: { ...filtro.tipoFiltro },
+      filtro: { ...filtro.filtro },
+      cantidad: filtro.cantidad,
+      cantidadEquivalencias: filtro.cantidadEquivalencias,
+    })),
+  aceites: borrador.aceites
+    .filter((aceite) => aceite.estadoOperacion !== "pendiente_eliminacion")
+    .map((aceite) => ({
+      equipoAceiteId: aceite.equipoAceiteId,
+      sistema: { ...aceite.sistema },
+      aceite: { ...aceite.aceite },
+    })),
+  imagen: {
+    mainStoragePath: respuesta.equipoLista.main_storage_path,
+    tieneImagenMain: respuesta.equipoLista.tiene_imagen_main,
+    imagenActualizadaEn: respuesta.equipoLista.imagen_actualizada_en,
+  },
+});
 
 export const useEquipoEngraseEdicionStore = defineStore(
   "dbequipos_engrase_edicion",
@@ -103,6 +148,8 @@ export const useEquipoEngraseEdicionStore = defineStore(
     const saving = shallowRef(false);
     const loadError = ref<EquipoEdicionError | null>(null);
     const saveError = ref<EquipoEdicionError | null>(null);
+    const validationErrors = ref<EquipoEdicionValidationIssue[]>([]);
+    const successMessage = shallowRef<string | null>(null);
     const imagenPersistidaActual = ref<EquipoImagenPersistida | null>(null);
     const imagenSyncState = shallowRef<ImagenSyncState>({ kind: "idle" });
     let solicitudActual = 0;
@@ -114,43 +161,10 @@ export const useEquipoEngraseEdicionStore = defineStore(
         auxiliares.value !== null &&
         !loading.value,
     );
-    const isDirty = computed(() => {
-      if (!original.value || !draft.value) return false;
-      const filtrosOriginales = original.value.filtros.map((filtro) => `existente:${filtro.id}:id:${filtro.tipoFiltro.id}:id:${filtro.filtro.id}:${filtro.cantidad}`).sort();
-      const filtrosBorrador = draft.value.filtros.flatMap((filtro) => {
-        if (filtro.estadoOperacion === "pendiente_eliminacion") return filtro.id ? [`eliminado:${filtro.id}`] : [];
-        const tipo = referenciaClave(filtro.tipoFiltroReferencia);
-        const referenciaFiltro = filtro.filtroReferencia.estado === "existente" ? `id:${filtro.filtroReferencia.id}` : `temp:${filtro.filtroReferencia.tempId}`;
-        return [`${filtro.id ? `existente:${filtro.id}` : `nuevo:${filtro.draftId}`}:${tipo}:${referenciaFiltro}:${filtro.cantidad}`];
-      }).sort();
-      const aceitesOriginales = original.value.aceites.map((aceite) => `existente:${aceite.equipoAceiteId}:id:${aceite.sistema.id}:id:${aceite.aceite.id}`).sort();
-      const aceitesBorrador = draft.value.aceites.flatMap((aceite) => {
-        if (aceite.estadoOperacion === "pendiente_eliminacion") return aceite.equipoAceiteId ? [`eliminado:${aceite.equipoAceiteId}`] : [];
-        return [`${aceite.equipoAceiteId ? `existente:${aceite.equipoAceiteId}` : `nuevo:${aceite.draftId}`}:${referenciaClave(aceite.sistemaReferencia)}:${referenciaClave(aceite.aceiteReferencia)}`];
-      }).sort();
-      return (
-        JSON.stringify({
-          codigo: normalizarTexto(original.value.equipo.codigo), tipo: original.value.equipo.tipoEquipoId, subtipo: normalizarTexto(original.value.equipo.subtipo), estado: original.value.equipo.estado,
-          etapas: original.value.etapas.map((etapa) => etapa.id).sort((a, b) => a - b),
-          filtros: filtrosOriginales,
-          aceites: aceitesOriginales,
-        }) !==
-        JSON.stringify({
-          codigo: normalizarTexto(draft.value.equipo.codigo), tipo: draft.value.tipoEquipoReferencia.estado === "existente" ? draft.value.tipoEquipoReferencia.id : draft.value.tipoEquipoReferencia.tempId, subtipo: normalizarTexto(draft.value.equipo.subtipo), estado: draft.value.equipo.estado,
-          etapas: draft.value.etapas.map((etapa) => etapa.id).sort((a, b) => a - b),
-          filtros: filtrosBorrador,
-          aceites: aceitesBorrador,
-        })
-      );
-    });
+    const cambiosPendientes = computed(() => original.value && draft.value ? construirCambiosEquipo(original.value, draft.value) : {});
+    const isDirty = computed(() => hayCambiosEquipo(cambiosPendientes.value));
     const hasActiveOverlay = computed(() => activeOverlay.value !== null);
-    const canSave = computed(
-      () =>
-        isReady.value &&
-        isDirty.value &&
-        !saving.value &&
-        activeOverlay.value === null,
-    );
+    const canSave = computed(() => isReady.value && hayCambiosEquipo(cambiosPendientes.value) && !saving.value && activeOverlay.value === null && imagenSyncState.value.kind !== "move_pending");
     const activeFiltersCount = computed(() => draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").length ?? 0);
     const activeStagesCount = computed(() => draft.value?.etapas.length ?? 0);
     const activeOilsCount = computed(() => draft.value?.aceites.filter((aceite) => aceite.estadoOperacion !== "pendiente_eliminacion").length ?? 0);
@@ -171,6 +185,8 @@ export const useEquipoEngraseEdicionStore = defineStore(
       loading.value = true;
       loadError.value = null;
       saveError.value = null;
+      validationErrors.value = [];
+      successMessage.value = null;
       activeOverlay.value = null;
       try {
         const [equipo, catalogos] = await Promise.all([
@@ -204,6 +220,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
       }
     }
     function solicitarSalida(): boolean {
+      if (saving.value) return false;
       if (!isDirty.value) return true;
       activeOverlay.value = "confirmar_salida";
       return false;
@@ -328,7 +345,65 @@ export const useEquipoEngraseEdicionStore = defineStore(
       if (draft.value) draft.value.imagen = { ...imagen };
       if (draft.value) useFiltrosEngraseStore().actualizarImagenEquipo(draft.value.equipo.id, imagen);
     }
-    function actualizarEstadoSyncImagen(estado: ImagenSyncState): void { imagenSyncState.value = estado; }
+    function actualizarEstadoSyncImagen(estado: ImagenSyncState): void {
+      const movimientoResuelto = imagenSyncState.value.kind === "move_pending" && estado.kind === "idle";
+      imagenSyncState.value = estado;
+      if (movimientoResuelto) successMessage.value = "Los cambios y la imagen quedaron sincronizados correctamente.";
+    }
+    async function guardar(moverImagen: MoverImagenEquipo): Promise<ResultadoGuardadoEquipo> {
+      if (saving.value) return { kind: "busy" };
+      if (!original.value || !draft.value || !codigoOriginal.value) return { kind: "invalid" };
+      saveError.value = null;
+      successMessage.value = null;
+      const validacion = validarEquipoEngrase(draft.value);
+      validationErrors.value = validacion.errores;
+      if (!validacion.valido) return { kind: "invalid" };
+      const cambios = construirCambiosEquipo(original.value, draft.value);
+      if (!hayCambiosEquipo(cambios)) {
+        saveError.value = { codigo: "SIN_CAMBIOS", mensaje: "No hay cambios pendientes." };
+        return { kind: "empty" };
+      }
+      const borradorPersistido = structuredClone(toRaw(draft.value));
+      const rutaFuente = imagenPersistidaActual.value?.mainStoragePath ?? null;
+      saving.value = true;
+      try {
+        const respuesta = await equipoEngraseEdicionService.actualizarEquipoCompleto({
+          codigoOriginal: codigoOriginal.value,
+          cambios,
+        });
+        const listado = useFiltrosEngraseStore();
+        listado.aplicarEquipoActualizado(respuesta.equipoLista);
+        listado.invalidarDetalleEquipo(respuesta.equipoLista.id);
+        const snapshot = crearSnapshotPersistido(borradorPersistido, respuesta);
+        codigoOriginal.value = respuesta.equipoLista.codigo;
+        original.value = clonarSnapshot(snapshot);
+        draft.value = crearBorrador(snapshot);
+        imagenPersistidaActual.value = { ...snapshot.imagen };
+        validationErrors.value = [];
+        const rutaDestino = respuesta.equipoLista.main_storage_path;
+        if (rutaFuente && rutaDestino && rutaFuente !== rutaDestino) {
+          try {
+            await moverImagen(rutaFuente, rutaDestino);
+          } catch {
+            imagenSyncState.value = { kind: "move_pending", sourcePath: rutaFuente, destinationPath: rutaDestino };
+          }
+        }
+        if (imagenSyncState.value.kind === "move_pending") {
+          successMessage.value = "Los cambios se guardaron, pero falta mover la imagen a la ruta del nuevo código.";
+          return { kind: "partial", respuesta };
+        }
+        successMessage.value = respuesta.mensaje || "Los cambios se guardaron correctamente.";
+        return { kind: "success", respuesta };
+      } catch (error) {
+        const codigo = error instanceof Error ? extraerCodigoErrorEdicionEquipo(error.message) : "ERROR_EDICION_EQUIPO";
+        const mapped = mapearErrorRpcEquipo(codigo);
+        validationErrors.value = [mapped];
+        saveError.value = { codigo, mensaje: mapped.mensaje };
+        return { kind: "error" };
+      } finally {
+        saving.value = false;
+      }
+    }
     function reset(): void {
       solicitudActual += 1;
       codigoOriginal.value = null;
@@ -340,6 +415,8 @@ export const useEquipoEngraseEdicionStore = defineStore(
       saving.value = false;
       loadError.value = null;
       saveError.value = null;
+      validationErrors.value = [];
+      successMessage.value = null;
       imagenPersistidaActual.value = null;
       imagenSyncState.value = { kind: "idle" };
     }
@@ -353,6 +430,8 @@ export const useEquipoEngraseEdicionStore = defineStore(
       saving,
       loadError,
       saveError,
+      validationErrors,
+      successMessage,
       imagenPersistidaActual,
       imagenSyncState,
       isReady,
@@ -369,6 +448,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
       reset,
       actualizarCodigo, seleccionarTipoEquipo, actualizarSubtipo, actualizarEstado, agregarEtapa, quitarEtapa, crearYSeleccionarTipoEquipo, esTipoEquipoDuplicado, abrirNuevoTipoEquipo, buscarFiltroOriginalParaAsignar, agregarFiltroExistente, agregarFiltroTemporal, actualizarAsignacionFiltro, marcarFiltroParaEliminar, deshacerEliminacionFiltro, agregarAceite, actualizarAceite, marcarAceiteParaEliminar, deshacerEliminacionAceite,
       actualizarImagenPersistida, actualizarEstadoSyncImagen,
+      guardar,
     };
   },
 );

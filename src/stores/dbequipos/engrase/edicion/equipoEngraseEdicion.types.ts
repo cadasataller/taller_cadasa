@@ -272,6 +272,22 @@ export interface CambiosEquipoPayload {
   filtros?: FiltrosCambiosPayload;
   aceites?: AceitesCambiosPayload;
 }
+export interface ActualizarEquipoCompletoArgumento {
+  codigoOriginal: string;
+  cambios: CambiosEquipoPayload;
+}
+
+export type EquipoEdicionSeccionError = "datos" | "etapas" | "filtros" | "aceites" | "general";
+export interface EquipoEdicionValidationIssue {
+  codigo: string;
+  mensaje: string;
+  seccion: EquipoEdicionSeccionError;
+  fieldId?: string;
+}
+export interface EquipoEdicionValidationResult {
+  valido: boolean;
+  errores: EquipoEdicionValidationIssue[];
+}
 
 export interface CambiosDetalleEquipo {
   datosEquipoCambiaron: boolean;

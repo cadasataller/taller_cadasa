@@ -20,6 +20,17 @@ const errorAgregarFiltro = shallowRef<string | null>(null);
 const aceiteOverlay = shallowRef<EquipoAceiteFormMode | null>(null);
 const errorAceite = shallowRef<string | null>(null);
 const imagenOverlay = shallowRef(false);
+const erroresPorSeccion = (seccion: "datos" | "etapas" | "filtros" | "aceites") => computed(() => editor.validationErrors.value.filter((error) => error.seccion === seccion));
+const erroresDatos = erroresPorSeccion("datos");
+const erroresEtapas = erroresPorSeccion("etapas");
+const erroresFiltros = erroresPorSeccion("filtros");
+const erroresAceites = erroresPorSeccion("aceites");
+const mensajeGuardado = computed(() => editor.saveError.value?.mensaje ?? editor.successMessage.value);
+const tipoMensajeGuardado = computed<"error" | "success" | "partial" | null>(() => {
+  if (editor.saveError.value) return "error";
+  if (!editor.successMessage.value) return null;
+  return editor.imagenSyncState.value.kind === "move_pending" ? "partial" : "success";
+});
 const filtroEditado = computed(() => editor.draft.value?.filtros.find((filtro) => filtro.draftId === filtroEditadoId.value));
 const tiposOcupados = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.draftId !== filtroEditadoId.value).map((filtro) => filtro.tipoFiltro.id) ?? []);
 const filtrosOcupadosId = computed(() => editor.draft.value?.filtros.flatMap((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.filtroReferencia.estado === "existente" ? [filtro.filtroReferencia.id] : []) ?? []);
@@ -108,12 +119,24 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
       :oils-count="editor.activeOilsCount.value"
       :can-save="editor.canSave.value"
       :saving="editor.saving.value"
+      :message="mensajeGuardado"
+      :message-kind="tipoMensajeGuardado"
+      :validation-count="editor.validationErrors.value.length"
+      :move-pending="editor.imagenSyncState.value.kind === 'move_pending'"
       @back="editor.volver"
       @cancel="editor.volver"
+      @save="editor.guardar(imagenManager.moverDespuesDeCambioCodigo)"
+      @retry-image="imagenManager.reintentarMovimiento"
     >
       <template #datos>
+        <div v-if="editor.validationErrors.value.length > 1" class="rounded-md border border-danger bg-danger-bg p-3 text-xs text-danger" role="alert" tabindex="-1" data-validation-section="general">
+          <p class="font-bold">Hay {{ editor.validationErrors.value.length }} errores por corregir:</p>
+          <ul class="mt-1 list-disc space-y-1 pl-4"><li v-for="error in editor.validationErrors.value" :key="`${error.codigo}-${error.mensaje}`">{{ error.mensaje }}</li></ul>
+        </div>
         <EquipoImagenTrigger :src="imagenManager.urlActual.value" :tiene-imagen="imagenManager.tieneImagen.value" :disabled="imagenManager.bloqueado.value" @open="imagenOverlay = true" />
-        <EquipoDatosForm
+        <div data-validation-section="datos" tabindex="-1">
+          <p v-for="error in [...erroresDatos, ...erroresEtapas]" :key="`${error.codigo}-${error.mensaje}`" class="mb-2 rounded-md bg-danger-bg px-3 py-2 text-xs text-danger" role="alert">{{ error.mensaje }}</p>
+          <EquipoDatosForm
           v-if="editor.auxiliares.value"
           :draft="editor.draft.value"
           :auxiliares="editor.auxiliares.value"
@@ -125,20 +148,25 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
           @add-etapa="editor.agregarEtapa"
           @remove-etapa="editor.quitarEtapa"
           @create-tipo-equipo="editor.crearYSeleccionarTipoEquipo"
-        />
+        /></div>
       </template>
       <template #filtros>
-        <EquipoFiltrosSection
+        <div data-validation-section="filtros" tabindex="-1">
+          <p v-for="error in erroresFiltros" :key="`${error.codigo}-${error.mensaje}`" class="mb-2 rounded-md bg-danger-bg px-3 py-2 text-xs text-danger" role="alert">{{ error.mensaje }}</p>
+          <EquipoFiltrosSection
           :filtros="editor.draft.value.filtros"
           :active-count="editor.activeFiltersCount.value"
           @add="abrirAgregarFiltro"
           @edit="(draftId) => { filtroEditadoId = draftId; filtroOverlay = 'edit' }"
           @remove="editor.marcarFiltroParaEliminar"
           @undo="editor.deshacerEliminacionFiltro"
-        />
+        /></div>
       </template>
       <template #aceites>
-        <EquipoAceitesSection :aceites="editor.draft.value.aceites" :active-count="editor.activeOilsCount.value" @add="aceiteOverlay = { kind: 'add' }" @edit="(draftId) => aceiteOverlay = { kind: 'edit', draftId }" @remove="editor.marcarAceiteParaEliminar" @undo="editor.deshacerEliminacionAceite" />
+        <div data-validation-section="aceites" tabindex="-1">
+          <p v-for="error in erroresAceites" :key="`${error.codigo}-${error.mensaje}`" class="mb-2 rounded-md bg-danger-bg px-3 py-2 text-xs text-danger" role="alert">{{ error.mensaje }}</p>
+          <EquipoAceitesSection :aceites="editor.draft.value.aceites" :active-count="editor.activeOilsCount.value" @add="aceiteOverlay = { kind: 'add' }" @edit="(draftId) => aceiteOverlay = { kind: 'edit', draftId }" @remove="editor.marcarAceiteParaEliminar" @undo="editor.deshacerEliminacionAceite" />
+        </div>
       </template>
       <template #overlay
         ><div

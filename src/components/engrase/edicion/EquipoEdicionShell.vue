@@ -9,8 +9,12 @@ defineProps<{
   oilsCount: number;
   canSave: boolean;
   saving: boolean;
+  message: string | null;
+  messageKind: "error" | "success" | "partial" | null;
+  validationCount: number;
+  movePending: boolean;
 }>();
-const emit = defineEmits<{ back: []; cancel: []; save: [] }>();
+const emit = defineEmits<{ back: []; cancel: []; save: []; retryImage: [] }>();
 </script>
 <template>
   <section class="flex min-h-full flex-col bg-second text-sm">
@@ -29,8 +33,13 @@ const emit = defineEmits<{ back: []; cancel: []; save: [] }>();
     <EquipoEdicionFooter
       :can-save="canSave"
       :saving="saving"
+      :message="message"
+      :message-kind="messageKind"
+      :validation-count="validationCount"
+      :move-pending="movePending"
       @cancel="emit('cancel')"
       @save="emit('save')"
+      @retry-image="emit('retryImage')"
     />
     <slot name="overlay" />
   </section>

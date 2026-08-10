@@ -231,6 +231,24 @@ export const useFiltrosEngraseStore = defineStore(
     function seleccionarFiltro(id: number | null) {
       filtroSeleccionadoId.value = id;
     }
+    function aplicarEquipoActualizado(equipo: EquipoEngraseListItem): void {
+      const indice = equipos.value.findIndex((item) => item.id === equipo.id);
+      if (indice < 0) equipos.value.push(equipo);
+      else equipos.value[indice] = equipo;
+      if (equipoSeleccionadoId.value !== null && !equiposVisibles.value.some((item) => item.id === equipoSeleccionadoId.value)) {
+        equipoSeleccionadoId.value = equiposVisibles.value[0]?.id ?? null;
+        filtroSeleccionadoId.value = null;
+        filtrosEquipo.value = [];
+        equivalenciasPorFiltroId.value = {};
+      }
+    }
+    function invalidarDetalleEquipo(equipoId: number): void {
+      filtrosCache.delete(equipoId);
+      if (equipoSeleccionadoId.value !== equipoId) return;
+      filtrosEquipo.value = [];
+      filtroSeleccionadoId.value = null;
+      equivalenciasPorFiltroId.value = {};
+    }
     function actualizarImagenEquipo(equipoId: number, imagen: EquipoImagenPersistida): void {
       const indice = equipos.value.findIndex((equipo) => equipo.id === equipoId);
       if (indice < 0) return;
@@ -297,6 +315,8 @@ export const useFiltrosEngraseStore = defineStore(
       limpiarFiltros,
       seleccionarEquipo,
       seleccionarFiltro,
+      aplicarEquipoActualizado,
+      invalidarDetalleEquipo,
       actualizarImagenEquipo,
       reintentarCarga,
       reset,
