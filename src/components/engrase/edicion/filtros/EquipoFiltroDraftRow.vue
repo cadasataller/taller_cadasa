@@ -13,21 +13,19 @@ const emit = defineEmits<{
   <li
     class="grid gap-2 border-b border-second-deep px-3 py-2.5 last:border-b-0 sm:grid-cols-[minmax(11rem,1.4fr)_minmax(7rem,1fr)_auto_auto] sm:items-center"
   >
-    <div class="min-w-0">
-      <p
-        class="flex items-center gap-1.5 truncate text-sm font-semibold text-main"
-      >
+    <div class="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2">
+      <span class="row-span-2 flex items-center justify-center rounded-md bg-main/10 text-main">
         <component
           :is="obtenerIconoTipoFiltro(filtro.tipoFiltro.nombre).icono"
-          class="h-4 w-4 shrink-0"
+          class="h-5 w-5 shrink-0"
           aria-hidden="true"
-        />{{ filtro.tipoFiltro.nombre }}
+        />
+      </span>
+      <p class="min-w-0 truncate self-end text-sm font-semibold text-main">
+        {{ filtro.tipoFiltro.nombre }}
       </p>
-      <p class="text-xs text-gray-600">
-        Código:
-        <span class="font-mono font-semibold text-gray-900">{{
-          filtro.filtro.codigo
-        }}</span>
+      <p class="min-w-0 truncate self-start font-mono text-xs font-semibold text-gray-900">
+        {{ filtro.filtro.codigo }}
       </p>
     </div>
     <div class="flex flex-wrap gap-1.5 text-xs">
