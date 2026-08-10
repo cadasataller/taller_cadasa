@@ -24,8 +24,8 @@ const editor = {
   actualizarCodigo: vi.fn(), seleccionarTipoEquipo: vi.fn(), actualizarSubtipo: vi.fn(), actualizarEstado: vi.fn(), agregarEtapa: vi.fn(), quitarEtapa: vi.fn(), crearYSeleccionarTipoEquipo: vi.fn(), esTipoEquipoDuplicado: vi.fn(() => false), abrirNuevoTipoEquipo: vi.fn(), buscarFiltroOriginalParaAsignar: vi.fn(), agregarFiltroExistente: vi.fn(() => true), agregarFiltroTemporal: vi.fn(() => true), actualizarAsignacionFiltro: vi.fn(), marcarFiltroParaEliminar: vi.fn(), deshacerEliminacionFiltro: vi.fn(), agregarAceite: vi.fn(() => true), actualizarAceite: vi.fn(() => true), marcarAceiteParaEliminar: vi.fn(), deshacerEliminacionAceite: vi.fn(() => true),
 };
 const imagenManager = {
-  urlActual: shallowRef<string | null>(null), tieneImagen: shallowRef(false), bloqueado: shallowRef(false), preparada: shallowRef(null), imagenSyncState: editor.imagenSyncState,
-  seleccionarArchivo: vi.fn(), guardar: vi.fn(), eliminar: vi.fn(), reintentarLimpieza: vi.fn(), reintentarMovimiento: vi.fn(), limpiarPreview: vi.fn(), moverDespuesDeCambioCodigo: moverImagen,
+  urlActual: shallowRef<string | null>(null), urlLoading: shallowRef(false), urlError: shallowRef<string | null>(null), tieneImagen: shallowRef(false), bloqueado: shallowRef(false), preparada: shallowRef(null), imagenSyncState: editor.imagenSyncState,
+  seleccionarArchivo: vi.fn(), guardar: vi.fn(), eliminar: vi.fn(), reintentarLimpieza: vi.fn(), reintentarMovimiento: vi.fn(), reintentarUrl: vi.fn(), limpiarPreview: vi.fn(), moverDespuesDeCambioCodigo: moverImagen,
 };
 
 vi.mock("@/composables/engrase/useEquipoEngraseEditor", () => ({ useEquipoEngraseEditor: () => editor }));

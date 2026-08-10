@@ -20,6 +20,9 @@ const respuestaEquipo: ObtenerEquipoParaEdicionDto = {
     tipo_equipo: "Buses",
     subtipo: "Bus",
     estado: "activo",
+    main_storage_path: null,
+    tiene_imagen_main: false,
+    imagen_actualizada_en: null,
   },
 };
 

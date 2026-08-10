@@ -33,6 +33,11 @@ export interface EquipoEdicionAceite {
   sistema: CatalogoIdNombre;
   aceite: CatalogoIdNombre;
 }
+export interface EquipoImagenPersistida {
+  mainStoragePath: string | null;
+  tieneImagenMain: boolean;
+  imagenActualizadaEn: string | null;
+}
 export interface CatalogoTemporalReference {
   estado: "nuevo";
   id: null;
@@ -68,15 +73,9 @@ export interface EquipoParaEdicion {
   etapas: CatalogoIdNombre[];
   filtros: EquipoEdicionFiltro[];
   aceites: EquipoEdicionAceite[];
-}
-export interface EquipoImagenPersistida {
-  mainStoragePath: string | null;
-  tieneImagenMain: boolean;
-  imagenActualizadaEn: string | null;
-}
-export interface EquipoEdicionSnapshot extends EquipoParaEdicion {
   imagen: EquipoImagenPersistida;
 }
+export type EquipoEdicionSnapshot = EquipoParaEdicion;
 export interface TipoEquipoExistenteDraftReference extends CatalogoIdNombre { estado: "existente"; tempId: null }
 export interface TipoEquipoNuevoDraftReference { estado: "nuevo"; id: null; tempId: string; nombre: string; subtiposSugeridos: string[] }
 export type TipoEquipoDraftReference = TipoEquipoExistenteDraftReference | TipoEquipoNuevoDraftReference;
@@ -354,6 +353,9 @@ export interface ObtenerEquipoParaEdicionDto {
     tipo_equipo: string;
     subtipo: string | null;
     estado: EquipoEstado;
+    main_storage_path: string | null;
+    tiene_imagen_main: boolean;
+    imagen_actualizada_en: string | null;
   };
   etapas?: { id: number; nombre: string }[];
   filtros?: {

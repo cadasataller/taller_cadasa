@@ -32,6 +32,11 @@ const equipo: EquipoParaEdicion = {
   etapas: [{ id: 1, nombre: "Cultivo" }],
   filtros: [],
   aceites: [],
+  imagen: {
+    mainStoragePath: "equipos/410002/main_thumb/imagen.webp",
+    tieneImagenMain: true,
+    imagenActualizadaEn: "2026-08-10T15:33:50.316Z",
+  },
 };
 const auxiliares: AuxiliaresEdicionEquipo = {
   tiposEquipo: [],
@@ -61,6 +66,7 @@ describe("store de edición de equipo", () => {
     expect(obtenerEquipo).toHaveBeenCalledWith("410002");
     expect(obtenerAuxiliares).toHaveBeenCalledOnce();
     expect(store.isDirty).toBe(false);
+    expect(store.imagenPersistidaActual).toEqual(equipo.imagen);
     if (!store.draft || !store.original)
       throw new Error("El borrador no se creó.");
     store.draft.equipo.subtipo = "Bus urbano";

@@ -37,9 +37,13 @@ export const equipoEngraseImagenService = {
       .move(sourcePath, destinationPath);
     if (error) throw new Error(error.message || "No se pudo mover la imagen.");
   },
-  obtenerUrlPublica(path: string | null): string | null {
-    if (!path || !esRutaImagenEquipoValida(path)) return null;
-    return supabaseEquipos.storage.from(IMAGEN_EQUIPO_BUCKET).getPublicUrl(path)
-      .data.publicUrl;
+  async obtenerUrlFirmada(path: string, expiresIn = 600): Promise<string> {
+    asegurarRuta(path);
+    const { data, error } = await supabaseEquipos.storage
+      .from(IMAGEN_EQUIPO_BUCKET)
+      .createSignedUrl(path, expiresIn);
+    if (error || !data?.signedUrl)
+      throw new Error(error?.message || "No se pudo cargar la imagen del equipo.");
+    return data.signedUrl;
   },
 };

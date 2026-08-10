@@ -27,6 +27,9 @@ const equipoDto: ObtenerEquipoParaEdicionDto = {
     tipo_equipo: "Buses",
     subtipo: "Bus",
     estado: "activo",
+    main_storage_path: "equipos/410002/main_thumb/imagen.webp",
+    tiene_imagen_main: true,
+    imagen_actualizada_en: "2026-08-10T15:33:50.316Z",
   },
   etapas: [{ id: 1, nombre: "Cultivo" }],
   filtros: [
@@ -99,6 +102,11 @@ describe("mappers de edición de equipos", () => {
     expect(mapEquipoParaEdicion(equipoDto).filtros[0]).toMatchObject({
       equipoId: 6,
       cantidadEquivalencias: 0,
+    });
+    expect(mapEquipoParaEdicion(equipoDto).imagen).toEqual({
+      mainStoragePath: "equipos/410002/main_thumb/imagen.webp",
+      tieneImagenMain: true,
+      imagenActualizadaEn: "2026-08-10T15:33:50.316Z",
     });
     const vacio = mapEquipoParaEdicion({ ok: true, equipo: equipoDto.equipo });
     expect(vacio).toMatchObject({ etapas: [], filtros: [], aceites: [] });

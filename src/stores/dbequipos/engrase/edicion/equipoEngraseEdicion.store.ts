@@ -89,16 +89,6 @@ const crearBorrador = (
     aceites: "existente",
   },
 });
-const imagenDelListado = (codigo: string): EquipoImagenPersistida => {
-  const equipo = useFiltrosEngraseStore().equipos.find(
-    (item) => item.codigo === codigo,
-  );
-  return {
-    mainStoragePath: equipo?.main_storage_path ?? null,
-    tieneImagenMain: equipo?.tiene_imagen_main ?? false,
-    imagenActualizadaEn: equipo?.imagen_actualizada_en ?? null,
-  };
-};
 const crearSnapshotPersistido = (
   borrador: EquipoEdicionDraft,
   respuesta: ActualizarEquipoCompletoRespuesta,
@@ -196,10 +186,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
           equipoEngraseEdicionService.obtenerAuxiliaresEdicionEquipo(),
         ]);
         if (solicitud !== solicitudActual) return;
-        const snapshot: EquipoEdicionSnapshot = {
-          ...equipo,
-          imagen: imagenDelListado(codigoNormalizado),
-        };
+        const snapshot: EquipoEdicionSnapshot = equipo;
         codigoOriginal.value = codigoNormalizado;
         original.value = clonarSnapshot(snapshot);
         draft.value = crearBorrador(snapshot);

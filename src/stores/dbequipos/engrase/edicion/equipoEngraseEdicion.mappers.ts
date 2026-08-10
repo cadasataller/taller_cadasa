@@ -67,6 +67,11 @@ export const mapEquipoParaEdicion = (
       sistema: catalogo(aceite.sistema),
       aceite: catalogo(aceite.aceite),
     })),
+    imagen: {
+      mainStoragePath: dto.equipo.main_storage_path,
+      tieneImagenMain: dto.equipo.tiene_imagen_main,
+      imagenActualizadaEn: dto.equipo.imagen_actualizada_en,
+    },
   };
 };
 export const mapAuxiliaresEdicionEquipo = (

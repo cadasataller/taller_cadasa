@@ -14,6 +14,8 @@ import type { ImagenSyncState } from "@/stores/dbequipos/engrase/edicion/equipoE
 const props = defineProps<{
   codigoEquipo: string;
   actualUrl: string | null;
+  urlLoading: boolean;
+  urlError: string | null;
   previewUrl: string | null;
   tieneImagen: boolean;
   syncState: ImagenSyncState;
@@ -27,6 +29,7 @@ const emit = defineEmits<{
   retryCleanup: [];
   retryMove: [];
   clearPreview: [];
+  retryPreview: [];
 }>();
 const closeButton = useTemplateRef<HTMLButtonElement>("closeButton");
 const confirmarEliminar = shallowRef(false);
@@ -98,6 +101,21 @@ onBeforeUnmount(() => {
             :tiene-imagen="tieneImagen"
             @select="emit('select', $event)"
           />
+          <p
+            v-if="urlLoading && tieneImagen && !previewUrl"
+            class="mt-3 inline-flex items-center gap-1.5 text-xs text-main"
+            role="status"
+          >
+            <Loader2 class="h-3.5 w-3.5 animate-spin" aria-hidden="true" />Cargando imagen actual…
+          </p>
+          <div
+            v-if="urlError"
+            class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-warning-bg px-2.5 py-2 text-xs text-warning"
+            role="alert"
+          >
+            <span class="inline-flex items-start gap-1.5"><AlertTriangle class="mt-0.5 h-3.5 w-3.5 shrink-0" />{{ urlError }}</span>
+            <button type="button" class="min-h-10 cursor-pointer rounded-md border border-warning px-3 font-semibold" @click="emit('retryPreview')">Reintentar vista previa</button>
+          </div>
           <p
             v-if="syncState.kind === 'error'"
             class="mt-3 flex gap-1.5 rounded-md bg-danger-bg px-2.5 py-2 text-xs text-danger"
