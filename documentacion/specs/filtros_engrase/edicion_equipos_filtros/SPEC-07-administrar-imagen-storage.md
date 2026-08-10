@@ -49,6 +49,7 @@ src/components/engrase/edicion/imagen/EquipoImagenTrigger.vue
 src/components/engrase/edicion/imagen/EquipoImagenOverlay.vue
 src/components/engrase/edicion/imagen/EquipoImagenForm.vue
 src/components/engrase/edicion/imagen/EquipoImagenPreview.vue
+src/components/engrase/edicion/imagen/EquipoImagenCropper.vue
 src/composables/engrase/useEquipoImagenManager.ts
 src/stores/dbequipos/engrase/edicion/equipoEngraseImagen.service.ts
 src/stores/dbequipos/engrase/edicion/equipoEngraseImagen.types.ts
@@ -67,7 +68,7 @@ El drawer conserva densidad ERP: texto y acciones en `text-sm`, metadatos/ayudas
 Mostrar:
 
 - placeholder con icono;
-- selector de archivo;
+- dos entradas de archivo: “Galería” y “Tomar foto”;
 - vista previa local;
 - acción `Agregar imagen`.
 
@@ -110,6 +111,13 @@ Después de una operación exitosa:
 
 Reglas:
 
+- “Galería” abre un selector normal de imágenes;
+- “Tomar foto” usa un selector de archivo independiente con `accept="image/*"` y `capture="environment"`; en dispositivos compatibles solicita la cámara trasera y en los demás conserva el selector nativo;
+- el archivo proveniente de cualquiera de las dos entradas sigue exactamente la misma validación, preparación WebP, vista previa, persistencia y compensaciones;
+- después de elegir desde galería o cámara, mostrar obligatoriamente un recortador previo a la vista previa final;
+- el recortador usa marco fijo de aspecto `1:1`, permite desplazar la imagen por arrastre y ampliar/reducir mediante control de zoom, sin permitir zonas vacías dentro del marco;
+- al confirmar se exporta únicamente el área cuadrada seleccionada y ese resultado continúa por el flujo WebP; al cancelar no se modifica la imagen persistida;
+- limpiar el valor de cada input después de seleccionar para permitir elegir de nuevo el mismo archivo;
 - aceptar formatos de imagen soportados por el navegador;
 - validar MIME y tamaño antes de procesar;
 - generar salida `.webp`;
@@ -257,7 +265,9 @@ No persistir silenciosamente rutas pendientes en variables sueltas. El estado de
 - Todo botón disponible debe usar `cursor-pointer`.
 - Procesando/deshabilitado: `disabled` y `cursor-not-allowed`.
 - Usar Lucide:
-  - `ImagePlus` para agregar;
+- `ImagePlus` para agregar;
+- `FolderOpen` para Galería;
+- `Camera` para Tomar foto;
   - `Image` para placeholder;
   - `RefreshCw` o `Replace` equivalente disponible para cambiar;
   - `Trash2` para eliminar;
@@ -301,6 +311,8 @@ Cubrir:
 - reintento no repite RPC general;
 - botones bloqueados durante proceso;
 - revocación de previews.
+- selección desde galería y captura de cámara pasan por el mismo flujo de preparación;
+- recorte 1:1 conserva el encuadre elegido al exportar, permite mover y zoom, y libera su URL temporal al cancelar o confirmar;
 - densidad ERP sin texto menor a 12 px ni controles móviles pequeños.
 - tema principal aplicado al drawer, confirmación y estados de imagen sin valores cromáticos literales.
 
@@ -309,6 +321,8 @@ Cubrir:
 - El drawer administra agregar, cambiar y eliminar.
 - La imagen se persiste inmediatamente.
 - La salida subida es `.webp`.
+- Galería y Tomar foto están disponibles y producen la misma vista previa local antes de persistir.
+- Toda imagen seleccionada pasa por el recortador 1:1 antes de la vista previa y la subida.
 - Los stores reflejan cada RPC exitosa.
 - Existen compensaciones para archivos huérfanos.
 - El cambio de código mueve el archivo después del guardado general.

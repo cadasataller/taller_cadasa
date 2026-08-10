@@ -5,6 +5,7 @@ import { extraerCodigoErrorEdicionEquipo } from "./equipoEngraseEdicion.errors";
 import { equipoEngraseEdicionService } from "./equipoEngraseEdicion.service";
 import { crearTempId } from "./equipoEngraseEdicion.tempIds";
 import { crearMotivoCambioFiltro } from "./equipoEngraseFiltroMotivo";
+import type { ImagenSyncState } from "./equipoEngraseImagen.types";
 import type {
   AuxiliaresEdicionEquipo,
   EquipoEdicionDraft,
@@ -102,6 +103,8 @@ export const useEquipoEngraseEdicionStore = defineStore(
     const saving = shallowRef(false);
     const loadError = ref<EquipoEdicionError | null>(null);
     const saveError = ref<EquipoEdicionError | null>(null);
+    const imagenPersistidaActual = ref<EquipoImagenPersistida | null>(null);
+    const imagenSyncState = shallowRef<ImagenSyncState>({ kind: "idle" });
     let solicitudActual = 0;
 
     const isReady = computed(
@@ -184,6 +187,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
         codigoOriginal.value = codigoNormalizado;
         original.value = clonarSnapshot(snapshot);
         draft.value = crearBorrador(snapshot);
+        imagenPersistidaActual.value = { ...snapshot.imagen };
         auxiliares.value = structuredClone(catalogos);
       } catch (error) {
         if (solicitud !== solicitudActual) return;
@@ -318,6 +322,13 @@ export const useEquipoEngraseEdicionStore = defineStore(
       item.estadoAntesDeEliminar = null;
       return true;
     }
+    function actualizarImagenPersistida(imagen: EquipoImagenPersistida): void {
+      imagenPersistidaActual.value = { ...imagen };
+      if (original.value) original.value.imagen = { ...imagen };
+      if (draft.value) draft.value.imagen = { ...imagen };
+      if (draft.value) useFiltrosEngraseStore().actualizarImagenEquipo(draft.value.equipo.id, imagen);
+    }
+    function actualizarEstadoSyncImagen(estado: ImagenSyncState): void { imagenSyncState.value = estado; }
     function reset(): void {
       solicitudActual += 1;
       codigoOriginal.value = null;
@@ -329,6 +340,8 @@ export const useEquipoEngraseEdicionStore = defineStore(
       saving.value = false;
       loadError.value = null;
       saveError.value = null;
+      imagenPersistidaActual.value = null;
+      imagenSyncState.value = { kind: "idle" };
     }
     return {
       codigoOriginal,
@@ -340,6 +353,8 @@ export const useEquipoEngraseEdicionStore = defineStore(
       saving,
       loadError,
       saveError,
+      imagenPersistidaActual,
+      imagenSyncState,
       isReady,
       isDirty,
       hasActiveOverlay,
@@ -353,6 +368,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
       descartarCambios,
       reset,
       actualizarCodigo, seleccionarTipoEquipo, actualizarSubtipo, actualizarEstado, agregarEtapa, quitarEtapa, crearYSeleccionarTipoEquipo, esTipoEquipoDuplicado, abrirNuevoTipoEquipo, buscarFiltroOriginalParaAsignar, agregarFiltroExistente, agregarFiltroTemporal, actualizarAsignacionFiltro, marcarFiltroParaEliminar, deshacerEliminacionFiltro, agregarAceite, actualizarAceite, marcarAceiteParaEliminar, deshacerEliminacionAceite,
+      actualizarImagenPersistida, actualizarEstadoSyncImagen,
     };
   },
 );

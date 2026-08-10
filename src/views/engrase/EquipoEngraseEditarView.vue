@@ -7,14 +7,19 @@ import EquipoFiltrosSection from "@/components/engrase/edicion/filtros/EquipoFil
 import EquipoFiltroOverlay from "@/components/engrase/edicion/filtros/EquipoFiltroOverlay.vue";
 import EquipoAceitesSection from "@/components/engrase/edicion/aceites/EquipoAceitesSection.vue";
 import EquipoAceiteOverlay from "@/components/engrase/edicion/aceites/EquipoAceiteOverlay.vue";
+import EquipoImagenTrigger from "@/components/engrase/edicion/imagen/EquipoImagenTrigger.vue";
+import EquipoImagenOverlay from "@/components/engrase/edicion/imagen/EquipoImagenOverlay.vue";
 import type { CatalogoAceiteDraftReference, EquipoAceiteFormMode, FiltroExistenteDraftReference, FiltroNuevoDraftReference, ResultadoFiltroEncontrado, TipoFiltroDraftReference } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.types";
 import { useEquipoEngraseEditor } from "@/composables/engrase/useEquipoEngraseEditor";
+import { useEquipoImagenManager } from "@/composables/engrase/useEquipoImagenManager";
 const editor = useEquipoEngraseEditor();
+const imagenManager = useEquipoImagenManager();
 const filtroOverlay = shallowRef<"add" | "edit" | null>(null);
 const filtroEditadoId = shallowRef<string | null>(null);
 const errorAgregarFiltro = shallowRef<string | null>(null);
 const aceiteOverlay = shallowRef<EquipoAceiteFormMode | null>(null);
 const errorAceite = shallowRef<string | null>(null);
+const imagenOverlay = shallowRef(false);
 const filtroEditado = computed(() => editor.draft.value?.filtros.find((filtro) => filtro.draftId === filtroEditadoId.value));
 const tiposOcupados = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.draftId !== filtroEditadoId.value).map((filtro) => filtro.tipoFiltro.id) ?? []);
 const filtrosOcupadosId = computed(() => editor.draft.value?.filtros.flatMap((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.filtroReferencia.estado === "existente" ? [filtro.filtroReferencia.id] : []) ?? []);
@@ -107,6 +112,7 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
       @cancel="editor.volver"
     >
       <template #datos>
+        <EquipoImagenTrigger :src="imagenManager.urlActual.value" :tiene-imagen="imagenManager.tieneImagen.value" :disabled="imagenManager.bloqueado.value" @open="imagenOverlay = true" />
         <EquipoDatosForm
           v-if="editor.auxiliares.value"
           :draft="editor.draft.value"
@@ -188,6 +194,7 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
           @edit="(tipoFiltroId, cantidad) => { if (filtroEditadoId) editor.actualizarAsignacionFiltro({ draftId: filtroEditadoId, tipoFiltroId, cantidad }); cerrarFiltroOverlay() }"
         />
         <EquipoAceiteOverlay v-if="aceiteOverlay && editor.auxiliares.value" :mode="aceiteOverlay" :aceite="aceiteEditado" :sistemas="editor.auxiliares.value.sistemasAceite" :aceites="editor.auxiliares.value.aceites" :has-system-conflict="conflictoSistemaAceite" @close="aceiteOverlay = null" @confirm="confirmarAceite" />
+        <EquipoImagenOverlay v-if="imagenOverlay" :codigo-equipo="editor.draft.value.equipo.codigo" :actual-url="imagenManager.urlActual.value" :preview-url="imagenManager.preparada.value?.previewUrl ?? null" :tiene-imagen="imagenManager.tieneImagen.value" :sync-state="imagenManager.imagenSyncState.value" :bloqueado="imagenManager.bloqueado.value" @close="imagenOverlay = false" @select="imagenManager.seleccionarArchivo" @save="imagenManager.guardar(editor.draft.value.equipo.codigo, $event)" @remove="imagenManager.eliminar(editor.draft.value.equipo.codigo)" @retry-cleanup="imagenManager.reintentarLimpieza" @retry-move="imagenManager.reintentarMovimiento" @clear-preview="imagenManager.limpiarPreview" />
       </template
       >
     </EquipoEdicionShell>

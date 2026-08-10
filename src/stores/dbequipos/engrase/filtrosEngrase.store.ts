@@ -15,6 +15,7 @@ import type {
   TipoFiltroEngrase,
   EtapaEngrase,
 } from "./filtrosEngrase.types";
+import type { EquipoImagenPersistida } from "./edicion/equipoEngraseEdicion.types";
 export const useFiltrosEngraseStore = defineStore(
   "dbequipos_engrase_filtros",
   () => {
@@ -230,6 +231,16 @@ export const useFiltrosEngraseStore = defineStore(
     function seleccionarFiltro(id: number | null) {
       filtroSeleccionadoId.value = id;
     }
+    function actualizarImagenEquipo(equipoId: number, imagen: EquipoImagenPersistida): void {
+      const indice = equipos.value.findIndex((equipo) => equipo.id === equipoId);
+      if (indice < 0) return;
+      equipos.value[indice] = {
+        ...equipos.value[indice],
+        main_storage_path: imagen.mainStoragePath,
+        tiene_imagen_main: imagen.tieneImagenMain,
+        imagen_actualizada_en: imagen.imagenActualizadaEn,
+      };
+    }
     async function reintentarCarga() {
       await inicializar();
     }
@@ -286,6 +297,7 @@ export const useFiltrosEngraseStore = defineStore(
       limpiarFiltros,
       seleccionarEquipo,
       seleccionarFiltro,
+      actualizarImagenEquipo,
       reintentarCarga,
       reset,
     };
