@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AlertTriangle, RefreshCw } from "lucide-vue-next";
-import { computed, shallowRef } from "vue";
+import { computed, shallowRef, watch } from "vue";
 import EquipoEdicionShell from "@/components/engrase/edicion/EquipoEdicionShell.vue";
 import EquipoDatosForm from "@/components/engrase/edicion/datos/EquipoDatosForm.vue";
 import EquipoFiltrosSection from "@/components/engrase/edicion/filtros/EquipoFiltrosSection.vue";
@@ -20,12 +20,21 @@ const errorAgregarFiltro = shallowRef<string | null>(null);
 const aceiteOverlay = shallowRef<EquipoAceiteFormMode | null>(null);
 const errorAceite = shallowRef<string | null>(null);
 const imagenOverlay = shallowRef(false);
+type PestañaEdicion = "datos" | "filtros" | "aceites";
+const pestanaActiva = shallowRef<PestañaEdicion>("datos");
 const erroresPorSeccion = (seccion: "datos" | "etapas" | "filtros" | "aceites") => computed(() => editor.validationErrors.value.filter((error) => error.seccion === seccion));
 const erroresDatos = erroresPorSeccion("datos");
 const erroresEtapas = erroresPorSeccion("etapas");
 const erroresFiltros = erroresPorSeccion("filtros");
 const erroresAceites = erroresPorSeccion("aceites");
 const mensajeGuardado = computed(() => editor.saveError.value?.mensaje ?? editor.successMessage.value);
+watch(
+  () => editor.validationErrors.value[0],
+  (error) => {
+    if (!error) return;
+    pestanaActiva.value = error.seccion === "etapas" ? "datos" : error.seccion;
+  },
+);
 const tipoMensajeGuardado = computed<"error" | "success" | "partial" | null>(() => {
   if (editor.saveError.value) return "error";
   if (!editor.successMessage.value) return null;
@@ -114,8 +123,12 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
     <EquipoEdicionShell
       v-else-if="editor.draft.value"
       :draft="editor.draft.value"
+      :active-tab="pestanaActiva"
       :filters-count="editor.activeFiltersCount.value"
       :oils-count="editor.activeOilsCount.value"
+      :has-data-changes="editor.hasDataChanges.value"
+      :has-filter-changes="editor.hasFilterChanges.value"
+      :has-oil-changes="editor.hasOilChanges.value"
       :can-save="editor.canSave.value"
       :saving="editor.saving.value"
       :message="mensajeGuardado"
@@ -126,6 +139,7 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
       @cancel="editor.volver"
       @save="editor.guardar(imagenManager.moverDespuesDeCambioCodigo)"
       @retry-image="imagenManager.reintentarMovimiento"
+      @update-active-tab="pestanaActiva = $event"
     >
       <template #datos>
         <div v-if="editor.validationErrors.value.length > 1" class="rounded-md border border-danger bg-danger-bg p-3 text-xs text-danger" role="alert" tabindex="-1" data-validation-section="general">

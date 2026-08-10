@@ -2,6 +2,7 @@ import { defineComponent } from "vue";
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import EquipoEdicionHeader from "./EquipoEdicionHeader.vue";
+import EquipoEdicionShell from "./EquipoEdicionShell.vue";
 import EquipoDatosForm from "./datos/EquipoDatosForm.vue";
 import type {
   AuxiliaresEdicionEquipo,
@@ -78,5 +79,39 @@ describe("cabecera y datos del editor", () => {
     expect(wrapper.find('[data-test="imagen-integrada"]').exists()).toBe(true);
     await wrapper.get('button[aria-pressed="false"]').trigger("click");
     expect(wrapper.emitted("updateEstado")).toEqual([["descartado"]]);
+  });
+
+  it("muestra una sección por pestaña e indica los cambios pendientes", async () => {
+    const wrapper = mount(EquipoEdicionShell, {
+      props: {
+        draft,
+        activeTab: "datos",
+        filtersCount: 2,
+        oilsCount: 1,
+        hasDataChanges: false,
+        hasFilterChanges: true,
+        hasOilChanges: false,
+        canSave: true,
+        saving: false,
+        message: null,
+        messageKind: null,
+        validationCount: 0,
+        movePending: false,
+      },
+      slots: {
+        datos: '<div data-test="datos">Datos</div>',
+        filtros: '<div data-test="filtros">Filtros</div>',
+        aceites: '<div data-test="aceites">Aceites</div>',
+      },
+      global: { stubs: { EquipoEdicionHeader: true, EquipoEdicionFooter: true } },
+    });
+
+    expect(wrapper.get("[role=tab][aria-selected=true]").text()).toContain("Datos del equipo");
+    expect(wrapper.get("#panel-datos").isVisible()).toBe(true);
+    expect(wrapper.get("#panel-filtros").isVisible()).toBe(false);
+    expect(wrapper.get("#tab-filtros").text()).toContain("Cambios pendientes");
+
+    await wrapper.get("#tab-filtros").trigger("click");
+    expect(wrapper.emitted("updateActiveTab")).toEqual([["filtros"]]);
   });
 });

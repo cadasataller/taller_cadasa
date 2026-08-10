@@ -18,7 +18,7 @@ const guardarEditor = vi.fn(async (): Promise<void> => {});
 const moverImagen = vi.fn(async (): Promise<void> => {});
 const editor = {
   loading: shallowRef(false), loadError: ref(null), draft: ref<EquipoEdicionDraft | null>(draft), auxiliares: ref<AuxiliaresEdicionEquipo | null>(auxiliares),
-  activeStagesCount: computed(() => draft.etapas.length), activeFiltersCount: computed(() => draft.filtros.length), activeOilsCount: computed(() => draft.aceites.length),
+  activeStagesCount: computed(() => draft.etapas.length), activeFiltersCount: computed(() => draft.filtros.length), activeOilsCount: computed(() => draft.aceites.length), hasDataChanges: computed(() => false), hasFilterChanges: computed(() => false), hasOilChanges: computed(() => false),
   canSave: shallowRef(true), saving: shallowRef(false), saveError: ref<{ codigo: string; mensaje: string } | null>(null), successMessage: shallowRef<string | null>(null), validationErrors: ref<EquipoEdicionValidationIssue[]>([]), imagenSyncState: shallowRef<ImagenSyncState>({ kind: "idle" }), activeOverlay: shallowRef(null),
   volver: vi.fn(), descartarYVolver: vi.fn(), continuarEditando: vi.fn(), reintentar: vi.fn(), guardar: guardarEditor,
   actualizarCodigo: vi.fn(), seleccionarTipoEquipo: vi.fn(), actualizarSubtipo: vi.fn(), actualizarEstado: vi.fn(), agregarEtapa: vi.fn(), quitarEtapa: vi.fn(), crearYSeleccionarTipoEquipo: vi.fn(), esTipoEquipoDuplicado: vi.fn(() => false), abrirNuevoTipoEquipo: vi.fn(), buscarFiltroOriginalParaAsignar: vi.fn(), agregarFiltroExistente: vi.fn(() => true), agregarFiltroTemporal: vi.fn(() => true), actualizarAsignacionFiltro: vi.fn(), marcarFiltroParaEliminar: vi.fn(), deshacerEliminacionFiltro: vi.fn(), agregarAceite: vi.fn(() => true), actualizarAceite: vi.fn(() => true), marcarAceiteParaEliminar: vi.fn(), deshacerEliminacionAceite: vi.fn(() => true),
@@ -35,8 +35,8 @@ import EquipoEngraseEditarView from "./EquipoEngraseEditarView.vue";
 
 const ShellStub = defineComponent({
   name: "EquipoEdicionShell",
-  props: { canSave: Boolean, saving: Boolean, message: String, messageKind: String, validationCount: Number, movePending: Boolean, draft: Object, filtersCount: Number, oilsCount: Number },
-  emits: ["save", "cancel", "back", "retryImage"],
+  props: { canSave: Boolean, saving: Boolean, message: String, messageKind: String, validationCount: Number, movePending: Boolean, draft: Object, filtersCount: Number, oilsCount: Number, activeTab: String, hasDataChanges: Boolean, hasFilterChanges: Boolean, hasOilChanges: Boolean },
+  emits: ["save", "cancel", "back", "retryImage", "updateActiveTab"],
   template: `<section><button data-test="save" @click="$emit('save')">Guardar</button><button data-test="retry" @click="$emit('retryImage')">Reintentar</button><slot name="datos"/><slot name="filtros"/><slot name="aceites"/><slot name="overlay"/></section>`,
 });
 const stubs = {

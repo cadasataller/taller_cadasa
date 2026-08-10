@@ -194,6 +194,13 @@ export const useEquipoEngraseEdicionStore = defineStore(
     );
     const cambiosPendientes = computed(() => original.value && draft.value ? construirCambiosEquipo(original.value, draft.value) : {});
     const isDirty = computed(() => hayCambiosEquipo(cambiosPendientes.value));
+    const hasDataChanges = computed(
+      () =>
+        Boolean(cambiosPendientes.value.datos_equipo) ||
+        Boolean(cambiosPendientes.value.etapas),
+    );
+    const hasFilterChanges = computed(() => Boolean(cambiosPendientes.value.filtros));
+    const hasOilChanges = computed(() => Boolean(cambiosPendientes.value.aceites));
     const hasActiveOverlay = computed(() => activeOverlay.value !== null);
     const canSave = computed(() => isReady.value && hayCambiosEquipo(cambiosPendientes.value) && !saving.value && activeOverlay.value === null && imagenSyncState.value.kind !== "move_pending");
     const activeFiltersCount = computed(() => draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").length ?? 0);
@@ -464,6 +471,9 @@ export const useEquipoEngraseEdicionStore = defineStore(
       imagenSyncState,
       isReady,
       isDirty,
+      hasDataChanges,
+      hasFilterChanges,
+      hasOilChanges,
       hasActiveOverlay,
       canSave,
       activeFiltersCount,
