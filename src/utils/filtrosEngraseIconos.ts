@@ -2,25 +2,21 @@ import type { Component } from "vue";
 import {
   Cog,
   Droplet,
-  Fan,
   Filter,
   Fuel,
   Gauge,
-  Snowflake,
   Wind,
 } from "lucide-vue-next";
 
 export interface IconoTipoFiltro {
   icono: Component;
   grupo:
-    | "climatizacion"
-    | "refrigeracion"
-    | "hidraulico"
+    | "motor"
+    | "aire"
     | "combustible"
-    | "lubricacion"
+    | "hidraulico"
     | "transmision"
-    | "admision_aire"
-    | "elemento";
+    | "otros";
   nombreGrupo: string;
 }
 
@@ -35,25 +31,20 @@ const normalizarNombreTipoFiltro = (nombre: string): string =>
 export const obtenerIconoTipoFiltro = (nombre: string): IconoTipoFiltro => {
   const nombreNormalizado = normalizarNombreTipoFiltro(nombre);
 
+  if (nombreNormalizado.includes("aceite"))
+    return { icono: Droplet, grupo: "motor", nombreGrupo: "Motor" };
   if (
-    nombreNormalizado.includes("aire acondicionado") ||
+    nombreNormalizado.includes("aire") ||
     nombreNormalizado.includes("cabina")
   )
-    return {
-      icono: Fan,
-      grupo: "climatizacion",
-      nombreGrupo: "Cabina y climatización",
-    };
+    return { icono: Wind, grupo: "aire", nombreGrupo: "Aire" };
   if (
-    nombreNormalizado.includes("coolant") ||
-    nombreNormalizado.includes("refrigerante") ||
-    nombreNormalizado.includes("refrigeracion")
+    nombreNormalizado.includes("gasolina") ||
+    nombreNormalizado.includes("diesel") ||
+    nombreNormalizado.includes("combustible") ||
+    nombreNormalizado.includes("elemento")
   )
-    return {
-      icono: Snowflake,
-      grupo: "refrigeracion",
-      nombreGrupo: "Refrigeración",
-    };
+    return { icono: Fuel, grupo: "combustible", nombreGrupo: "Combustible" };
   if (
     nombreNormalizado.includes("hidraulic") ||
     nombreNormalizado.includes("hidraul")
@@ -61,35 +52,14 @@ export const obtenerIconoTipoFiltro = (nombre: string): IconoTipoFiltro => {
     return {
       icono: Gauge,
       grupo: "hidraulico",
-      nombreGrupo: "Sistema hidráulico",
+      nombreGrupo: "Hidráulico",
     };
-  if (
-    nombreNormalizado.includes("diesel") ||
-    nombreNormalizado.includes("gasolina") ||
-    nombreNormalizado.includes("combustible")
-  )
-    return { icono: Fuel, grupo: "combustible", nombreGrupo: "Combustible" };
-  if (nombreNormalizado.includes("aceite"))
-    return {
-      icono: Droplet,
-      grupo: "lubricacion",
-      nombreGrupo: "Lubricación del motor",
-    };
-  if (
-    nombreNormalizado.includes("transmision") ||
-    nombreNormalizado.includes("diferencial")
-  )
+  if (nombreNormalizado.includes("transmision"))
     return {
       icono: Cog,
       grupo: "transmision",
-      nombreGrupo: "Transmisión y tren motriz",
-    };
-  if (nombreNormalizado.includes("aire"))
-    return {
-      icono: Wind,
-      grupo: "admision_aire",
-      nombreGrupo: "Admisión de aire",
+      nombreGrupo: "Transmisión",
     };
 
-  return { icono: Filter, grupo: "elemento", nombreGrupo: "Elemento / otros" };
+  return { icono: Filter, grupo: "otros", nombreGrupo: "Otros" };
 };

@@ -7,6 +7,7 @@ import {
 import { filtrosEngraseService } from "./filtrosEngrase.service";
 import type {
   EquipoEngraseListItem,
+  EquipoAceiteDetalle,
   EquipoFiltroDetalle,
   FiltroCodigoSugerencia,
   FiltroEquivalenciaRow,
@@ -24,6 +25,7 @@ export const useFiltrosEngraseStore = defineStore(
       tiposFiltro = ref<TipoFiltroEngrase[]>([]),
       etapas = ref<EtapaEngrase[]>([]),
       filtrosEquipo = ref<EquipoFiltroDetalle[]>([]),
+      aceitesEquipo = ref<EquipoAceiteDetalle[]>([]),
       equivalenciasPorFiltroId = ref<Record<number, FiltroEquivalenciaRow[]>>(
         {},
       ),
@@ -35,13 +37,16 @@ export const useFiltrosEngraseStore = defineStore(
       loadingInicial = ref(false),
       loadingEquipos = ref(false),
       loadingDetalleEquipo = ref(false),
+      loadingCambioEstado = ref(false),
       loadingSugerencias = ref(false),
       errorInicial = ref<string | null>(null),
       errorEquipos = ref<string | null>(null),
-      errorDetalle = ref<string | null>(null);
+      errorDetalle = ref<string | null>(null),
+      errorCambioEstado = ref<string | null>(null);
     let catalogosCargados = false,
       idsCodigo = ref<Set<number> | null>(null),
       filtrosCache = new Map<number, EquipoFiltroDetalle[]>(),
+      aceitesCache = new Map<number, EquipoAceiteDetalle[]>(),
       imagenesRequest = new Map<string, Promise<void>>(),
       request: Promise<void> | null = null,
       sugerenciasRequest = 0;
@@ -166,15 +171,21 @@ export const useFiltrosEngraseStore = defineStore(
       loadingDetalleEquipo.value = true;
       errorDetalle.value = null;
       try {
-        const data =
+        const [filtros, aceites] = await Promise.all([
           !force && filtrosCache.has(id)
-            ? filtrosCache.get(id)!
-            : await filtrosEngraseService.obtenerFiltrosDeEquipo(id);
-        filtrosCache.set(id, data);
+            ? Promise.resolve(filtrosCache.get(id)!)
+            : filtrosEngraseService.obtenerFiltrosDeEquipo(id),
+          !force && aceitesCache.has(id)
+            ? Promise.resolve(aceitesCache.get(id)!)
+            : filtrosEngraseService.obtenerAceitesDeEquipo(id),
+        ]);
+        filtrosCache.set(id, filtros);
+        aceitesCache.set(id, aceites);
         if (equipoSeleccionadoId.value === id) {
-          filtrosEquipo.value = data;
+          filtrosEquipo.value = filtros;
+          aceitesEquipo.value = aceites;
           const eq = await filtrosEngraseService.obtenerEquivalenciasActivas(
-            data.map((x) => x.filtro_id),
+            filtros.map((x) => x.filtro_id),
           );
           equivalenciasPorFiltroId.value = eq.reduce<
             Record<number, FiltroEquivalenciaRow[]>
@@ -267,10 +278,40 @@ export const useFiltrosEngraseStore = defineStore(
     async function seleccionarEquipo(id: number) {
       equipoSeleccionadoId.value = id;
       filtroSeleccionadoId.value = null;
-      await cargarFiltrosEquipo(id);
+      await Promise.all([cargarFiltrosEquipo(id), cargarImagenEquipo(id)]);
     }
     function seleccionarFiltro(id: number | null) {
       filtroSeleccionadoId.value = id;
+    }
+    async function cambiarEstadoEquipo(
+      codigo: string,
+      estado: "activo" | "descartado",
+    ): Promise<void> {
+      if (loadingCambioEstado.value) return;
+      const indice = equipos.value.findIndex((equipo) => equipo.codigo === codigo);
+      if (indice < 0) {
+        errorCambioEstado.value = "No se encontró el equipo para actualizar.";
+        return;
+      }
+      loadingCambioEstado.value = true;
+      errorCambioEstado.value = null;
+      try {
+        const estadoConfirmado = await filtrosEngraseService.cambiarEstadoEquipo(
+          codigo,
+          estado,
+        );
+        equipos.value[indice] = {
+          ...equipos.value[indice],
+          estado: estadoConfirmado,
+        };
+      } catch (e) {
+        errorCambioEstado.value =
+          e instanceof Error
+            ? e.message
+            : "No se pudo cambiar el estado del equipo.";
+      } finally {
+        loadingCambioEstado.value = false;
+      }
     }
     function aplicarEquipoActualizado(equipo: EquipoEngraseListItem): void {
       const indice = equipos.value.findIndex((item) => item.id === equipo.id);
@@ -280,13 +321,16 @@ export const useFiltrosEngraseStore = defineStore(
         equipoSeleccionadoId.value = equiposVisibles.value[0]?.id ?? null;
         filtroSeleccionadoId.value = null;
         filtrosEquipo.value = [];
+        aceitesEquipo.value = [];
         equivalenciasPorFiltroId.value = {};
       }
     }
     function invalidarDetalleEquipo(equipoId: number): void {
       filtrosCache.delete(equipoId);
+      aceitesCache.delete(equipoId);
       if (equipoSeleccionadoId.value !== equipoId) return;
       filtrosEquipo.value = [];
+      aceitesEquipo.value = [];
       filtroSeleccionadoId.value = null;
       equivalenciasPorFiltroId.value = {};
       detalleEquipoPendienteRecargaId.value = equipoId;
@@ -311,6 +355,7 @@ export const useFiltrosEngraseStore = defineStore(
       tiposFiltro.value = [];
       etapas.value = [];
       filtrosEquipo.value = [];
+      aceitesEquipo.value = [];
       equivalenciasPorFiltroId.value = {};
       limpiarSugerencias();
       equipoSeleccionadoId.value = null;
@@ -319,6 +364,7 @@ export const useFiltrosEngraseStore = defineStore(
       filtrosAplicados.value = initialFiltrosEngraseQuery();
       catalogosCargados = false;
       filtrosCache.clear();
+      aceitesCache.clear();
       imagenesRequest.clear();
       idsCodigo.value = null;
     }
@@ -328,6 +374,7 @@ export const useFiltrosEngraseStore = defineStore(
       tiposFiltro,
       etapas,
       filtrosEquipo,
+      aceitesEquipo,
       equivalenciasPorFiltroId,
       sugerenciasCodigo,
       equipoSeleccionadoId,
@@ -336,10 +383,12 @@ export const useFiltrosEngraseStore = defineStore(
       loadingInicial,
       loadingEquipos,
       loadingDetalleEquipo,
+      loadingCambioEstado,
       loadingSugerencias,
       errorInicial,
       errorEquipos,
       errorDetalle,
+      errorCambioEstado,
       equiposVisibles,
       equipoSeleccionado,
       filtroSeleccionado,
@@ -361,6 +410,7 @@ export const useFiltrosEngraseStore = defineStore(
       limpiarFiltros,
       seleccionarEquipo,
       seleccionarFiltro,
+      cambiarEstadoEquipo,
       aplicarEquipoActualizado,
       invalidarDetalleEquipo,
       actualizarImagenEquipo,

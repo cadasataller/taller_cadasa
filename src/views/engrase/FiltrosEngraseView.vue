@@ -34,6 +34,12 @@ function cargarImagenVisible(equipoId: number): void {
 async function retryDetalle() {
   if (f.equipoSeleccionadoId.value) await f.reintentar();
 }
+async function cambiarEstadoEquipo(
+  codigo: string,
+  estado: "activo" | "descartado",
+) {
+  await f.cambiarEstadoEquipo(codigo, estado);
+}
 async function clearAllFilters() {
   await f.limpiarFiltros();
   resetSignal.value += 1;
@@ -94,15 +100,19 @@ async function clearAllFilters() {
             class="h-full"
             :equipo="f.equipoSeleccionado.value"
             :filtros="f.filtrosEquipo.value"
+            :aceites="f.aceitesEquipo.value"
             :equivalencias="f.equivalenciasPorFiltroId.value"
             :codigo-buscado="f.filtrosAplicados.value.codigoExactoSeleccionado"
             :selected-filtro-id="f.filtroSeleccionadoId.value"
             :loading="f.loadingDetalleEquipo.value"
             :error="f.errorDetalle.value"
+            :loading-cambio-estado="f.loadingCambioEstado.value"
+            :error-cambio-estado="f.errorCambioEstado.value"
             @select-filtro="f.seleccionarFiltro"
             @retry="retryDetalle"
             @back-to-equipos="mobileStage = 'equipos'"
             @editar-equipo="editarEquipo"
+            @cambiar-estado="cambiarEstadoEquipo"
           />
         </div>
         <FiltroDetallePanel

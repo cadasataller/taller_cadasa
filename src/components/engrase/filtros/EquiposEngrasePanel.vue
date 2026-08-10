@@ -56,6 +56,12 @@ const selectedTipoNombre = computed(
       ?.tipo_equipo ?? "",
 );
 const selectedModelo = computed(() => props.filters.modelo);
+const hayFiltrosDeChipsActivos = computed(
+  () => selectedTipoId.value !== null || Boolean(selectedModelo.value),
+);
+const hayFiltrosLocalesActivos = computed(
+  () => Boolean(search.value) || hayFiltrosDeChipsActivos.value,
+);
 const tipoActivoId = computed(() =>
   selectedTipoId.value ?? (tiposOrdenados.value.length === 1
     ? visible.value[0]?.tipo_equipo_id ?? null
@@ -131,8 +137,14 @@ function cerrarChips() {
       />
       <button
         type="button"
-        class="absolute inset-y-0 right-0 flex w-8 items-center justify-center rounded-r-md text-main hover:bg-main/10"
+        class="absolute inset-y-0 right-0 flex w-8 items-center justify-center rounded-r-md transition"
+        :class="
+          hayFiltrosLocalesActivos
+            ? 'bg-accent-light/45 text-main-dark hover:bg-accent-light/70'
+            : 'text-main hover:bg-main/10'
+        "
         aria-label="Limpiar búsqueda y filtros de chips"
+        :title="hayFiltrosLocalesActivos ? 'Limpiar búsqueda y filtros aplicados' : 'Sin filtros locales para limpiar'"
         @click="limpiarBusquedaYFiltros"
       >
         <Eraser class="h-4 w-4" />
@@ -172,8 +184,14 @@ function cerrarChips() {
               <ArrowLeft class="h-4 w-4" /></button
             ><button
               type="button"
-              class="rounded p-1 text-main hover:bg-main/10"
+              class="rounded p-1 transition"
+              :class="
+                hayFiltrosDeChipsActivos
+                  ? 'bg-accent-light/45 text-main-dark hover:bg-accent-light/70'
+                  : 'text-main hover:bg-main/10'
+              "
               aria-label="Limpiar filtros de chips"
+              :title="hayFiltrosDeChipsActivos ? 'Limpiar filtros de chips' : 'Sin filtros de chips para limpiar'"
               @click="limpiarFiltros"
             >
               <Eraser class="h-4 w-4" />

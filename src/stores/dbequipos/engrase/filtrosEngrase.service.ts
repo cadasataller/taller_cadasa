@@ -2,6 +2,7 @@ import { supabaseEquipos } from "@/lib/supabase";
 import { mapCatalogo, mapEquipo, mapFiltro } from "./filtrosEngrase.mappers";
 import type {
   EquipoEngraseListItem,
+  EquipoAceiteDetalle,
   EquipoFiltroDetalle,
   EtapaEngrase,
   FiltroCodigoSugerencia,
@@ -68,6 +69,36 @@ export const filtrosEngraseService = {
       tipoFiltro: x.tipo_filtro,
       filtro: mapFiltro(x.filtro),
     }));
+  },
+  async obtenerAceitesDeEquipo(
+    equipoId: number,
+  ): Promise<EquipoAceiteDetalle[]> {
+    const { data, error } = await schema().rpc("rpc_obtener_aceites_equipo", {
+      p_equipo_id: equipoId,
+    });
+    raise(error, "No se pudieron obtener los aceites del equipo");
+    return (Array.isArray(data) ? data : [])
+      .filter(isRecord)
+      .map((item) => ({
+        sistema: String(item.sistema ?? ""),
+        aceite: String(item.aceite ?? ""),
+      }))
+      .filter((item) => item.sistema && item.aceite);
+  },
+  async cambiarEstadoEquipo(
+    codigo: string,
+    estado: "activo" | "descartado",
+  ): Promise<"activo" | "descartado"> {
+    const { data, error } = await schema().rpc("rpc_cambiar_estado_equipo", {
+      p_codigo_equipo: codigo,
+      p_estado: estado,
+    });
+    raise(error, "No se pudo cambiar el estado del equipo");
+    if (!isRecord(data) || data.ok !== true)
+      throw new Error("La RPC no confirmó el cambio de estado del equipo");
+    if (data.estado !== "activo" && data.estado !== "descartado")
+      throw new Error("La RPC devolvió un estado de equipo inválido");
+    return data.estado;
   },
   async obtenerEquivalenciasActivas(
     ids: number[],

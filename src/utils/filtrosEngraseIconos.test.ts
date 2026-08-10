@@ -2,17 +2,15 @@ import { describe, expect, it } from "vitest";
 import { obtenerIconoTipoFiltro } from "./filtrosEngraseIconos";
 
 describe("obtenerIconoTipoFiltro", () => {
-  it("prioriza aire acondicionado sobre el grupo genérico de aire", () => {
-    expect(obtenerIconoTipoFiltro("Filtro de aire acondicionado").grupo).toBe(
-      "climatizacion",
-    );
-  });
-
   it.each([
+    ["Filtro de aire acondicionado", "aire"],
+    ["Filtro de cabina", "aire"],
     ["Filtro hidráulico", "hidraulico"],
-    ["Filtro de aceite", "lubricacion"],
+    ["Filtro de aceite", "motor"],
     ["Filtro diésel", "combustible"],
-    ["Filtro desconocido", "elemento"],
+    ["Filtro de elemento", "combustible"],
+    ["Filtro de transmisión", "transmision"],
+    ["Filtro desconocido", "otros"],
   ] as const)("clasifica %s", (nombre, grupo) => {
     expect(obtenerIconoTipoFiltro(nombre).grupo).toBe(grupo);
   });

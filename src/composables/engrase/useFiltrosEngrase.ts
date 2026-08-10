@@ -52,6 +52,7 @@ export function useFiltrosEngrase() {
     limpiarFiltros: store.limpiarFiltros,
     seleccionarEquipo: store.seleccionarEquipo,
     seleccionarFiltro: store.seleccionarFiltro,
+    cambiarEstadoEquipo: store.cambiarEstadoEquipo,
     cargarImagenEquipo: store.cargarImagenEquipo,
     reintentar: store.reintentarCarga,
   };

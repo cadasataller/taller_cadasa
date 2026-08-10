@@ -42,6 +42,10 @@ export interface EquipoFiltroDetalle extends EquipoFiltroRow {
   tipoFiltro: TipoFiltroEngrase;
   filtro: FiltroEngrase;
 }
+export interface EquipoAceiteDetalle {
+  sistema: string;
+  aceite: string;
+}
 export interface FiltroEquivalenciaRow {
   id: number;
   filtro_original_id: number;

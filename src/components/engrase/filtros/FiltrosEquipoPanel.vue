@@ -1,28 +1,40 @@
 <script setup lang="ts">
-import { computed, shallowRef } from "vue";
+import { computed, shallowRef, watch } from "vue";
 import { storeToRefs } from "pinia";
 import {
   Sprout,
   Wheat,
   SquarePen,
+  ImageOff,
+  LoaderCircle,
 } from "lucide-vue-next";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 import { obtenerIconoTipoFiltro } from "@/utils/filtrosEngraseIconos";
 import type {
   EquipoEngraseListItem,
+  EquipoAceiteDetalle,
   EquipoFiltroDetalle,
   FiltroEquivalenciaRow,
 } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
 const props = defineProps<{
   equipo: EquipoEngraseListItem | null;
   filtros: EquipoFiltroDetalle[];
+  aceites: EquipoAceiteDetalle[];
   equivalencias: Record<number, FiltroEquivalenciaRow[]>;
   codigoBuscado: string | null;
   selectedFiltroId: number | null;
   loading: boolean;
   error: string | null;
+  loadingCambioEstado: boolean;
+  errorCambioEstado: string | null;
 }>();
-const emit = defineEmits<{ selectFiltro: [number]; retry: []; backToEquipos: []; editarEquipo: [string] }>();
+const emit = defineEmits<{
+  selectFiltro: [number];
+  retry: [];
+  backToEquipos: [];
+  editarEquipo: [string];
+  cambiarEstado: [codigo: string, estado: "activo" | "descartado"];
+}>();
 const featureAccessStore = useFeatureAccessStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
 const canEditFiltrosEngrase = computed(() =>
@@ -51,6 +63,22 @@ const grupoSeleccionado = shallowRef<string | null>(null);
 const soloConEquivalencias = shallowRef(false);
 const soloEnCompras = shallowRef(false);
 const opcionesDeListadoAbiertas = shallowRef(false);
+const imagenPrincipalFallida = shallowRef(false);
+watch(
+  () => props.equipo?.imageUrl,
+  () => {
+    imagenPrincipalFallida.value = false;
+  },
+);
+const cantidadFiltrosDeListadoActivos = computed(
+  () =>
+    Number(grupoSeleccionado.value !== null) +
+    Number(soloConEquivalencias.value) +
+    Number(soloEnCompras.value),
+);
+const hayFiltrosDeListadoActivos = computed(
+  () => cantidadFiltrosDeListadoActivos.value > 0,
+);
 function esCultivo(nombre: string) {
   return nombre.trim().toLocaleLowerCase() === "cultivo";
 }
@@ -90,6 +118,14 @@ function alternarGrupo(grupo: string) {
   grupoSeleccionado.value =
     grupoSeleccionado.value === grupo ? null : grupo;
 }
+function alternarEstado(): void {
+  if (!props.equipo || props.loadingCambioEstado) return;
+  emit(
+    "cambiarEstado",
+    props.equipo.codigo,
+    props.equipo.estado === "activo" ? "descartado" : "activo",
+  );
+}
 </script>
 <template>
   <section
@@ -104,53 +140,124 @@ function alternarGrupo(grupo: string) {
     </button>
     <template v-if="equipo">
       <header class="flex items-start justify-between gap-3">
-        <div>
-          <p class="text-xs font-semibold text-main">
-            {{ equipo.tipo_equipo }}
-          </p>
-          <h2 class="font-mono text-lg font-semibold text-main">
-            {{ equipo.codigo }}
-          </h2>
-          <p class="flex flex-wrap items-center gap-x-1 text-xs text-gray-500">
-            Modelo: {{ equipo.subtipo || "Sin modelo" }} ·
-            <template v-if="equipo.etapas.length"
-              ><span
-                v-for="etapa in equipo.etapas"
-                :key="etapa.id"
-                class="inline-flex items-center gap-0.5"
-                ><Sprout
-                  v-if="esCultivo(etapa.nombre)"
-                  class="h-3 w-3 text-main"
-                /><Wheat
-                  v-else-if="esZafra(etapa.nombre)"
-                  class="h-3 w-3 text-accent"
-                />{{ etapa.nombre }}</span
-              ></template
-            ><template v-else>Sin etapa</template>
-          </p>
+        <div class="flex min-w-0 items-start gap-3">
+          <div class="grid aspect-square w-20 shrink-0 place-items-center overflow-hidden rounded-md bg-second-dark text-gray-400 sm:w-24">
+            <img
+              v-if="equipo.imageUrl && !imagenPrincipalFallida"
+              class="h-full w-full object-cover"
+              :src="equipo.imageUrl"
+              :alt="`Imagen del equipo ${equipo.codigo}`"
+              @error="imagenPrincipalFallida = true"
+            />
+            <ImageOff v-else class="h-5 w-5" :aria-label="`Sin imagen: ${equipo.codigo}`" />
+          </div>
+          <div class="min-w-0">
+            <p class="text-xs font-semibold text-main">
+              {{ equipo.tipo_equipo }}
+            </p>
+            <h2 class="font-mono text-lg font-semibold text-main">
+              {{ equipo.codigo }}
+            </h2>
+            <p class="flex flex-wrap items-center gap-x-1 text-xs text-gray-500">
+              Modelo: {{ equipo.subtipo || "Sin modelo" }} ·
+              <template v-if="equipo.etapas.length"
+                ><span
+                  v-for="etapa in equipo.etapas"
+                  :key="etapa.id"
+                  class="inline-flex items-center gap-0.5"
+                  ><Sprout
+                    v-if="esCultivo(etapa.nombre)"
+                    class="h-3 w-3 text-main"
+                  /><Wheat
+                    v-else-if="esZafra(etapa.nombre)"
+                    class="h-3 w-3 text-accent"
+                  />{{ etapa.nombre }}</span
+                ></template
+              ><template v-else>Sin etapa</template>
+            </p>
+          </div>
+        </div>
+        <div
+          v-if="canEditFiltrosEngrase"
+          class="flex shrink-0 flex-col items-end gap-1"
+        >
+          <span
+            class="text-[10px] font-bold uppercase"
+            :class="equipo.estado === 'activo' ? 'text-main' : 'text-danger'"
+          >
+            {{ equipo.estado }}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            class="relative h-5 w-10 rounded-full p-0.5 shadow-inner transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main disabled:cursor-wait disabled:opacity-70"
+            :class="equipo.estado === 'activo' ? 'bg-main' : 'bg-danger'"
+            :aria-checked="equipo.estado === 'activo'"
+            :aria-label="`Cambiar estado del equipo; actualmente ${equipo.estado}`"
+            :disabled="loadingCambioEstado"
+            @click="alternarEstado"
+          >
+            <span
+              class="grid h-4 w-4 place-items-center rounded-full bg-white shadow-md transition-transform duration-200"
+              :class="equipo.estado === 'activo' ? 'translate-x-5' : 'translate-x-0'"
+              aria-hidden="true"
+            >
+              <LoaderCircle v-if="loadingCambioEstado" class="h-2.5 w-2.5 animate-spin text-gray-500" />
+            </span>
+          </button>
         </div>
         <b
+          v-else
           class="rounded px-1.5 py-1 text-[10px] font-semibold uppercase"
-          :class="
-            equipo.estado === 'activo'
-              ? 'bg-success-bg text-success'
-              : 'bg-danger-bg text-danger'
-          "
+          :class="equipo.estado === 'activo' ? 'bg-main/10 text-main' : 'bg-danger-bg text-danger'"
           >{{ equipo.estado }}</b
         >
       </header>
+      <div v-if="aceites.length" class="mb-3 mt-3 flex flex-wrap gap-2">
+        <span
+          v-for="aceite in aceites"
+          :key="`${aceite.sistema}-${aceite.aceite}`"
+          class="rounded-md bg-main-light/15 px-2.5 py-1 text-xs font-medium text-main"
+        >
+          {{ aceite.sistema }} · {{ aceite.aceite }}
+        </span>
+      </div>
+      <p v-if="errorCambioEstado" class="mt-3 text-xs text-danger" role="alert">
+        {{ errorCambioEstado }}
+      </p>
       <div class="my-3 flex flex-wrap items-center gap-2 text-xs">
         <p class="whitespace-nowrap text-gray-500">
           Total filtros: <b class="text-main">{{ filtros.length }}</b>
         </p>
         <button
           type="button"
-          class="cursor-pointer rounded-md border border-gray-200 px-2 py-1 font-medium text-gray-600 transition hover:border-main/40 hover:text-main"
+          class="cursor-pointer inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-medium transition"
+          :class="
+            hayFiltrosDeListadoActivos
+              ? 'border-second-deep bg-second text-main hover:bg-second-dark'
+              : 'border-gray-200 text-gray-600 hover:border-main/40 hover:text-main'
+          "
           :aria-expanded="opcionesDeListadoAbiertas"
           aria-controls="opciones-de-listado"
+          :title="
+            hayFiltrosDeListadoActivos
+              ? `${cantidadFiltrosDeListadoActivos} filtro(s) aplicado(s)`
+              : 'Mostrar filtros de listado'
+          "
           @click="opcionesDeListadoAbiertas = !opcionesDeListadoAbiertas"
         >
           Mostrar por
+          <span
+            v-if="hayFiltrosDeListadoActivos && !opcionesDeListadoAbiertas"
+            class="h-1.5 w-1.5 rounded-full bg-second-deep"
+            aria-hidden="true"
+          />
+          <span
+            v-if="hayFiltrosDeListadoActivos && !opcionesDeListadoAbiertas"
+            class="sr-only"
+          >
+            {{ cantidadFiltrosDeListadoActivos }} filtro(s) aplicado(s)
+          </span>
         </button>
         <button
           v-if="canEditFiltrosEngrase"
