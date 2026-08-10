@@ -58,20 +58,24 @@ const emit = defineEmits<{
       <button
         v-if="filtro.estadoOperacion !== 'pendiente_eliminacion'"
         type="button"
-        class="inline-flex min-h-9 cursor-pointer items-center gap-1 rounded-md border border-second-deep px-2 text-xs font-semibold text-main hover:bg-second disabled:cursor-not-allowed disabled:opacity-50"
+        class="inline-flex min-h-9 min-w-9 cursor-pointer items-center justify-center rounded-md border border-second-deep px-2 text-xs font-semibold text-main hover:bg-second disabled:cursor-not-allowed disabled:opacity-50"
+        aria-label="Editar filtro"
+        title="Editar filtro"
         @click="emit('edit', filtro.draftId)"
       >
-        <Pencil class="h-3.5 w-3.5" />Editar
+        <Pencil class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <button
         v-if="filtro.estadoOperacion !== 'pendiente_eliminacion'"
         type="button"
         :disabled="!canRemove"
-        class="inline-flex min-h-9 items-center gap-1 rounded-md border border-danger/30 px-2 text-xs font-semibold text-danger hover:bg-danger-bg disabled:opacity-50"
+        class="inline-flex min-h-9 min-w-9 items-center justify-center rounded-md border border-danger/30 px-2 text-xs font-semibold text-danger hover:bg-danger-bg disabled:opacity-50"
         :class="canRemove ? 'cursor-pointer' : 'cursor-not-allowed'"
+        aria-label="Quitar filtro"
+        title="Quitar filtro"
         @click="emit('remove', filtro.draftId)"
       >
-        <Trash2 class="h-3.5 w-3.5" />Quitar
+        <Trash2 class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <button
         v-else
