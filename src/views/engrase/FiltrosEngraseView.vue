@@ -73,6 +73,7 @@ async function clearAllFilters() {
             class="h-full"
             :equipos="f.equiposVisibles.value"
             :selected-equipo-id="f.equipoSeleccionadoId.value"
+            :filters="f.filtrosAplicados.value"
             :counts-by-tipo="f.conteoPorTipoEquipo.value"
             :loading="f.loadingEquipos.value"
             :error="f.errorEquipos.value"
@@ -82,6 +83,7 @@ async function clearAllFilters() {
             @retry="f.reintentar"
             @filter-tipo="update({ tipoEquipoId: $event, modelo: '' })"
             @filter-modelo="update({ modelo: $event })"
+            @clear-tipo-modelo="update({ tipoEquipoId: null, modelo: '' })"
           />
         </div>
         <div

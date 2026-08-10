@@ -30,6 +30,7 @@ export const useFiltrosEngraseStore = defineStore(
       sugerenciasCodigo = ref<FiltroCodigoSugerencia[]>([]),
       equipoSeleccionadoId = ref<number | null>(null),
       filtroSeleccionadoId = ref<number | null>(null),
+      detalleEquipoPendienteRecargaId = ref<number | null>(null),
       filtrosAplicados = ref<FiltrosEngraseQuery>(initialFiltrosEngraseQuery()),
       loadingInicial = ref(false),
       loadingEquipos = ref(false),
@@ -181,6 +182,7 @@ export const useFiltrosEngraseStore = defineStore(
             (a[x.filtro_original_id] ??= []).push(x);
             return a;
           }, {});
+          detalleEquipoPendienteRecargaId.value = null;
         }
       } catch (e) {
         errorDetalle.value =
@@ -196,6 +198,12 @@ export const useFiltrosEngraseStore = defineStore(
         errorInicial.value = null;
         try {
           await Promise.all([cargarCatalogos(), cargarEquipos()]);
+          if (
+            detalleEquipoPendienteRecargaId.value !== null &&
+            detalleEquipoPendienteRecargaId.value === equipoSeleccionadoId.value
+          ) {
+            await cargarFiltrosEquipo(equipoSeleccionadoId.value, true);
+          }
         } catch (e) {
           errorInicial.value =
             e instanceof Error ? e.message : "No se pudo iniciar la vista";
@@ -281,6 +289,7 @@ export const useFiltrosEngraseStore = defineStore(
       filtrosEquipo.value = [];
       filtroSeleccionadoId.value = null;
       equivalenciasPorFiltroId.value = {};
+      detalleEquipoPendienteRecargaId.value = equipoId;
     }
     function actualizarImagenEquipo(equipoId: number, imagen: EquipoImagenPersistida): void {
       const indice = equipos.value.findIndex((equipo) => equipo.id === equipoId);
@@ -306,6 +315,7 @@ export const useFiltrosEngraseStore = defineStore(
       limpiarSugerencias();
       equipoSeleccionadoId.value = null;
       filtroSeleccionadoId.value = null;
+      detalleEquipoPendienteRecargaId.value = null;
       filtrosAplicados.value = initialFiltrosEngraseQuery();
       catalogosCargados = false;
       filtrosCache.clear();

@@ -114,7 +114,6 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
     <EquipoEdicionShell
       v-else-if="editor.draft.value"
       :draft="editor.draft.value"
-      :stages-count="editor.activeStagesCount.value"
       :filters-count="editor.activeFiltersCount.value"
       :oils-count="editor.activeOilsCount.value"
       :can-save="editor.canSave.value"
@@ -133,22 +132,31 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
           <p class="font-bold">Hay {{ editor.validationErrors.value.length }} errores por corregir:</p>
           <ul class="mt-1 list-disc space-y-1 pl-4"><li v-for="error in editor.validationErrors.value" :key="`${error.codigo}-${error.mensaje}`">{{ error.mensaje }}</li></ul>
         </div>
-        <EquipoImagenTrigger :src="imagenManager.urlActual.value" :tiene-imagen="imagenManager.tieneImagen.value" :disabled="imagenManager.bloqueado.value" @open="imagenOverlay = true" />
         <div data-validation-section="datos" tabindex="-1">
           <p v-for="error in [...erroresDatos, ...erroresEtapas]" :key="`${error.codigo}-${error.mensaje}`" class="mb-2 rounded-md bg-danger-bg px-3 py-2 text-xs text-danger" role="alert">{{ error.mensaje }}</p>
           <EquipoDatosForm
-          v-if="editor.auxiliares.value"
-          :draft="editor.draft.value"
-          :auxiliares="editor.auxiliares.value"
-          :is-duplicate-tipo-equipo="editor.esTipoEquipoDuplicado"
-          @update-codigo="editor.actualizarCodigo"
-          @select-tipo-equipo="editor.seleccionarTipoEquipo"
-          @update-subtipo="editor.actualizarSubtipo"
-          @update-estado="editor.actualizarEstado"
-          @add-etapa="editor.agregarEtapa"
-          @remove-etapa="editor.quitarEtapa"
-          @create-tipo-equipo="editor.crearYSeleccionarTipoEquipo"
-        /></div>
+            v-if="editor.auxiliares.value"
+            :draft="editor.draft.value"
+            :auxiliares="editor.auxiliares.value"
+            :is-duplicate-tipo-equipo="editor.esTipoEquipoDuplicado"
+            @update-codigo="editor.actualizarCodigo"
+            @select-tipo-equipo="editor.seleccionarTipoEquipo"
+            @update-subtipo="editor.actualizarSubtipo"
+            @update-estado="editor.actualizarEstado"
+            @add-etapa="editor.agregarEtapa"
+            @remove-etapa="editor.quitarEtapa"
+            @create-tipo-equipo="editor.crearYSeleccionarTipoEquipo"
+          >
+            <template #imagen>
+              <EquipoImagenTrigger
+                :src="imagenManager.urlActual.value"
+                :tiene-imagen="imagenManager.tieneImagen.value"
+                :disabled="imagenManager.bloqueado.value"
+                @open="imagenOverlay = true"
+              />
+            </template>
+          </EquipoDatosForm>
+        </div>
       </template>
       <template #filtros>
         <div data-validation-section="filtros" tabindex="-1">

@@ -4,10 +4,14 @@ import { storeToRefs } from "pinia";
 import { ArrowLeft, ChevronDown, ChevronUp, Eraser, Plus } from "lucide-vue-next";
 import EquipoEngraseListItem from "./EquipoEngraseListItem.vue";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
-import type { EquipoEngraseListItem as EquipoItem } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
+import type {
+  EquipoEngraseListItem as EquipoItem,
+  FiltrosEngraseQuery,
+} from "@/stores/dbequipos/engrase/filtrosEngrase.types";
 const props = defineProps<{
   equipos: EquipoItem[];
   selectedEquipoId: number | null;
+  filters: FiltrosEngraseQuery;
   countsByTipo: [string, number][];
   loading: boolean;
   error: string | null;
@@ -19,6 +23,7 @@ const emit = defineEmits<{
   retry: [];
   filterTipo: [number | null];
   filterModelo: [string];
+  clearTipoModelo: [];
 }>();
 const featureAccessStore = useFeatureAccessStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
@@ -27,11 +32,7 @@ const canEditFiltrosEngrase = computed(() =>
   && featureAccessStore.tieneFuncionalidad("editar_filtros_engrase"),
 );
 const search = shallowRef(""),
-  showCounts = shallowRef(false),
-  selectedTipoId = shallowRef<number | null>(null),
-  selectedTipoNombre = shallowRef(""),
-  selectedModelo = shallowRef(""),
-  modelosDelTipo = shallowRef<[string, number][]>([]);
+  showCounts = shallowRef(false);
 const visible = computed(() => {
   const q = search.value.toLowerCase();
   return props.equipos.filter(
@@ -48,6 +49,13 @@ const tiposOrdenados = computed(() =>
     return counts;
   }, {})).sort(([a], [b]) => a.localeCompare(b)),
 );
+const selectedTipoId = computed(() => props.filters.tipoEquipoId);
+const selectedTipoNombre = computed(
+  () =>
+    visible.value.find((equipo) => equipo.tipo_equipo_id === selectedTipoId.value)
+      ?.tipo_equipo ?? "",
+);
+const selectedModelo = computed(() => props.filters.modelo);
 const tipoActivoId = computed(() =>
   selectedTipoId.value ?? (tiposOrdenados.value.length === 1
     ? visible.value[0]?.tipo_equipo_id ?? null
@@ -65,9 +73,7 @@ const modelosVisibles = computed(() =>
       }, {}),
   ).sort(([a], [b]) => a.localeCompare(b)),
 );
-const modelos = computed(() =>
-  selectedTipoId.value === null ? modelosVisibles.value : modelosDelTipo.value,
-);
+const modelos = modelosVisibles;
 const etiquetaCantidad = computed(() =>
   selectedTipoId.value === null
     ? "Cantidad por tipo de equipo"
@@ -78,31 +84,15 @@ const etiquetaCantidad = computed(() =>
 watch(() => props.resetSignal, () => {
   search.value = "";
   showCounts.value = false;
-  selectedTipoId.value = null;
-  selectedTipoNombre.value = "";
-  selectedModelo.value = "";
-  modelosDelTipo.value = [];
 });
 function seleccionarTipo(id: number) {
-  selectedTipoId.value = id;
-  selectedTipoNombre.value = visible.value.find(
-    (equipo) => equipo.tipo_equipo_id === id,
-  )?.tipo_equipo ?? "";
-  selectedModelo.value = "";
-  modelosDelTipo.value = modelosVisibles.value;
   emit("filterTipo", id);
 }
 function seleccionarModelo(modelo: string) {
-  selectedModelo.value = modelo;
   emit("filterModelo", modelo === "Sin modelo" ? "" : modelo);
 }
 function volverTipos() {
-  selectedTipoId.value = null;
-  selectedTipoNombre.value = "";
-  selectedModelo.value = "";
-  modelosDelTipo.value = [];
-  emit("filterTipo", null);
-  emit("filterModelo", "");
+  emit("clearTipoModelo");
 }
 function limpiarFiltros() {
   volverTipos();

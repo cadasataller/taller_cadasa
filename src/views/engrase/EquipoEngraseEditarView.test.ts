@@ -35,7 +35,7 @@ import EquipoEngraseEditarView from "./EquipoEngraseEditarView.vue";
 
 const ShellStub = defineComponent({
   name: "EquipoEdicionShell",
-  props: { canSave: Boolean, saving: Boolean, message: String, messageKind: String, validationCount: Number, movePending: Boolean, draft: Object, stagesCount: Number, filtersCount: Number, oilsCount: Number },
+  props: { canSave: Boolean, saving: Boolean, message: String, messageKind: String, validationCount: Number, movePending: Boolean, draft: Object, filtersCount: Number, oilsCount: Number },
   emits: ["save", "cancel", "back", "retryImage"],
   template: `<section><button data-test="save" @click="$emit('save')">Guardar</button><button data-test="retry" @click="$emit('retryImage')">Reintentar</button><slot name="datos"/><slot name="filtros"/><slot name="aceites"/><slot name="overlay"/></section>`,
 });

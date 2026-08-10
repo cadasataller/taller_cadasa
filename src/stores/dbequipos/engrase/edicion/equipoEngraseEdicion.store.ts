@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef, toRaw } from "vue";
+import { computed, ref, shallowRef } from "vue";
 import { defineStore } from "pinia";
 import { useFiltrosEngraseStore } from "../filtrosEngrase.store";
 import { extraerCodigoErrorEdicionEquipo } from "./equipoEngraseEdicion.errors";
@@ -22,7 +22,10 @@ import type {
   AgregarAceiteDraft,
   ActualizarAceiteDraft,
   CatalogoAceiteDraftReference,
+  FiltroDraftReference,
   ResultadoBusquedaFiltroOriginal,
+  TipoEquipoDraftReference,
+  TipoFiltroDraftReference,
   EquipoEdicionValidationIssue,
   ActualizarEquipoCompletoRespuesta,
   } from "./equipoEngraseEdicion.types";
@@ -39,6 +42,44 @@ const crearError = (error: Error): EquipoEdicionError => ({
 });
 const normalizarTexto = (valor: string): string => valor.trim().replace(/\s+/g, " ");
 const claveTexto = (valor: string): string => normalizarTexto(valor).normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase();
+const clonarTipoEquipoReferencia = (
+  referencia: TipoEquipoDraftReference,
+): TipoEquipoDraftReference =>
+  referencia.estado === "nuevo"
+    ? { ...referencia, subtiposSugeridos: [...referencia.subtiposSugeridos] }
+    : { ...referencia };
+const clonarFiltroReferencia = (
+  referencia: FiltroDraftReference,
+): FiltroDraftReference => ({ ...referencia });
+const clonarTipoFiltroReferencia = (
+  referencia: TipoFiltroDraftReference,
+): TipoFiltroDraftReference => ({ ...referencia });
+const clonarAceiteReferencia = (
+  referencia: CatalogoAceiteDraftReference,
+): CatalogoAceiteDraftReference => ({ ...referencia });
+const clonarBorrador = (borrador: EquipoEdicionDraft): EquipoEdicionDraft => ({
+  equipo: { ...borrador.equipo },
+  etapas: borrador.etapas.map((etapa) => ({ ...etapa })),
+  filtros: borrador.filtros.map((filtro) => ({
+    ...filtro,
+    tipoFiltro: { ...filtro.tipoFiltro },
+    filtro: { ...filtro.filtro },
+    filtroReferencia: clonarFiltroReferencia(filtro.filtroReferencia),
+    tipoFiltroReferencia: clonarTipoFiltroReferencia(filtro.tipoFiltroReferencia),
+  })),
+  aceites: borrador.aceites.map((aceite) => ({
+    ...aceite,
+    sistema: { ...aceite.sistema },
+    aceite: { ...aceite.aceite },
+    sistemaReferencia: clonarAceiteReferencia(aceite.sistemaReferencia),
+    aceiteReferencia: clonarAceiteReferencia(aceite.aceiteReferencia),
+  })),
+  imagen: { ...borrador.imagen },
+  tipoEquipoReferencia: clonarTipoEquipoReferencia(
+    borrador.tipoEquipoReferencia,
+  ),
+  operaciones: { ...borrador.operaciones },
+});
 const clonarSnapshot = (
   snapshot: EquipoEdicionSnapshot,
 ): EquipoEdicionSnapshot => ({
@@ -220,7 +261,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
       activeOverlay.value = null;
     }
     function actualizarCodigo(codigo: string): void { if (draft.value) draft.value.equipo.codigo = codigo.trim(); }
-    function seleccionarTipoEquipo(tipo: EquipoEdicionDraft["tipoEquipoReferencia"]): void { if (!draft.value) return; draft.value.tipoEquipoReferencia = tipo; draft.value.equipo.tipoEquipoId = tipo.estado === "existente" ? tipo.id : 0; draft.value.equipo.tipoEquipo = tipo.nombre; }
+    function seleccionarTipoEquipo(tipo: EquipoEdicionDraft["tipoEquipoReferencia"]): void { if (!draft.value) return; draft.value.tipoEquipoReferencia = clonarTipoEquipoReferencia(tipo); draft.value.equipo.tipoEquipoId = tipo.estado === "existente" ? tipo.id : 0; draft.value.equipo.tipoEquipo = tipo.nombre; }
     function actualizarSubtipo(subtipo: string): void { if (draft.value) draft.value.equipo.subtipo = subtipo.trim(); }
     function actualizarEstado(estado: EquipoEstado): void { if (draft.value) draft.value.equipo.estado = estado; }
     function agregarEtapa(etapaId: number): void { if (!draft.value || draft.value.etapas.some((etapa) => etapa.id === etapaId)) return; const etapa = auxiliares.value?.etapas.find((item) => item.id === etapaId); if (etapa) draft.value.etapas.push({ ...etapa }); }
@@ -247,7 +288,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
       if (!draft.value || entrada.cantidad < 1) return false;
       const tipoRepetido = draft.value.filtros.some((item) => item.estadoOperacion !== "pendiente_eliminacion" && claveTexto(item.tipoFiltroReferencia.nombre) === claveTexto(entrada.tipoFiltro.nombre));
       if (tipoRepetido) return false;
-      draft.value.filtros.push({ id: 0, equipoId: draft.value.equipo.id, tipoFiltro: { id: entrada.tipoFiltro.estado === "existente" ? entrada.tipoFiltro.id : 0, nombre: entrada.tipoFiltro.nombre }, filtro: { id: entrada.filtro.estado === "existente" ? entrada.filtro.id : 0, codigo: entrada.filtro.codigo, estaEnListaCompras: entrada.filtro.estaEnListaCompras }, cantidad: entrada.cantidad, cantidadEquivalencias: 0, draftId: crearTempId("equipo_filtro"), estadoOperacion: "nuevo", estadoAntesDeEliminar: null, filtroReferencia: entrada.filtro, tipoFiltroReferencia: entrada.tipoFiltro });
+      draft.value.filtros.push({ id: 0, equipoId: draft.value.equipo.id, tipoFiltro: { id: entrada.tipoFiltro.estado === "existente" ? entrada.tipoFiltro.id : 0, nombre: entrada.tipoFiltro.nombre }, filtro: { id: entrada.filtro.estado === "existente" ? entrada.filtro.id : 0, codigo: entrada.filtro.codigo, estaEnListaCompras: entrada.filtro.estaEnListaCompras }, cantidad: entrada.cantidad, cantidadEquivalencias: 0, draftId: crearTempId("equipo_filtro"), estadoOperacion: "nuevo", estadoAntesDeEliminar: null, filtroReferencia: clonarFiltroReferencia(entrada.filtro), tipoFiltroReferencia: clonarTipoFiltroReferencia(entrada.tipoFiltro) });
       return true;
     }
     function actualizarAsignacionFiltro(entrada: EditarAsignacionFiltroDraft): void {
@@ -296,7 +337,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
         sistema: { id: entrada.sistema.estado === "existente" ? entrada.sistema.id : 0, nombre: entrada.sistema.nombre },
         aceite: { id: entrada.aceite.estado === "existente" ? entrada.aceite.id : 0, nombre: entrada.aceite.nombre },
         draftId: crearTempId("equipo_aceite"), estadoOperacion: "nuevo", estadoAntesDeEliminar: null,
-        sistemaReferencia: entrada.sistema, aceiteReferencia: entrada.aceite,
+        sistemaReferencia: clonarAceiteReferencia(entrada.sistema), aceiteReferencia: clonarAceiteReferencia(entrada.aceite),
       });
       return true;
     }
@@ -305,8 +346,8 @@ export const useEquipoEngraseEdicionStore = defineStore(
       if (!item || existeSistemaActivo(entrada.sistema, entrada.draftId)) return false;
       item.sistema = { id: entrada.sistema.estado === "existente" ? entrada.sistema.id : 0, nombre: entrada.sistema.nombre };
       item.aceite = { id: entrada.aceite.estado === "existente" ? entrada.aceite.id : 0, nombre: entrada.aceite.nombre };
-      item.sistemaReferencia = entrada.sistema;
-      item.aceiteReferencia = entrada.aceite;
+      item.sistemaReferencia = clonarAceiteReferencia(entrada.sistema);
+      item.aceiteReferencia = clonarAceiteReferencia(entrada.aceite);
       if (item.estadoOperacion !== "nuevo") {
         const originalAceite = original.value?.aceites.find((aceite) => aceite.equipoAceiteId === item.equipoAceiteId);
         item.estadoOperacion = originalAceite && originalAceite.sistema.id === item.sistema.id && originalAceite.aceite.id === item.aceite.id ? "existente" : "actualizado";
@@ -350,10 +391,10 @@ export const useEquipoEngraseEdicionStore = defineStore(
         saveError.value = { codigo: "SIN_CAMBIOS", mensaje: "No hay cambios pendientes." };
         return { kind: "empty" };
       }
-      const borradorPersistido = structuredClone(toRaw(draft.value));
       const rutaFuente = imagenPersistidaActual.value?.mainStoragePath ?? null;
       saving.value = true;
       try {
+        const borradorPersistido = clonarBorrador(draft.value);
         const respuesta = await equipoEngraseEdicionService.actualizarEquipoCompleto({
           codigoOriginal: codigoOriginal.value,
           cambios,

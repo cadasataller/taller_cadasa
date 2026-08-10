@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
+import { reactive } from "vue";
 import type {
   AuxiliaresEdicionEquipo,
   EquipoParaEdicion,
@@ -200,6 +201,32 @@ describe("store de edición de equipo", () => {
     expect(listado.equipos[0]?.subtipo).toBe("Bus urbano");
     expect(listado.filtrosAplicados.modelo).toBe("urbano");
     expect(listado.equipoSeleccionadoId).toBe(6);
+  });
+
+  it("guarda referencias provenientes de proxies reactivos de Vue", async () => {
+    obtenerEquipo.mockResolvedValue({
+      ...equipo,
+      filtros: [{ id: 9, equipoId: 6, tipoFiltro: { id: 2, nombre: "Aire" }, filtro: { id: 4, codigo: "AF-1", estaEnListaCompras: true }, cantidad: 1, cantidadEquivalencias: 0 }],
+    });
+    obtenerAuxiliares.mockResolvedValue(auxiliares);
+    actualizarEquipoCompleto.mockResolvedValue(respuestaActualizacion());
+    const store = useEquipoEngraseEdicionStore();
+    await store.cargar("410002");
+
+    const subtiposSugeridos = reactive(["Bus urbano"]);
+    const tipoEquipo = reactive({
+      estado: "nuevo" as const,
+      id: null,
+      tempId: "tipo_equipo_1",
+      nombre: "Buses urbanos",
+      subtiposSugeridos,
+    });
+    store.seleccionarTipoEquipo(tipoEquipo);
+
+    const resultado = await store.guardar(async () => {});
+
+    expect(resultado.kind).toBe("success");
+    expect(actualizarEquipoCompleto).toHaveBeenCalledOnce();
   });
 
   it("conserva el borrador y habilita reintento cuando falla la RPC", async () => {
