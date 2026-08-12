@@ -59,7 +59,7 @@ function backToFiltros(): void {
 <template>
   <main
     class="flex min-h-full min-w-0 flex-col gap-2 bg-second p-2 pb-20 text-gray-700 sm:gap-2.5 sm:p-3 md:pb-4 lg:p-4"
-    :class="activeSection === 'tipos-filtro' ? 'lg:h-full lg:overflow-hidden' : ''"
+    :class="['tipos-filtro', 'filtros'].includes(activeSection) ? 'lg:h-full lg:overflow-hidden' : ''"
   >
     <CatalogoEngraseHeader class="lg:shrink-0" @back="backToFiltros" />
     <CatalogoEngraseNavigation
@@ -72,7 +72,10 @@ function backToFiltros(): void {
       v-if="activeSection === 'tipos-filtro'"
       class="lg:min-h-0 lg:overflow-hidden"
     />
-    <CatalogoFiltrosSection v-else-if="activeSection === 'filtros'" />
+    <CatalogoFiltrosSection
+      v-else-if="activeSection === 'filtros'"
+      class="lg:min-h-0 lg:overflow-hidden"
+    />
     <CatalogoEngraseSectionShell v-else :title="activeSectionLabel" />
   </main>
 </template>

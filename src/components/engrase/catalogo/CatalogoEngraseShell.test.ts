@@ -133,7 +133,7 @@ describe("shell del catálogo de engrase", () => {
     await router.push({ name: "CatalogoEngraseFiltros" });
 
     expect(wrapper.findComponent(CatalogoEngraseView).element).toBe(initialViewElement);
-    expect(wrapper.findComponent(CatalogoEngraseView).get("main").classes()).not.toContain("lg:overflow-hidden");
+    expect(wrapper.findComponent(CatalogoEngraseView).get("main").classes()).toContain("lg:overflow-hidden");
     expect(wrapper.findComponent(CatalogoFiltrosSection).exists()).toBe(true);
     await vi.waitFor(() => expect(listarFiltros).toHaveBeenCalledOnce());
 

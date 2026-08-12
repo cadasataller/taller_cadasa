@@ -1,0 +1,9 @@
+<script setup lang="ts">
+import { AlertCircle, Inbox, SearchX } from "lucide-vue-next";
+defineProps<{ kind: "loading" | "error" | "empty" | "no-results"; message?: string | null }>();
+const emit = defineEmits<{ retry: []; clear: []; create: [] }>();
+</script>
+<template>
+  <div v-if="kind === 'loading'" class="space-y-2" aria-label="Cargando filtros" aria-busy="true"><div v-for="index in 6" :key="index" class="h-16 animate-pulse rounded-lg border border-gray-200 bg-white motion-reduce:animate-none"><div class="m-4 h-3 w-1/3 rounded bg-gray-200" /></div></div>
+  <div v-else class="grid min-h-52 place-items-center rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center"><div><component :is="kind === 'error' ? AlertCircle : kind === 'no-results' ? SearchX : Inbox" class="mx-auto h-7 w-7 text-main" aria-hidden="true" /><h3 class="mt-3 text-sm font-semibold text-gray-800">{{ kind === 'error' ? 'No se pudieron cargar los filtros' : kind === 'empty' ? 'No hay filtros registrados.' : 'No hay coincidencias' }}</h3><p class="mt-1 text-xs text-gray-500">{{ message ?? (kind === 'no-results' ? 'Prueba cambiando o limpiando los filtros.' : '') }}</p><button v-if="kind === 'error'" type="button" class="mt-4 min-h-11 cursor-pointer rounded-md bg-main px-4 text-sm font-semibold text-white" @click="emit('retry')">Reintentar</button><button v-else-if="kind === 'empty'" type="button" class="mt-4 min-h-11 cursor-pointer rounded-md bg-main px-4 text-sm font-semibold text-white" @click="emit('create')">Nuevo filtro</button><button v-else type="button" class="mt-4 min-h-11 cursor-pointer rounded-md border border-gray-300 px-4 text-sm font-semibold" @click="emit('clear')">Limpiar filtros</button></div></div>
+</template>

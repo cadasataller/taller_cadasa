@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia';
 import { useRouter, useRoute } from 'vue-router';
 import { supabase, supabaseRatings, supabaseCompras, supabaseEquipos } from '@/lib/supabase';
 import { useFeatureAccessStore } from '@/stores/db_mantenimiento/app_feature_access/featureAccess.store';
+import { useFiltrosCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/filtrosCatalogo.store';
 import { useDashboardHeaderNav } from '@/composables/useDashboardHeaderNav';
 import { 
   BarChart3, 
@@ -22,6 +23,7 @@ import {
 const router = useRouter();
 const route = useRoute();
 const featureAccessStore = useFeatureAccessStore();
+const filtrosCatalogoStore = useFiltrosCatalogoStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
 const isSidebarOpen = ref(true);
 const isPreparingSolicitudCompraCreate = ref(false);
@@ -172,6 +174,7 @@ const logout = async () => {
     supabaseCompras.auth.signOut(),
     supabaseEquipos.auth.signOut()
   ]);
+  filtrosCatalogoStore.reset();
   router.push('/login');
 };
 
