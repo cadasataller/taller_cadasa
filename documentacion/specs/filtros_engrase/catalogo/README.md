@@ -46,7 +46,8 @@ specs/
 │   ├── README.md
 │   └── SPEC-00…SPEC-07
 └── sistemas/
-    └── README.md
+    ├── README.md
+    └── SPEC-00…SPEC-07
 ```
 
 ## Orden de trabajo
@@ -55,7 +56,7 @@ specs/
 2. Implementar **Tipos de filtro** siguiendo `tipos-filtro/README.md` y sus specs `00` a `07`.
 3. Implementar **Filtros** siguiendo `filtros/README.md` y sus specs `00` a `07`.
 4. Implementar **Aceites** siguiendo `aceites/README.md` y sus specs `00` a `07`.
-5. Especificar e implementar **Sistemas** dentro de `sistemas/`.
+5. Implementar **Sistemas** siguiendo `sistemas/README.md` y sus specs `00` a `07`.
 6. Integrar confirmación, estados cruzados y pruebas finales cuando las cuatro secciones estén disponibles.
 
 No avanzar una sección sin su spec específico. El spec general no autoriza implementar tablas, filtros, formularios, drawers, RPC ni reglas particulares de ninguna pestaña.
