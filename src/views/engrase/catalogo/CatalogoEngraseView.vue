@@ -5,6 +5,7 @@ import CatalogoEngraseHeader from "@/components/engrase/catalogo/CatalogoEngrase
 import CatalogoEngraseNavigation from "@/components/engrase/catalogo/CatalogoEngraseNavigation.vue";
 import CatalogoEngraseSectionShell from "@/components/engrase/catalogo/CatalogoEngraseSectionShell.vue";
 import CatalogoTiposFiltroSection from "./CatalogoTiposFiltroSection.vue";
+import CatalogoFiltrosSection from "./CatalogoFiltrosSection.vue";
 import type {
   CatalogoEngraseNavigationItem,
   CatalogoEngraseRouteName,
@@ -58,14 +59,20 @@ function backToFiltros(): void {
 <template>
   <main
     class="flex min-h-full min-w-0 flex-col gap-2 bg-second p-2 pb-20 text-gray-700 sm:gap-2.5 sm:p-3 md:pb-4 lg:p-4"
+    :class="activeSection === 'tipos-filtro' ? 'lg:h-full lg:overflow-hidden' : ''"
   >
-    <CatalogoEngraseHeader @back="backToFiltros" />
+    <CatalogoEngraseHeader class="lg:shrink-0" @back="backToFiltros" />
     <CatalogoEngraseNavigation
+      class="lg:shrink-0"
       :items="sections"
       :active-section="activeSection"
       @select-section="selectSection"
     />
-    <CatalogoTiposFiltroSection v-if="activeSection === 'tipos-filtro'" />
+    <CatalogoTiposFiltroSection
+      v-if="activeSection === 'tipos-filtro'"
+      class="lg:min-h-0 lg:overflow-hidden"
+    />
+    <CatalogoFiltrosSection v-else-if="activeSection === 'filtros'" />
     <CatalogoEngraseSectionShell v-else :title="activeSectionLabel" />
   </main>
 </template>

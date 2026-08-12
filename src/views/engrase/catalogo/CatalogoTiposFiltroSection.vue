@@ -30,7 +30,10 @@ function openItem(item: CatalogoTipoFiltroItem): void { catalogo.abrirEditar(ite
 <template>
   <section class="flex min-h-0 min-w-0 flex-1 flex-col rounded-lg border border-gray-200 bg-[#FAF9F5] shadow-sm">
     <div class="flex min-h-0 min-w-0 flex-1 gap-3">
-      <div class="min-w-0 flex-1 p-3 sm:p-4" :class="catalogo.drawerOpen.value ? 'lg:pr-[calc(clamp(320px,28vw,400px)+1rem)]' : ''">
+      <div
+        class="min-w-0 flex-1 p-3 sm:p-4 lg:flex lg:min-h-0 lg:flex-col"
+        :class="catalogo.drawerOpen.value ? 'lg:pr-[calc(clamp(320px,28vw,400px)+1rem)]' : ''"
+      >
         <TiposFiltroToolbar
           :busqueda="catalogo.busqueda.value"
           :estado="catalogo.estado.value"
@@ -45,7 +48,7 @@ function openItem(item: CatalogoTipoFiltroItem): void { catalogo.abrirEditar(ite
           <div><h2 class="text-sm font-bold text-main">Tipos de filtro</h2><p class="text-xs text-gray-500" aria-live="polite">{{ visibleLabel }} resultados</p></div>
         </header>
 
-        <div class="mt-3">
+        <div class="mt-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
           <TiposFiltroListState v-if="listState" :kind="listState" :message="mensajeCatalogoTiposFiltroError(catalogo.errorInicial.value)" @retry="catalogo.reintentar" @clear="catalogo.limpiarFiltros" @create="catalogo.abrirCrear" />
           <template v-else>
             <TiposFiltroTable :items="catalogo.itemsVisibles.value" :selected-id="catalogo.seleccionadoId.value" :sort-key="catalogo.sortKey.value" :sort-direction="catalogo.sortDirection.value" @select="openItem" @sort="catalogo.actualizarOrden" />
