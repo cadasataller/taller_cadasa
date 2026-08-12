@@ -43,7 +43,8 @@ specs/
 │   ├── README.md
 │   └── SPEC-00…SPEC-07
 ├── aceites/
-│   └── README.md
+│   ├── README.md
+│   └── SPEC-00…SPEC-07
 └── sistemas/
     └── README.md
 ```
@@ -53,7 +54,7 @@ specs/
 1. Implementar el shell general definido en `general/SPEC-00-vista-general-catalogo.md`.
 2. Implementar **Tipos de filtro** siguiendo `tipos-filtro/README.md` y sus specs `00` a `07`.
 3. Implementar **Filtros** siguiendo `filtros/README.md` y sus specs `00` a `07`.
-4. Especificar e implementar **Aceites** dentro de `aceites/`.
+4. Implementar **Aceites** siguiendo `aceites/README.md` y sus specs `00` a `07`.
 5. Especificar e implementar **Sistemas** dentro de `sistemas/`.
 6. Integrar confirmación, estados cruzados y pruebas finales cuando las cuatro secciones estén disponibles.
 
