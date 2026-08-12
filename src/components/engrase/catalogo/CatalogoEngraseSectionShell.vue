@@ -3,18 +3,21 @@ import { AlertCircle, Construction, RotateCw } from "lucide-vue-next";
 
 type SectionState = "content" | "pending" | "loading" | "error";
 
-withDefaults(defineProps<{
-  state?: SectionState;
-  title: string;
-  description?: string;
-  errorTitle?: string;
-  errorDescription?: string;
-}>(), {
-  state: "pending",
-  description: "Esta sección se implementará en una entrega posterior.",
-  errorTitle: "No se pudo cargar esta sección",
-  errorDescription: "Ocurrió un problema al obtener la información.",
-});
+withDefaults(
+  defineProps<{
+    state?: SectionState;
+    title: string;
+    description?: string;
+    errorTitle?: string;
+    errorDescription?: string;
+  }>(),
+  {
+    state: "pending",
+    description: "Esta sección se implementará en una entrega posterior.",
+    errorTitle: "No se pudo cargar esta sección",
+    errorDescription: "Ocurrió un problema al obtener la información.",
+  },
+);
 
 const emit = defineEmits<{
   retry: [];
@@ -25,7 +28,9 @@ const emit = defineEmits<{
   <section
     class="flex min-h-64 min-w-0 flex-1 rounded-lg border border-gray-200 bg-[#FAF9F5] shadow-sm sm:min-h-80"
     :aria-busy="state === 'loading' ? 'true' : undefined"
-    :aria-labelledby="state === 'content' ? undefined : 'catalogo-section-title'"
+    :aria-labelledby="
+      state === 'content' ? undefined : 'catalogo-section-title'
+    "
   >
     <slot v-if="state === 'content'" />
 
@@ -35,8 +40,12 @@ const emit = defineEmits<{
     >
       <h2 id="catalogo-section-title" class="sr-only">Cargando {{ title }}</h2>
       <slot name="loading">
-        <div class="h-8 w-44 animate-pulse rounded-md bg-gray-200 motion-reduce:animate-none" />
-        <div class="h-24 w-full animate-pulse rounded-md bg-gray-100 motion-reduce:animate-none" />
+        <div
+          class="h-8 w-44 animate-pulse rounded-md bg-gray-200 motion-reduce:animate-none"
+        />
+        <div
+          class="h-24 w-full animate-pulse rounded-md bg-gray-100 motion-reduce:animate-none"
+        />
       </slot>
     </div>
 
@@ -59,8 +68,13 @@ const emit = defineEmits<{
       </button>
     </div>
 
-    <div v-else class="m-auto flex max-w-md flex-col items-center px-5 py-12 text-center">
-      <span class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg border border-main/10 bg-main/5 text-main">
+    <div
+      v-else
+      class="m-auto flex max-w-md flex-col items-center px-5 py-12 text-center"
+    >
+      <span
+        class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-lg border border-main/10 bg-main/5 text-main"
+      >
         <Construction class="h-6 w-6" aria-hidden="true" />
       </span>
       <h2 id="catalogo-section-title" class="text-base font-bold text-main">

@@ -50,7 +50,9 @@ function handleMobileSelection(event: Event): void {
       </div>
     </div>
 
-    <div class="hidden min-w-0 grid-cols-4 border-b border-gray-100 px-2 sm:grid">
+    <div
+      class="hidden min-w-0 grid-cols-4 border-b border-gray-100 px-2 sm:grid"
+    >
       <RouterLink
         v-for="item in items"
         :key="item.id"

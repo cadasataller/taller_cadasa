@@ -6,6 +6,7 @@ import CatalogoEngraseNavigation from "@/components/engrase/catalogo/CatalogoEng
 import CatalogoEngraseSectionShell from "@/components/engrase/catalogo/CatalogoEngraseSectionShell.vue";
 import CatalogoTiposFiltroSection from "./CatalogoTiposFiltroSection.vue";
 import CatalogoFiltrosSection from "./CatalogoFiltrosSection.vue";
+import CatalogoAceitesSection from "./CatalogoAceitesSection.vue";
 import type {
   CatalogoEngraseNavigationItem,
   CatalogoEngraseRouteName,
@@ -16,7 +17,11 @@ const route = useRoute();
 const router = useRouter();
 
 const sections = [
-  { id: "tipos-filtro", label: "Tipos de filtro", routeName: "CatalogoEngraseTiposFiltro" },
+  {
+    id: "tipos-filtro",
+    label: "Tipos de filtro",
+    routeName: "CatalogoEngraseTiposFiltro",
+  },
   { id: "filtros", label: "Filtros", routeName: "CatalogoEngraseFiltros" },
   { id: "aceites", label: "Aceites", routeName: "CatalogoEngraseAceites" },
   { id: "sistemas", label: "Sistemas", routeName: "CatalogoEngraseSistemas" },
@@ -26,12 +31,16 @@ const sectionByRouteName = Object.fromEntries(
   sections.map((section) => [section.routeName, section.id]),
 ) as Record<CatalogoEngraseRouteName, CatalogoEngraseSection>;
 
-const activeSection = computed<CatalogoEngraseSection>(() =>
-  sectionByRouteName[route.name as CatalogoEngraseRouteName] ?? "tipos-filtro",
+const activeSection = computed<CatalogoEngraseSection>(
+  () =>
+    sectionByRouteName[route.name as CatalogoEngraseRouteName] ??
+    "tipos-filtro",
 );
 
-const activeSectionLabel = computed(() =>
-  sections.find((section) => section.id === activeSection.value)?.label ?? "Tipos de filtro",
+const activeSectionLabel = computed(
+  () =>
+    sections.find((section) => section.id === activeSection.value)?.label ??
+    "Tipos de filtro",
 );
 
 function selectSection(sectionId: CatalogoEngraseSection): void {
@@ -43,9 +52,10 @@ function selectSection(sectionId: CatalogoEngraseSection): void {
 
 function backToFiltros(): void {
   const previousLocation = window.history.state?.back;
-  const previousPath = typeof previousLocation === "string" ? previousLocation : "";
-  const cameFromEngrase = previousPath.includes("/engrase/")
-    && !previousPath.includes("/catalogo");
+  const previousPath =
+    typeof previousLocation === "string" ? previousLocation : "";
+  const cameFromEngrase =
+    previousPath.includes("/engrase/") && !previousPath.includes("/catalogo");
 
   if (cameFromEngrase) {
     router.back();
@@ -59,7 +69,11 @@ function backToFiltros(): void {
 <template>
   <main
     class="flex min-h-full min-w-0 flex-col gap-2 bg-second p-2 pb-20 text-gray-700 sm:gap-2.5 sm:p-3 md:pb-4 lg:p-4"
-    :class="['tipos-filtro', 'filtros'].includes(activeSection) ? 'lg:h-full lg:overflow-hidden' : ''"
+    :class="
+      ['tipos-filtro', 'filtros', 'aceites'].includes(activeSection)
+        ? 'lg:h-full lg:overflow-hidden'
+        : ''
+    "
   >
     <CatalogoEngraseHeader class="lg:shrink-0" @back="backToFiltros" />
     <CatalogoEngraseNavigation
@@ -74,6 +88,10 @@ function backToFiltros(): void {
     />
     <CatalogoFiltrosSection
       v-else-if="activeSection === 'filtros'"
+      class="lg:min-h-0 lg:overflow-hidden"
+    />
+    <CatalogoAceitesSection
+      v-else-if="activeSection === 'aceites'"
       class="lg:min-h-0 lg:overflow-hidden"
     />
     <CatalogoEngraseSectionShell v-else :title="activeSectionLabel" />

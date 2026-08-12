@@ -23,10 +23,14 @@ const emit = defineEmits<{
     <span class="hidden h-6 w-px bg-gray-200 sm:block" aria-hidden="true" />
 
     <div class="min-w-0">
-      <p class="hidden text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500 md:block">
-        Engrase / Filtros
+      <p
+        class="hidden text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500 md:block"
+      >
+        Engrase / Catalogo
       </p>
-      <h1 class="truncate text-base font-bold leading-tight text-main sm:text-[17px]">
+      <h1
+        class="truncate text-base font-bold leading-tight text-main sm:text-[17px]"
+      >
         <span class="sm:hidden">Catálogo de engrase</span>
         <span class="hidden sm:inline">Catálogo de filtros y engrase</span>
       </h1>
