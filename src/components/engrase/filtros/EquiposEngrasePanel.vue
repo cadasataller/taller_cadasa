@@ -24,6 +24,7 @@ const emit = defineEmits<{
   filterTipo: [number | null];
   filterModelo: [string];
   clearTipoModelo: [];
+  openCatalogo: [];
 }>();
 const featureAccessStore = useFeatureAccessStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
@@ -117,6 +118,10 @@ function alternarMenuEquipo() {
 function cerrarMenuEquipo() {
   showEquipoMenu.value = false;
 }
+function abrirCatalogo() {
+  cerrarMenuEquipo();
+  emit("openCatalogo");
+}
 </script>
 <template>
   <section
@@ -164,7 +169,7 @@ function cerrarMenuEquipo() {
           >
             <button
               type="button"
-              class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-700 transition-colors hover:bg-main/5 hover:text-main"
+              class="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-700 transition-colors hover:bg-main/5 hover:text-main"
               role="menuitem"
               @click="cerrarMenuEquipo"
             >
@@ -173,12 +178,12 @@ function cerrarMenuEquipo() {
             </button>
             <button
               type="button"
-              class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-700 transition-colors hover:bg-main/5 hover:text-main"
+              class="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-700 transition-colors hover:bg-main/5 hover:text-main"
               role="menuitem"
-              @click="cerrarMenuEquipo"
+              @click="abrirCatalogo"
             >
               <LibraryBig class="h-4 w-4" aria-hidden="true" />
-              Ver Catalogo
+              Ver catálogo
             </button>
           </div>
         </Transition>
