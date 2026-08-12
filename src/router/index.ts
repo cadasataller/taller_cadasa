@@ -88,6 +88,7 @@ const router = createRouter({
               component: () => import('@/views/compras/SolicitudCompraCrearView.vue'),
               meta: {
                 requiredFeature: 'crear_solicitud_compra',
+                layout: 'fullscreen',
               },
             },
           ],
@@ -97,6 +98,69 @@ const router = createRouter({
           name: 'Catalogo',
           component: () => import('@/views/CatalogoView.vue'),
           meta: { requiredFeature: 'module_catalog' },
+        },
+        {
+          path: 'engrase/catalogo',
+          name: 'CatalogoEngrase',
+          component: () => import('@/views/engrase/catalogo/CatalogoEngraseView.vue'),
+          redirect: { name: 'CatalogoEngraseTiposFiltro' },
+          meta: {
+            requiredFeatures: ['module_engrase', 'ver_catalogo_engrase'],
+          },
+          children: [
+            {
+              path: 'tipos-filtro',
+              name: 'CatalogoEngraseTiposFiltro',
+              component: EmptyRouteComponent,
+            },
+            {
+              path: 'filtros',
+              name: 'CatalogoEngraseFiltros',
+              component: EmptyRouteComponent,
+            },
+            {
+              path: 'aceites',
+              name: 'CatalogoEngraseAceites',
+              component: EmptyRouteComponent,
+            },
+            {
+              path: 'sistemas',
+              name: 'CatalogoEngraseSistemas',
+              component: EmptyRouteComponent,
+            },
+          ],
+        },
+        {
+          path: 'engrase/filtros/catalogo',
+          name: 'CatalogoEngraseLegacy',
+          redirect: { name: 'CatalogoEngraseTiposFiltro' },
+          children: [
+            {
+              path: 'tipos-filtro',
+              redirect: { name: 'CatalogoEngraseTiposFiltro' },
+            },
+            {
+              path: 'filtros',
+              redirect: { name: 'CatalogoEngraseFiltros' },
+            },
+            {
+              path: 'aceites',
+              redirect: { name: 'CatalogoEngraseAceites' },
+            },
+            {
+              path: 'sistemas',
+              redirect: { name: 'CatalogoEngraseSistemas' },
+            },
+          ],
+        },
+        {
+          path: 'engrase/filtros/equipos/:codigo/editar',
+          name: 'EquipoEngraseEditar',
+          component: () => import('@/views/engrase/EquipoEngraseEditarView.vue'),
+          meta: {
+            requiredFeatures: ['module_engrase', 'ver_filtros_engrase', 'editar_filtros_engrase'],
+            layout: 'fullscreen',
+          },
         },
         {
           path: 'engrase/filtros',

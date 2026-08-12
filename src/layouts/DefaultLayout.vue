@@ -4,7 +4,11 @@ import { storeToRefs } from 'pinia';
 import { useRouter, useRoute } from 'vue-router';
 import { supabase, supabaseRatings, supabaseCompras, supabaseEquipos } from '@/lib/supabase';
 import { useFeatureAccessStore } from '@/stores/db_mantenimiento/app_feature_access/featureAccess.store';
+import { useFiltrosCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/filtrosCatalogo.store';
+import { useAceitesCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/aceitesCatalogo.store';
+import { useSistemasCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/sistemasCatalogo.store';
 import { useDashboardHeaderNav } from '@/composables/useDashboardHeaderNav';
+import { useCatalogoEngrasePermissions } from '@/composables/engrase/catalogo/useCatalogoEngrasePermissions';
 import { 
   BarChart3, 
   Wrench, 
@@ -22,6 +26,9 @@ import {
 const router = useRouter();
 const route = useRoute();
 const featureAccessStore = useFeatureAccessStore();
+const filtrosCatalogoStore = useFiltrosCatalogoStore();
+const aceitesCatalogoStore = useAceitesCatalogoStore();
+const sistemasCatalogoStore = useSistemasCatalogoStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
 const isSidebarOpen = ref(true);
 const isPreparingSolicitudCompraCreate = ref(false);
@@ -54,7 +61,18 @@ const allMenuItems = [
 
 const canSeeEngrase = computed(() => isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(MODULE_ENGRASE_FEATURE));
 const canSeeFiltrosEngrase = computed(() => canSeeEngrase.value && featureAccessStore.tieneFuncionalidad(VIEW_FILTROS_ENGRASE_FEATURE));
+const { canViewCatalog } = useCatalogoEngrasePermissions();
+const canSeeCatalogoEngrase = computed(() =>
+  canSeeEngrase.value && canViewCatalog.value
+);
 const isEngraseRoute = computed(() => route.path.startsWith('/engrase'));
+const isCatalogoEngraseRoute = computed(() =>
+  route.path.startsWith('/engrase/catalogo')
+  || route.path.startsWith('/engrase/filtros/catalogo')
+);
+const isFiltrosEngraseRoute = computed(() =>
+  route.path.startsWith('/engrase/filtros') && !isCatalogoEngraseRoute.value
+);
 watch(isEngraseRoute, (active) => { if (active) engraseDesktopOpen.value = true; }, { immediate: true });
 
 const menuItems = computed(() => allMenuItems.filter((item) =>
@@ -73,8 +91,9 @@ const isSolicitudCompraCreateRoute = computed(() => route.name === 'SolicitudCom
 const isDashboardRoute = computed(() => route.path.startsWith('/dashboard'));
 const showDashboardHeaderNav = computed(() => isDashboardRoute.value && dashboardHeaderNavState.isVisible);
 const mobileTopBarSpacerClass = computed(() => showDashboardHeaderNav.value ? 'h-[124px]' : 'h-[68px]');
-const hideShellForSolicitudCompraCreate = computed(() =>
-  isPreparingSolicitudCompraCreate.value || isSolicitudCompraCreateRoute.value
+const hideDefaultLayout = computed(() =>
+  isPreparingSolicitudCompraCreate.value
+  || route.matched.some((record) => record.meta.layout === 'fullscreen')
 );
 const isComprasFabLoading = computed(() =>
   route.path.startsWith('/compras')
@@ -116,7 +135,7 @@ const mobileFabVisibilityClass = computed(() => {
       : 'translate-x-0 opacity-100';
   }
 
-  return hideShellForSolicitudCompraCreate.value
+  return hideDefaultLayout.value
     ? '-translate-x-6 opacity-0 pointer-events-none'
     : 'translate-x-0 opacity-100';
 });
@@ -171,6 +190,9 @@ const logout = async () => {
     supabaseCompras.auth.signOut(),
     supabaseEquipos.auth.signOut()
   ]);
+  filtrosCatalogoStore.reset();
+  aceitesCatalogoStore.reset();
+  sistemasCatalogoStore.reset();
   router.push('/login');
 };
 
@@ -194,13 +216,11 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
 <template>
   <div class="flex h-screen bg-second overflow-hidden">
     <!-- Desktop Sidebar -->
-    <aside 
+    <aside
+      v-if="!hideDefaultLayout"
       id="desktop-sidebar-container"
       class="hidden md:flex flex-col w-64 bg-main-dark text-white p-6 transition-all duration-300 relative z-20"
-      :class="[
-        { '-ml-64': !isSidebarOpen },
-        hideShellForSolicitudCompraCreate ? '-translate-x-8 opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'
-      ]"
+      :class="{ '-ml-64': !isSidebarOpen }"
     >
       <div class="mb-10">
         <h1 class="font-display text-2xl text-accent tracking-widest">CADASA</h1>
@@ -226,7 +246,10 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
           <button type="button" class="flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all" :class="isEngraseRoute ? 'bg-main text-accent' : 'text-gray-400 hover:bg-main hover:text-white'" @click="engraseDesktopOpen = !engraseDesktopOpen" :aria-expanded="engraseDesktopOpen">
             <Droplets class="w-5 h-5 flex-shrink-0" /><span class="font-medium text-sm flex-1 text-left">Engrase</span><ChevronDown class="w-4 h-4 transition-transform" :class="{ 'rotate-180': engraseDesktopOpen }" />
           </button>
-          <router-link v-if="engraseDesktopOpen && canSeeFiltrosEngrase" to="/engrase/filtros" class="ml-5 flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'">Filtros</router-link>
+          <div v-if="engraseDesktopOpen" class="ml-5 space-y-1">
+            <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isFiltrosEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'">Filtros</router-link>
+            <router-link v-if="canSeeCatalogoEngrase" to="/engrase/catalogo" class="flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isCatalogoEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'">Catálogo</router-link>
+          </div>
         </div>
       </nav>
 
@@ -243,8 +266,8 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
     <main class="flex-1 flex flex-col min-w-0 bg-second overflow-hidden relative">
       <!-- Top Header (Desktop) -->
       <header
+        v-if="!hideDefaultLayout"
         class="hidden md:flex items-center gap-6 px-8 h-16 bg-white border-b border-gray-200 shadow-md relative z-10 transition-all duration-300"
-        :class="hideShellForSolicitudCompraCreate ? '-translate-x-8 opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'"
       >
         <div class="flex items-center gap-4 min-w-0">
           <button @click="isSidebarOpen = !isSidebarOpen" class="p-2 hover:bg-gray-50 rounded-lg text-gray-400">
@@ -290,8 +313,8 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
 
       <!-- Mobile Top Bar -->
       <div
+        v-if="!hideDefaultLayout"
         class="md:hidden bg-white border-b border-gray-100 absolute top-0 left-0 w-full z-[30] shadow-sm transition-all duration-300"
-        :class="hideShellForSolicitudCompraCreate ? '-translate-x-6 opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'"
       >
         <div class="flex items-center justify-between px-6 py-4">
           <div class="flex items-center gap-2 min-w-0">
@@ -324,7 +347,7 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
       </div>
 
       <!-- Mobile Spacer for Top Bar -->
-      <div :class="mobileTopBarSpacerClass" class="md:hidden flex-shrink-0 w-full"></div>
+      <div v-if="!hideDefaultLayout" :class="mobileTopBarSpacerClass" class="md:hidden flex-shrink-0 w-full"></div>
 
       <!-- Content Area -->
       <div id="app-main-content-area" class="flex-1 overflow-y-auto w-full">
@@ -337,9 +360,9 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
 
       <!-- Mobile Bottom Nav - SCROLLABLE -->
       <nav 
+        v-if="!hideDefaultLayout"
         id="mobile-bottom-nav" 
         class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-2 flex items-center justify-around gap-2 overflow-x-auto z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] rounded-t-3xl hide-scrollbar transition-all duration-300"
-        :class="hideShellForSolicitudCompraCreate ? '-translate-x-6 opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'"
       >
         <router-link 
           v-for="item in menuItems" 
@@ -355,14 +378,17 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
           <button type="button" class="flex flex-col items-center gap-1 p-2" :class="isEngraseRoute ? 'text-main' : 'text-gray-300'" @click="mobileEngraseOpen = !mobileEngraseOpen" :aria-expanded="mobileEngraseOpen"><Droplets class="w-6 h-6" /><span class="text-[10px] font-medium">Engrase</span></button>
         </div>
       </nav>
-      <div v-if="mobileEngraseOpen && canSeeEngrase" class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl">
+      <div v-if="!hideDefaultLayout && mobileEngraseOpen && canSeeEngrase" class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl">
         <div class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"><span>Engrase</span><button type="button" class="p-2" @click="mobileEngraseOpen = false" aria-label="Cerrar subpestañas"><X class="w-5 h-5" /></button></div>
-        <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="block w-full rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-main" @click="mobileEngraseOpen = false">Filtros</router-link>
+        <div class="space-y-2">
+          <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="block w-full rounded-xl px-4 py-3 text-sm font-semibold" :class="isFiltrosEngraseRoute ? 'bg-main/10 text-main' : 'bg-gray-50 text-gray-600'" @click="mobileEngraseOpen = false">Filtros</router-link>
+          <router-link v-if="canSeeCatalogoEngrase" to="/engrase/catalogo" class="block w-full rounded-xl px-4 py-3 text-sm font-semibold" :class="isCatalogoEngraseRoute ? 'bg-main/10 text-main' : 'bg-gray-50 text-gray-600'" @click="mobileEngraseOpen = false">Catálogo</router-link>
+        </div>
       </div>
 
       <!-- FAB Mobile -->
       <button 
-        v-if="canShowMobileFab"
+        v-if="!hideDefaultLayout && canShowMobileFab"
         @click="triggerNew" 
         class="lg:hidden fixed bottom-20 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-gray-900 shadow-lg transition-all duration-300 active:scale-90"
         :class="[mobileFabVisibilityClass, isComprasFabLoading ? 'cursor-wait' : 'cursor-pointer']"

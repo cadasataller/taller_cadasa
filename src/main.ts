@@ -8,6 +8,7 @@ import router from './router';
 import App from './App.vue';
 import 'primeicons/primeicons.css';
 import '@vuepic/vue-datepicker/dist/main.css';
+import 'vue-multiselect/dist/vue-multiselect.css';
 import './index.css';
 
 const app = createApp(App);

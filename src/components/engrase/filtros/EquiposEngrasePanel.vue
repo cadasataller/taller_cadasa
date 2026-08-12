@@ -4,10 +4,14 @@ import { storeToRefs } from "pinia";
 import { ArrowLeft, ChevronDown, ChevronUp, Eraser, Plus } from "lucide-vue-next";
 import EquipoEngraseListItem from "./EquipoEngraseListItem.vue";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
-import type { EquipoEngraseListItem as EquipoItem } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
+import type {
+  EquipoEngraseListItem as EquipoItem,
+  FiltrosEngraseQuery,
+} from "@/stores/dbequipos/engrase/filtrosEngrase.types";
 const props = defineProps<{
   equipos: EquipoItem[];
   selectedEquipoId: number | null;
+  filters: FiltrosEngraseQuery;
   countsByTipo: [string, number][];
   loading: boolean;
   error: string | null;
@@ -15,9 +19,11 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   selectEquipo: [number];
+  imageVisible: [number];
   retry: [];
   filterTipo: [number | null];
   filterModelo: [string];
+  clearTipoModelo: [];
 }>();
 const featureAccessStore = useFeatureAccessStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
@@ -26,11 +32,7 @@ const canEditFiltrosEngrase = computed(() =>
   && featureAccessStore.tieneFuncionalidad("editar_filtros_engrase"),
 );
 const search = shallowRef(""),
-  showCounts = shallowRef(false),
-  selectedTipoId = shallowRef<number | null>(null),
-  selectedTipoNombre = shallowRef(""),
-  selectedModelo = shallowRef(""),
-  modelosDelTipo = shallowRef<[string, number][]>([]);
+  showCounts = shallowRef(false);
 const visible = computed(() => {
   const q = search.value.toLowerCase();
   return props.equipos.filter(
@@ -46,6 +48,19 @@ const tiposOrdenados = computed(() =>
     counts[equipo.tipo_equipo] = (counts[equipo.tipo_equipo] ?? 0) + 1;
     return counts;
   }, {})).sort(([a], [b]) => a.localeCompare(b)),
+);
+const selectedTipoId = computed(() => props.filters.tipoEquipoId);
+const selectedTipoNombre = computed(
+  () =>
+    visible.value.find((equipo) => equipo.tipo_equipo_id === selectedTipoId.value)
+      ?.tipo_equipo ?? "",
+);
+const selectedModelo = computed(() => props.filters.modelo);
+const hayFiltrosDeChipsActivos = computed(
+  () => selectedTipoId.value !== null || Boolean(selectedModelo.value),
+);
+const hayFiltrosLocalesActivos = computed(
+  () => Boolean(search.value) || hayFiltrosDeChipsActivos.value,
 );
 const tipoActivoId = computed(() =>
   selectedTipoId.value ?? (tiposOrdenados.value.length === 1
@@ -64,9 +79,7 @@ const modelosVisibles = computed(() =>
       }, {}),
   ).sort(([a], [b]) => a.localeCompare(b)),
 );
-const modelos = computed(() =>
-  selectedTipoId.value === null ? modelosVisibles.value : modelosDelTipo.value,
-);
+const modelos = modelosVisibles;
 const etiquetaCantidad = computed(() =>
   selectedTipoId.value === null
     ? "Cantidad por tipo de equipo"
@@ -77,31 +90,15 @@ const etiquetaCantidad = computed(() =>
 watch(() => props.resetSignal, () => {
   search.value = "";
   showCounts.value = false;
-  selectedTipoId.value = null;
-  selectedTipoNombre.value = "";
-  selectedModelo.value = "";
-  modelosDelTipo.value = [];
 });
 function seleccionarTipo(id: number) {
-  selectedTipoId.value = id;
-  selectedTipoNombre.value = visible.value.find(
-    (equipo) => equipo.tipo_equipo_id === id,
-  )?.tipo_equipo ?? "";
-  selectedModelo.value = "";
-  modelosDelTipo.value = modelosVisibles.value;
   emit("filterTipo", id);
 }
 function seleccionarModelo(modelo: string) {
-  selectedModelo.value = modelo;
   emit("filterModelo", modelo === "Sin modelo" ? "" : modelo);
 }
 function volverTipos() {
-  selectedTipoId.value = null;
-  selectedTipoNombre.value = "";
-  selectedModelo.value = "";
-  modelosDelTipo.value = [];
-  emit("filterTipo", null);
-  emit("filterModelo", "");
+  emit("clearTipoModelo");
 }
 function limpiarFiltros() {
   volverTipos();
@@ -126,10 +123,11 @@ function cerrarChips() {
       <button
         v-if="canEditFiltrosEngrase"
         type="button"
-        class="cursor-pointer rounded bg-main/10 p-1 text-main hover:bg-main/20"
+        class="flex cursor-pointer items-center rounded bg-main/10 p-1 text-main transition-colors hover:bg-main/20"
         aria-label="Agregar equipo"
+        title="Agregar equipo"
       >
-        <Plus class="h-4 w-4" />
+        <Plus class="h-4 w-4" aria-hidden="true" />
       </button>
     </header>
     <div class="relative shrink-0">
@@ -140,8 +138,14 @@ function cerrarChips() {
       />
       <button
         type="button"
-        class="absolute inset-y-0 right-0 flex w-8 items-center justify-center rounded-r-md text-main hover:bg-main/10"
+        class="absolute inset-y-0 right-0 flex w-8 items-center justify-center rounded-r-md transition"
+        :class="
+          hayFiltrosLocalesActivos
+            ? 'bg-accent-light/45 text-main-dark hover:bg-accent-light/70'
+            : 'text-main hover:bg-main/10'
+        "
         aria-label="Limpiar búsqueda y filtros de chips"
+        :title="hayFiltrosLocalesActivos ? 'Limpiar búsqueda y filtros aplicados' : 'Sin filtros locales para limpiar'"
         @click="limpiarBusquedaYFiltros"
       >
         <Eraser class="h-4 w-4" />
@@ -181,8 +185,14 @@ function cerrarChips() {
               <ArrowLeft class="h-4 w-4" /></button
             ><button
               type="button"
-              class="rounded p-1 text-main hover:bg-main/10"
+              class="rounded p-1 transition"
+              :class="
+                hayFiltrosDeChipsActivos
+                  ? 'bg-accent-light/45 text-main-dark hover:bg-accent-light/70'
+                  : 'text-main hover:bg-main/10'
+              "
               aria-label="Limpiar filtros de chips"
+              :title="hayFiltrosDeChipsActivos ? 'Limpiar filtros de chips' : 'Sin filtros de chips para limpiar'"
               @click="limpiarFiltros"
             >
               <Eraser class="h-4 w-4" />
@@ -259,6 +269,7 @@ function cerrarChips() {
         :equipo="equipo"
         :selected="equipo.id === selectedEquipoId"
         @select="$emit('selectEquipo', $event)"
+        @image-visible="$emit('imageVisible', $event)"
       />
     </div>
   </section>

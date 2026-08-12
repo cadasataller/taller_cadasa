@@ -223,3 +223,60 @@
   line-height: 2rem;
 }
 
+.multiselect {
+  min-height: 2.5rem;
+  font-size: 0.875rem;
+}
+
+.multiselect__tags {
+  min-height: 2.5rem;
+  border-color: var(--color-gray-300);
+  border-radius: var(--radius-md);
+  padding: 0.4rem 2.5rem 0.35rem 0.75rem;
+}
+
+.multiselect--active .multiselect__tags {
+  border-color: var(--color-main);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-main) 20%, transparent);
+}
+
+.multiselect__option--highlight,
+.multiselect__option--highlight::after {
+  background: var(--color-main);
+}
+
+.multiselect__option--selected,
+.multiselect__option--selected::after {
+  background: var(--color-second-dark);
+  color: var(--color-gray-700);
+  font-weight: 600;
+}
+
+.multiselect__option--selected.multiselect__option--highlight,
+.multiselect__option--selected.multiselect__option--highlight::after {
+  background: var(--color-main-light);
+  color: var(--color-white);
+}
+
+.multiselect__tag {
+  background: var(--color-second-dark);
+  color: var(--color-gray-700);
+}
+
+.multiselect-invalid .multiselect__tags {
+  border-color: var(--color-danger);
+}
+
+.equipo-catalog-select-menu .multiselect__content-wrapper {
+  z-index: 60;
+  border-color: var(--color-second-deep);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 639px) {
+  .multiselect,
+  .multiselect__input,
+  .multiselect__single {
+    font-size: 1rem;
+  }
+}

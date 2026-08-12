@@ -1,0 +1,2 @@
+<script setup lang="ts">import { formatNumber } from "@/stores/dbequipos/engrase/catalogo/aceitesCatalogo.helpers";import type { CatalogoAceiteImpacto } from "@/stores/dbequipos/engrase/catalogo/aceitesCatalogo.types";defineProps<{impacto:CatalogoAceiteImpacto}>();</script>
+<template><section><div><p class="text-xs font-semibold text-gray-700">Total asignaciones</p><p class="mt-1 text-base font-bold tabular-nums text-main">{{formatNumber(impacto.totalAsignaciones)}}</p></div></section></template>

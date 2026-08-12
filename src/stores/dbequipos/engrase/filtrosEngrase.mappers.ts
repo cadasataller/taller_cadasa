@@ -1,6 +1,35 @@
-import type { EquipoEngraseListItem, EquipoEngraseRow, EtapaEngrase, FiltroEngrase, TipoEquipoEngrase, TipoFiltroEngrase } from './filtrosEngrase.types'
-const nullable = (value:unknown) => typeof value === 'string' && value.trim() ? value : null
-export const mapEquipo = (row:Record<string,unknown>):EquipoEngraseRow => ({ id:Number(row.id), codigo:String(row.codigo), tipo_equipo_id:Number(row.tipo_equipo_id), tipo_equipo:String(row.tipo_equipo), subtipo:nullable(row.subtipo), estado:row.estado === 'descartado' ? 'descartado' : 'activo', main_storage_path:nullable(row.main_storage_path), tiene_imagen_main:row.tiene_imagen_main === true, imagen_actualizada_en:nullable(row.imagen_actualizada_en) })
-export const mapEquipoListItem = (row:Record<string,unknown>, etapas:EtapaEngrase[]=[]):EquipoEngraseListItem => ({ ...mapEquipo(row), etapas })
-export const mapCatalogo = <T extends TipoEquipoEngrase|TipoFiltroEngrase|EtapaEngrase>(row:Record<string,unknown>):T => ({ id:Number(row.id), nombre:String(row.nombre) } as T)
-export const mapFiltro = (row:Record<string,unknown>):FiltroEngrase => ({ id:Number(row.id), codigo:String(row.codigo), esta_en_lista_compras:row.esta_en_lista_compras === true })
+import type {
+  EquipoEngraseListItem,
+  EquipoEngraseRow,
+  EtapaEngrase,
+  FiltroEngrase,
+  TipoEquipoEngrase,
+  TipoFiltroEngrase,
+} from "./filtrosEngrase.types";
+const nullable = (value: unknown) =>
+  typeof value === "string" && value.trim() ? value : null;
+export const mapEquipo = (row: Record<string, unknown>): EquipoEngraseRow => ({
+  id: Number(row.id),
+  codigo: String(row.codigo),
+  tipo_equipo_id: Number(row.tipo_equipo_id),
+  tipo_equipo: String(row.tipo_equipo),
+  subtipo: nullable(row.subtipo),
+  estado: row.estado === "descartado" ? "descartado" : "activo",
+  main_storage_path: nullable(row.main_storage_path),
+  tiene_imagen_main: row.tiene_imagen_main === true,
+  imagen_actualizada_en: nullable(row.imagen_actualizada_en),
+});
+export const mapEquipoListItem = (
+  row: Record<string, unknown>,
+  etapas: EtapaEngrase[] = [],
+): EquipoEngraseListItem => ({ ...mapEquipo(row), etapas });
+export const mapCatalogo = <
+  T extends TipoEquipoEngrase | TipoFiltroEngrase | EtapaEngrase,
+>(
+  row: Record<string, unknown>,
+): T => ({ id: Number(row.id), nombre: String(row.nombre) }) as T;
+export const mapFiltro = (row: Record<string, unknown>): FiltroEngrase => ({
+  id: Number(row.id),
+  codigo: String(row.codigo),
+  esta_en_lista_compras: row.esta_en_lista_compras === true,
+});

@@ -1,0 +1,56 @@
+<script setup lang="ts">
+import { computed, shallowRef } from "vue";
+import { ChevronDown, ChevronUp } from "lucide-vue-next";
+import { obtenerIconoTipoFiltro } from "@/utils/filtrosEngraseIconos";
+import type { CatalogoTipoFiltroRelacionado } from "@/stores/dbequipos/engrase/catalogo/filtrosCatalogo.types";
+const props = defineProps<{
+  items: readonly CatalogoTipoFiltroRelacionado[];
+}>();
+const expanded = shallowRef(false);
+const ordered = computed(() =>
+  [...props.items].sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
+  ),
+);
+const visible = computed(() =>
+  expanded.value ? ordered.value : ordered.value.slice(0, 4),
+);
+const remaining = computed(() => Math.max(ordered.value.length - 4, 0));
+</script>
+<template>
+  <section aria-labelledby="related-types-title">
+    <h3 id="related-types-title" class="text-xs font-semibold text-gray-800">
+      Tipos de filtro donde se utiliza
+    </h3>
+    <p v-if="!items.length" class="mt-2 text-xs text-gray-500">
+      Sin tipos de filtro relacionados
+    </p>
+    <div v-else class="mt-2 flex flex-wrap gap-1.5">
+      <span
+        v-for="item in visible"
+        :key="item.id"
+        class="inline-flex items-center gap-2 rounded-md bg-main/6 px-2 py-1.5 text-xs text-main"
+        ><component
+          :is="obtenerIconoTipoFiltro(item.nombre).icono"
+          class="h-3.5 w-3.5 shrink-0"
+          aria-hidden="true"
+        />{{ item.nombre
+        }}<strong class="tabular-nums">{{
+          new Intl.NumberFormat("es").format(item.cantidadEquipos)
+        }}</strong></span
+      ><button
+        v-if="remaining || expanded"
+        type="button"
+        class="inline-flex min-h-8 cursor-pointer items-center gap-1 rounded-md border border-main/15 px-2 text-xs font-semibold text-main"
+        :aria-expanded="expanded"
+        @click="expanded = !expanded"
+      >
+        {{ expanded ? "Ver menos" : `+${remaining}`
+        }}<component
+          :is="expanded ? ChevronUp : ChevronDown"
+          class="h-3.5 w-3.5"
+        />
+      </button>
+    </div>
+  </section>
+</template>

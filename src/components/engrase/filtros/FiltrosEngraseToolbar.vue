@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { Eraser, Sprout, Wheat } from 'lucide-vue-next';
 import FiltroCodigoAutocomplete from "./FiltroCodigoAutocomplete.vue";
 import type {
@@ -30,6 +31,15 @@ function clearAllFilters() {
   emit('clearAll');
   emit('closeDetail');
 }
+const hayFiltrosAplicados = computed(
+  () =>
+    props.filters.estadoEquipo !== "activo" ||
+    props.filters.tipoEquipoId !== null ||
+    props.filters.tipoFiltroId !== null ||
+    Boolean(props.filters.modelo) ||
+    props.filters.etapaIds.length > 0 ||
+    props.filters.codigoExactoSeleccionado !== null,
+);
 function toggleEtapa(etapaId: number) {
   const etapaIds = new Set(props.filters.etapaIds);
   etapaIds.has(etapaId) ? etapaIds.delete(etapaId) : etapaIds.add(etapaId);
@@ -104,9 +114,14 @@ function esZafra(nombre: string) {
       </button>
       <button
         type="button"
-        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-main/5 hover:text-main"
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border transition"
+        :class="
+          hayFiltrosAplicados
+            ? 'border-accent/60 bg-accent-light/45 text-main-dark hover:border-accent hover:bg-accent-light/70'
+            : 'border-gray-200 text-gray-500 hover:bg-main/5 hover:text-main'
+        "
         aria-label="Limpiar todos los filtros"
-        title="Limpiar todos los filtros"
+        :title="hayFiltrosAplicados ? 'Limpiar todos los filtros aplicados' : 'Sin filtros para limpiar'"
         @click="clearAllFilters"
       >
         <Eraser class="h-4 w-4" />

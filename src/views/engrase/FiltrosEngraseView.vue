@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, shallowRef } from "vue";
+import { useRouter } from "vue-router";
 import FiltrosEngraseToolbar from "@/components/engrase/filtros/FiltrosEngraseToolbar.vue";
 import EquiposEngrasePanel from "@/components/engrase/filtros/EquiposEngrasePanel.vue";
 import FiltrosEquipoPanel from "@/components/engrase/filtros/FiltrosEquipoPanel.vue";
 import FiltroDetallePanel from "@/components/engrase/filtros/FiltroDetallePanel.vue";
 import { useFiltrosEngrase } from "@/composables/engrase/useFiltrosEngrase";
+import type { FiltrosEngraseQuery } from "@/stores/dbequipos/engrase/filtrosEngrase.types";
 const f = useFiltrosEngrase(),
   mobileStage = shallowRef<"equipos" | "filtros">("equipos"),
   resetSignal = shallowRef(0);
+const router = useRouter();
 const equivalenciasSeleccionadas = computed(() =>
   f.filtroSeleccionado.value
     ? (f.equivalenciasPorFiltroId.value[f.filtroSeleccionado.value.filtro_id] ??
@@ -19,11 +22,23 @@ async function selectEquipo(id: number) {
   await f.seleccionarEquipo(id);
   mobileStage.value = "filtros";
 }
-async function update(filters: any) {
+async function update(filters: Partial<FiltrosEngraseQuery>) {
   await f.actualizarFiltros(filters);
+}
+function editarEquipo(codigo: string) {
+  router.push({ name: "EquipoEngraseEditar", params: { codigo } });
+}
+function cargarImagenVisible(equipoId: number): void {
+  void f.cargarImagenEquipo(equipoId);
 }
 async function retryDetalle() {
   if (f.equipoSeleccionadoId.value) await f.reintentar();
+}
+async function cambiarEstadoEquipo(
+  codigo: string,
+  estado: "activo" | "descartado",
+) {
+  await f.cambiarEstadoEquipo(codigo, estado);
 }
 async function clearAllFilters() {
   await f.limpiarFiltros();
@@ -35,7 +50,7 @@ async function clearAllFilters() {
     
     <div v-if="f.errorInicial.value" class="rounded-lg border border-danger/30 bg-danger-bg p-4 text-sm text-danger">
       <p>{{ f.errorInicial.value }}</p>
-      <button @click="f.reintentar">Reintentar</button>
+      <button class="cursor-pointer" @click="f.reintentar">Reintentar</button>
     </div>
     <template v-else>
       <FiltrosEngraseToolbar
@@ -64,14 +79,17 @@ async function clearAllFilters() {
             class="h-full"
             :equipos="f.equiposVisibles.value"
             :selected-equipo-id="f.equipoSeleccionadoId.value"
+            :filters="f.filtrosAplicados.value"
             :counts-by-tipo="f.conteoPorTipoEquipo.value"
             :loading="f.loadingEquipos.value"
             :error="f.errorEquipos.value"
             :reset-signal="resetSignal"
             @select-equipo="selectEquipo"
+            @image-visible="cargarImagenVisible"
             @retry="f.reintentar"
             @filter-tipo="update({ tipoEquipoId: $event, modelo: '' })"
             @filter-modelo="update({ modelo: $event })"
+            @clear-tipo-modelo="update({ tipoEquipoId: null, modelo: '' })"
           />
         </div>
         <div
@@ -82,14 +100,19 @@ async function clearAllFilters() {
             class="h-full"
             :equipo="f.equipoSeleccionado.value"
             :filtros="f.filtrosEquipo.value"
+            :aceites="f.aceitesEquipo.value"
             :equivalencias="f.equivalenciasPorFiltroId.value"
             :codigo-buscado="f.filtrosAplicados.value.codigoExactoSeleccionado"
             :selected-filtro-id="f.filtroSeleccionadoId.value"
             :loading="f.loadingDetalleEquipo.value"
             :error="f.errorDetalle.value"
+            :loading-cambio-estado="f.loadingCambioEstado.value"
+            :error-cambio-estado="f.errorCambioEstado.value"
             @select-filtro="f.seleccionarFiltro"
             @retry="retryDetalle"
             @back-to-equipos="mobileStage = 'equipos'"
+            @editar-equipo="editarEquipo"
+            @cambiar-estado="cambiarEstadoEquipo"
           />
         </div>
         <FiltroDetallePanel
