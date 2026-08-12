@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import TipoFiltroChangeSummary from "./TipoFiltroChangeSummary.vue";
 import TipoFiltroDetailDrawer from "./TipoFiltroDetailDrawer.vue";
 import TipoFiltroForm from "./TipoFiltroForm.vue";
+import TipoFiltroMobileCard from "./TipoFiltroMobileCard.vue";
 import TipoFiltroUpdateConfirmDialog from "./TipoFiltroUpdateConfirmDialog.vue";
 import TiposFiltroTable from "./TiposFiltroTable.vue";
 import TiposFiltroToolbar from "./TiposFiltroToolbar.vue";
@@ -45,14 +46,29 @@ describe("componentes del catálogo de tipos de filtro", () => {
 
   it("la tabla anuncia orden y permite seleccionar con teclado", async () => {
     const wrapper = mount(TiposFiltroTable, {
-      props: { items: [item], selectedId: null, sortKey: "nombre", sortDirection: "asc" },
+      props: {
+        items: [item],
+        selectedId: null,
+        sortKey: "nombre",
+        sortDirection: "asc",
+      },
     });
 
     expect(wrapper.get("th[aria-sort='ascending']").text()).toContain("Nombre");
+    expect(wrapper.find("svg.lucide-wind").exists()).toBe(true);
     await wrapper.get("tbody tr").trigger("keydown", { key: "Enter" });
     expect(wrapper.emitted("select")?.[0]).toEqual([item]);
     await wrapper.get("thead button").trigger("click");
     expect(wrapper.emitted("sort")?.[0]).toEqual(["nombre"]);
+  });
+
+  it("la card mobile usa el icono derivado del nombre", () => {
+    const wrapper = mount(TipoFiltroMobileCard, {
+      props: { item, selected: false },
+    });
+
+    expect(wrapper.find("svg.lucide-wind").exists()).toBe(true);
+    expect(wrapper.find("svg.lucide-funnel").exists()).toBe(false);
   });
 
   it("el formulario vincula el error al nombre y no expone campos de impacto", async () => {
@@ -65,15 +81,22 @@ describe("componentes del catálogo de tipos de filtro", () => {
 
     const input = wrapper.get("input");
     expect(input.attributes("aria-invalid")).toBe("true");
-    expect(input.attributes("aria-describedby")).toContain("tipo-filtro-name-error");
+    expect(input.attributes("aria-describedby")).toContain(
+      "tipo-filtro-name-error",
+    );
     expect(wrapper.text()).not.toContain("Equipos asociados");
     await input.setValue("Aceite");
-    expect(wrapper.emitted("updateDraft")?.[0]).toEqual([{ id: 7, nombre: "Aceite", activo: true }]);
+    expect(wrapper.emitted("updateDraft")?.[0]).toEqual([
+      { id: 7, nombre: "Aceite", activo: true },
+    ]);
   });
 
   it("el resumen muestra únicamente campos modificados", () => {
     const wrapper = mount(TipoFiltroChangeSummary, {
-      props: { original: item, draft: { id: 7, nombre: "Aire premium", activo: true } },
+      props: {
+        original: item,
+        draft: { id: 7, nombre: "Aire premium", activo: true },
+      },
     });
 
     expect(wrapper.text()).toContain("Nombre");
@@ -92,9 +115,15 @@ describe("componentes del catálogo de tipos de filtro", () => {
     });
 
     expect(wrapper.text()).toContain("18 equipos");
-    expect(wrapper.text()).toContain("Las asociaciones con equipos no se modificarán");
+    expect(wrapper.text()).toContain(
+      "Las asociaciones con equipos no se modificarán",
+    );
     expect(wrapper.text()).toContain("TRACTORES");
-    expect(wrapper.findAll("button").every((button) => button.attributes("disabled") !== undefined)).toBe(true);
+    expect(
+      wrapper
+        .findAll("button")
+        .every((button) => button.attributes("disabled") !== undefined),
+    ).toBe(true);
     wrapper.unmount();
   });
 
@@ -113,7 +142,9 @@ describe("componentes del catálogo de tipos de filtro", () => {
       global: { stubs: { Teleport: true } },
     });
 
-    expect(wrapper.get("aside").classes()).toEqual(expect.arrayContaining(["lg:right-0", "lg:bottom-0"]));
+    expect(wrapper.get("aside").classes()).toEqual(
+      expect.arrayContaining(["lg:right-0", "lg:bottom-0"]),
+    );
     expect(wrapper.text()).toContain("Nuevo tipo de filtro");
 
     await wrapper.setProps({
@@ -122,7 +153,9 @@ describe("componentes del catálogo de tipos de filtro", () => {
       draft: { id: 7, nombre: "Aire", activo: true },
     });
     expect(wrapper.text()).toContain("Detalles");
-    expect(wrapper.get("aside").classes()).toEqual(expect.arrayContaining(["lg:right-0", "lg:bottom-0"]));
+    expect(wrapper.get("aside").classes()).toEqual(
+      expect.arrayContaining(["lg:right-0", "lg:bottom-0"]),
+    );
     wrapper.unmount();
   });
 });
