@@ -5,6 +5,8 @@ import { useRouter, useRoute } from 'vue-router';
 import { supabase, supabaseRatings, supabaseCompras, supabaseEquipos } from '@/lib/supabase';
 import { useFeatureAccessStore } from '@/stores/db_mantenimiento/app_feature_access/featureAccess.store';
 import { useFiltrosCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/filtrosCatalogo.store';
+import { useAceitesCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/aceitesCatalogo.store';
+import { useSistemasCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/sistemasCatalogo.store';
 import { useDashboardHeaderNav } from '@/composables/useDashboardHeaderNav';
 import { 
   BarChart3, 
@@ -24,6 +26,8 @@ const router = useRouter();
 const route = useRoute();
 const featureAccessStore = useFeatureAccessStore();
 const filtrosCatalogoStore = useFiltrosCatalogoStore();
+const aceitesCatalogoStore = useAceitesCatalogoStore();
+const sistemasCatalogoStore = useSistemasCatalogoStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
 const isSidebarOpen = ref(true);
 const isPreparingSolicitudCompraCreate = ref(false);
@@ -175,6 +179,8 @@ const logout = async () => {
     supabaseEquipos.auth.signOut()
   ]);
   filtrosCatalogoStore.reset();
+  aceitesCatalogoStore.reset();
+  sistemasCatalogoStore.reset();
   router.push('/login');
 };
 

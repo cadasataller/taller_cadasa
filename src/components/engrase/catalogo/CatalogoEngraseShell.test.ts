@@ -9,10 +9,12 @@ import CatalogoEngraseSectionShell from "./CatalogoEngraseSectionShell.vue";
 import CatalogoEngraseView from "@/views/engrase/catalogo/CatalogoEngraseView.vue";
 import CatalogoTiposFiltroSection from "@/views/engrase/catalogo/CatalogoTiposFiltroSection.vue";
 import CatalogoFiltrosSection from "@/views/engrase/catalogo/CatalogoFiltrosSection.vue";
+import CatalogoAceitesSection from "@/views/engrase/catalogo/CatalogoAceitesSection.vue";
 import type { CatalogoEngraseNavigationItem } from "@/stores/dbequipos/engrase/catalogo/catalogoEngrase.types";
 
 const listarTiposFiltro = vi.hoisted(() => vi.fn());
 const listarFiltros = vi.hoisted(() => vi.fn());
+const listarAceites = vi.hoisted(() => vi.fn());
 vi.mock("@/stores/dbequipos/engrase/catalogo/tiposFiltroCatalogo.service", () => ({
   tiposFiltroCatalogoService: {
     listar: listarTiposFiltro,
@@ -24,6 +26,9 @@ vi.mock("@/stores/dbequipos/engrase/catalogo/filtrosCatalogo.service", () => ({
     listar: listarFiltros,
     guardar: vi.fn(),
   },
+}));
+vi.mock("@/stores/dbequipos/engrase/catalogo/aceitesCatalogo.service", () => ({
+  aceitesCatalogoService: { listar: listarAceites, guardar: vi.fn() },
 }));
 
 const items = [
@@ -55,6 +60,11 @@ describe("shell del catálogo de engrase", () => {
     listarFiltros.mockResolvedValue({
       items: [],
       resumen: { total: 0, activos: 0, desactivados: 0, enCompras: 0, fueraCompras: 0 },
+    });
+    listarAceites.mockReset();
+    listarAceites.mockResolvedValue({
+      items: [],
+      resumen: { total: 0, activos: 0, desactivados: 0 },
     });
   });
   it("expone una acción de retorno accesible", async () => {
@@ -136,6 +146,11 @@ describe("shell del catálogo de engrase", () => {
     expect(wrapper.findComponent(CatalogoEngraseView).get("main").classes()).toContain("lg:overflow-hidden");
     expect(wrapper.findComponent(CatalogoFiltrosSection).exists()).toBe(true);
     await vi.waitFor(() => expect(listarFiltros).toHaveBeenCalledOnce());
+
+    await router.push({ name: "CatalogoEngraseAceites" });
+    expect(wrapper.findComponent(CatalogoAceitesSection).exists()).toBe(true);
+    expect(wrapper.findComponent(CatalogoEngraseView).get("main").classes()).toContain("lg:overflow-hidden");
+    await vi.waitFor(() => expect(listarAceites).toHaveBeenCalledOnce());
 
     await router.push({ name: "CatalogoEngraseTiposFiltro" });
     expect(wrapper.findComponent(CatalogoTiposFiltroSection).exists()).toBe(true);

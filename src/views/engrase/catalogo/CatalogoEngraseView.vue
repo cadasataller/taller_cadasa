@@ -7,6 +7,7 @@ import CatalogoEngraseSectionShell from "@/components/engrase/catalogo/CatalogoE
 import CatalogoTiposFiltroSection from "./CatalogoTiposFiltroSection.vue";
 import CatalogoFiltrosSection from "./CatalogoFiltrosSection.vue";
 import CatalogoAceitesSection from "./CatalogoAceitesSection.vue";
+import CatalogoSistemasSection from "./CatalogoSistemasSection.vue";
 import type {
   CatalogoEngraseNavigationItem,
   CatalogoEngraseRouteName,
@@ -70,7 +71,7 @@ function backToFiltros(): void {
   <main
     class="flex min-h-full min-w-0 flex-col gap-2 bg-second p-2 pb-20 text-gray-700 sm:gap-2.5 sm:p-3 md:pb-4 lg:p-4"
     :class="
-      ['tipos-filtro', 'filtros', 'aceites'].includes(activeSection)
+      ['tipos-filtro', 'filtros', 'aceites', 'sistemas'].includes(activeSection)
         ? 'lg:h-full lg:overflow-hidden'
         : ''
     "
@@ -92,6 +93,10 @@ function backToFiltros(): void {
     />
     <CatalogoAceitesSection
       v-else-if="activeSection === 'aceites'"
+      class="lg:min-h-0 lg:overflow-hidden"
+    />
+    <CatalogoSistemasSection
+      v-else-if="activeSection === 'sistemas'"
       class="lg:min-h-0 lg:overflow-hidden"
     />
     <CatalogoEngraseSectionShell v-else :title="activeSectionLabel" />

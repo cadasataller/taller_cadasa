@@ -1,0 +1,2 @@
+<script setup lang="ts">import SistemaMobileCard from "./SistemaMobileCard.vue"; import type { CatalogoSistemaItem } from "@/stores/dbequipos/engrase/catalogo/sistemasCatalogo.types"; defineProps<{items:readonly CatalogoSistemaItem[];selectedId:number|null}>(); const emit=defineEmits<{select:[item:CatalogoSistemaItem,trigger:HTMLElement]}>();</script>
+<template><div class="grid gap-2 md:hidden"><SistemaMobileCard v-for="item in items" :key="item.id" :item="item" :selected="selectedId===item.id" @select="(item,trigger)=>emit('select',item,trigger)"/></div></template>
