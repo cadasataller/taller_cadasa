@@ -1,12 +1,22 @@
 import { mount } from "@vue/test-utils";
+import { createPinia } from "pinia";
 import { defineComponent } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import CatalogoEngraseHeader from "./CatalogoEngraseHeader.vue";
 import CatalogoEngraseNavigation from "./CatalogoEngraseNavigation.vue";
 import CatalogoEngraseSectionShell from "./CatalogoEngraseSectionShell.vue";
 import CatalogoEngraseView from "@/views/engrase/catalogo/CatalogoEngraseView.vue";
+import CatalogoTiposFiltroSection from "@/views/engrase/catalogo/CatalogoTiposFiltroSection.vue";
 import type { CatalogoEngraseNavigationItem } from "@/stores/dbequipos/engrase/catalogo/catalogoEngrase.types";
+
+const listarTiposFiltro = vi.hoisted(() => vi.fn());
+vi.mock("@/stores/dbequipos/engrase/catalogo/tiposFiltroCatalogo.service", () => ({
+  tiposFiltroCatalogoService: {
+    listar: listarTiposFiltro,
+    guardar: vi.fn(),
+  },
+}));
 
 const items = [
   { id: "tipos-filtro", label: "Tipos de filtro", routeName: "CatalogoEngraseTiposFiltro" },
@@ -27,6 +37,13 @@ function createTestRouter() {
 }
 
 describe("shell del catálogo de engrase", () => {
+  beforeEach(() => {
+    listarTiposFiltro.mockReset();
+    listarTiposFiltro.mockResolvedValue({
+      items: [],
+      resumen: { total: 0, activos: 0, desactivados: 0 },
+    });
+  });
   it("expone una acción de retorno accesible", async () => {
     const wrapper = mount(CatalogoEngraseHeader);
 
@@ -74,7 +91,7 @@ describe("shell del catálogo de engrase", () => {
     expect(error.emitted("retry")).toHaveLength(1);
   });
 
-  it("conserva montados la vista y el shell al cambiar la ruta hija", async () => {
+  it("conserva montada la vista y no recarga tipos de filtro al volver", async () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
@@ -93,15 +110,19 @@ describe("shell del catálogo de engrase", () => {
     await router.isReady();
 
     const wrapper = mount(defineComponent({ template: "<RouterView />" }), {
-      global: { plugins: [router] },
+      global: { plugins: [router, createPinia()] },
     });
     const initialViewElement = wrapper.findComponent(CatalogoEngraseView).element;
-    const initialShellElement = wrapper.findComponent(CatalogoEngraseSectionShell).element;
+    expect(wrapper.findComponent(CatalogoTiposFiltroSection).exists()).toBe(true);
+    await vi.waitFor(() => expect(listarTiposFiltro).toHaveBeenCalledOnce());
 
     await router.push({ name: "CatalogoEngraseFiltros" });
 
     expect(wrapper.findComponent(CatalogoEngraseView).element).toBe(initialViewElement);
-    expect(wrapper.findComponent(CatalogoEngraseSectionShell).element).toBe(initialShellElement);
     expect(wrapper.findComponent(CatalogoEngraseSectionShell).text()).toContain("Filtros");
+
+    await router.push({ name: "CatalogoEngraseTiposFiltro" });
+    expect(wrapper.findComponent(CatalogoTiposFiltroSection).exists()).toBe(true);
+    expect(listarTiposFiltro).toHaveBeenCalledOnce();
   });
 });

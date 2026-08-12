@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import CatalogoEngraseHeader from "@/components/engrase/catalogo/CatalogoEngraseHeader.vue";
 import CatalogoEngraseNavigation from "@/components/engrase/catalogo/CatalogoEngraseNavigation.vue";
 import CatalogoEngraseSectionShell from "@/components/engrase/catalogo/CatalogoEngraseSectionShell.vue";
+import CatalogoTiposFiltroSection from "./CatalogoTiposFiltroSection.vue";
 import type {
   CatalogoEngraseNavigationItem,
   CatalogoEngraseRouteName,
@@ -64,6 +65,7 @@ function backToFiltros(): void {
       :active-section="activeSection"
       @select-section="selectSection"
     />
-    <CatalogoEngraseSectionShell :title="activeSectionLabel" />
+    <CatalogoTiposFiltroSection v-if="activeSection === 'tipos-filtro'" />
+    <CatalogoEngraseSectionShell v-else :title="activeSectionLabel" />
   </main>
 </template>
