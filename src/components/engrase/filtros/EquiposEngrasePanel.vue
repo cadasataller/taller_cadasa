@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { ArrowLeft, ChevronDown, ChevronUp, CirclePlus, Eraser } from "lucide-vue-next";
+import { ArrowLeft, ChevronDown, ChevronUp, Eraser, Plus } from "lucide-vue-next";
 import EquipoEngraseListItem from "./EquipoEngraseListItem.vue";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 import type {
@@ -32,8 +32,7 @@ const canEditFiltrosEngrase = computed(() =>
   && featureAccessStore.tieneFuncionalidad("editar_filtros_engrase"),
 );
 const search = shallowRef(""),
-  showCounts = shallowRef(false),
-  showEquipoMenu = shallowRef(false);
+  showCounts = shallowRef(false);
 const visible = computed(() => {
   const q = search.value.toLowerCase();
   return props.equipos.filter(
@@ -111,12 +110,6 @@ function limpiarBusquedaYFiltros() {
 function cerrarChips() {
   showCounts.value = false;
 }
-function alternarMenuEquipo() {
-  showEquipoMenu.value = !showEquipoMenu.value;
-}
-function cerrarMenuEquipo() {
-  showEquipoMenu.value = false;
-}
 </script>
 <template>
   <section
@@ -127,53 +120,15 @@ function cerrarMenuEquipo() {
         Equipos
         <span class="font-normal text-gray-500">({{ equipos.length }})</span>
       </h2>
-      <div
+      <button
         v-if="canEditFiltrosEngrase"
-        class="relative"
-        @keydown.esc="cerrarMenuEquipo"
+        type="button"
+        class="flex cursor-pointer items-center rounded bg-main/10 p-1 text-main transition-colors hover:bg-main/20"
+        aria-label="Agregar equipo"
+        title="Agregar equipo"
       >
-        <button
-          id="menu-equipos-trigger"
-          type="button"
-          class="flex cursor-pointer items-center rounded bg-main/10 p-1 text-main transition-colors hover:bg-main/20"
-          aria-label="Abrir acciones de equipos"
-          aria-haspopup="menu"
-          :aria-expanded="showEquipoMenu"
-          aria-controls="menu-equipos"
-          @click="alternarMenuEquipo"
-        >
-          <ChevronDown
-            class="h-4 w-4 transition-transform"
-            :class="{ 'rotate-180': showEquipoMenu }"
-          />
-        </button>
-        <Transition
-          enter-active-class="transition duration-150 ease-out"
-          enter-from-class="-translate-y-1 opacity-0"
-          enter-to-class="translate-y-0 opacity-100"
-          leave-active-class="transition duration-100 ease-in"
-          leave-from-class="translate-y-0 opacity-100"
-          leave-to-class="-translate-y-1 opacity-0"
-        >
-          <div
-            v-if="showEquipoMenu"
-            id="menu-equipos"
-            class="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-md border border-gray-200 bg-white py-1 shadow-lg"
-            role="menu"
-            aria-labelledby="menu-equipos-trigger"
-          >
-            <button
-              type="button"
-              class="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-700 transition-colors hover:bg-main/5 hover:text-main"
-              role="menuitem"
-              @click="cerrarMenuEquipo"
-            >
-              <CirclePlus class="h-4 w-4" aria-hidden="true" />
-              Agregar Equipo
-            </button>
-          </div>
-        </Transition>
-      </div>
+        <Plus class="h-4 w-4" aria-hidden="true" />
+      </button>
     </header>
     <div class="relative shrink-0">
       <input

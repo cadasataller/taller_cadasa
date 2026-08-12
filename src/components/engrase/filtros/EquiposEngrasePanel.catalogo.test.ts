@@ -5,7 +5,7 @@ import EquiposEngrasePanel from "./EquiposEngrasePanel.vue";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 
 describe("acciones del panel Equipos", () => {
-  it("no mezcla la navegación al catálogo con las acciones del equipo", async () => {
+  it("muestra únicamente el botón Plus para agregar equipo", async () => {
     const pinia = createPinia();
     const featureAccess = useFeatureAccessStore(pinia);
     featureAccess.isLoaded = true;
@@ -31,9 +31,11 @@ describe("acciones del panel Equipos", () => {
       global: { plugins: [pinia] },
     });
 
-    await wrapper.get('button[aria-label="Abrir acciones de equipos"]').trigger("click");
-    expect(wrapper.find('[role="menu"]').text()).toContain("Agregar Equipo");
-    expect(wrapper.find('[role="menu"]').text()).not.toContain("Ver catálogo");
-    expect(wrapper.emitted("openCatalogo")).toBeUndefined();
+    const addButton = wrapper.get('button[aria-label="Agregar equipo"]');
+
+    expect(addButton.find("svg.lucide-plus").exists()).toBe(true);
+    expect(addButton.attributes("aria-haspopup")).toBeUndefined();
+    await addButton.trigger("click");
+    expect(wrapper.find('[role="menu"]').exists()).toBe(false);
   });
 });
