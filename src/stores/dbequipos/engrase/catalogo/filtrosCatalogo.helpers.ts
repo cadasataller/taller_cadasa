@@ -34,8 +34,6 @@ export function ordenarCatalogoFiltros(
     switch (key) {
       case "compras": result = Number(left.estaEnListaCompras) - Number(right.estaEnListaCompras); break;
       case "estado": result = Number(left.activo) - Number(right.activo); break;
-      case "equipos": result = left.impacto.totalEquipos - right.impacto.totalEquipos; break;
-      case "asignaciones": result = left.impacto.totalAsignaciones - right.impacto.totalAsignaciones; break;
       default: result = left.codigo.localeCompare(right.codigo, "es", { numeric: true, sensitivity: "base" });
     }
     const fallback = left.codigo.localeCompare(right.codigo, "es", { numeric: true, sensitivity: "base" });

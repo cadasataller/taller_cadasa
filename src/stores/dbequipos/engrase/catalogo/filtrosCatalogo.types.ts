@@ -2,7 +2,7 @@ export const FILTRO_CODIGO_MAX = 100;
 
 export type CatalogoFiltroEstado = "activos" | "desactivados" | "todos";
 export type CatalogoFiltroCompras = "en-compras" | "fuera-compras" | "todos";
-export type CatalogoFiltroSortKey = "codigo" | "compras" | "estado" | "equipos" | "asignaciones";
+export type CatalogoFiltroSortKey = "codigo" | "compras" | "estado";
 export type CatalogoSortDirection = "asc" | "desc";
 export type CatalogoFiltroEditorMode = "cerrado" | "crear" | "editar";
 

@@ -2,7 +2,7 @@ export const ACEITE_NOMBRE_MAX = 100;
 
 export type CatalogoAceiteEstado = "activos" | "desactivados" | "todos";
 export type CatalogoAceiteUso = "en-uso" | "sin-uso" | "todos";
-export type CatalogoAceiteSortKey = "nombre" | "sistemas" | "estado" | "equipos" | "asignaciones";
+export type CatalogoAceiteSortKey = "nombre" | "sistemas" | "estado";
 export type CatalogoSortDirection = "asc" | "desc";
 export type CatalogoAceiteEditorMode = "cerrado" | "crear" | "editar";
 

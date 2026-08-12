@@ -62,6 +62,10 @@ describe("componentes del catálogo de filtros", () => {
     expect(w.find("svg.lucide-funnel").exists()).toBe(true);
     expect(w.find("svg.lucide-droplet").exists()).toBe(false);
     expect(w.get("th[aria-sort='ascending']").text()).toContain("Código");
+    const summaryHeader = w
+      .findAll("th")
+      .find((header) => header.text() === "Resumen de uso");
+    expect(summaryHeader?.find("button").exists()).toBe(false);
     await w.get("tbody tr").trigger("keydown", { key: "Enter" });
     expect(w.emitted("select")?.[0]?.[0]).toEqual(item);
   });
@@ -127,6 +131,8 @@ describe("componentes del catálogo de filtros", () => {
     expect(w.text()).toContain(
       "Las asociaciones con equipos no se modificarán",
     );
+    expect(w.get("details").attributes("open")).toBeUndefined();
+    expect(w.get("summary").text()).toContain("Resumen de equipos");
     expect(
       w
         .findAll("button")

@@ -84,46 +84,7 @@ function select(item: CatalogoFiltroItem, event: Event): void {
               Estado<component :is="sortIcon('estado')" class="h-3.5 w-3.5" />
             </button>
           </th>
-          <th
-            class="px-3"
-            :aria-sort="
-              sortKey === 'equipos' || sortKey === 'asignaciones'
-                ? ariaSort(sortKey)
-                : 'none'
-            "
-          >
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="font-semibold">Resumen de uso</span>
-              <div
-                class="inline-flex rounded border border-gray-200 bg-white p-0.5"
-                aria-label="Ordenar resumen de uso"
-              >
-                <button
-                  type="button"
-                  class="cursor-pointer rounded px-1.5 py-0.5"
-                  :class="
-                    sortKey === 'equipos'
-                      ? 'bg-main/10 font-semibold text-main'
-                      : ''
-                  "
-                  @click="emit('sort', 'equipos')"
-                >
-                  Equipos</button
-                ><button
-                  type="button"
-                  class="cursor-pointer rounded px-1.5 py-0.5"
-                  :class="
-                    sortKey === 'asignaciones'
-                      ? 'bg-main/10 font-semibold text-main'
-                      : ''
-                  "
-                  @click="emit('sort', 'asignaciones')"
-                >
-                  Asignaciones
-                </button>
-              </div>
-            </div>
-          </th>
+          <th class="px-3 font-semibold">Resumen de uso</th>
           <th class="w-10"><span class="sr-only">Abrir</span></th>
         </tr>
       </thead>

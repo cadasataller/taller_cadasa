@@ -25,7 +25,7 @@ const item: CatalogoTipoFiltroItem = {
 afterEach(() => {
   document.body.innerHTML = "";
   document.body.style.overflow = "";
-});
+  });
 
 describe("componentes del catálogo de tipos de filtro", () => {
   it("la toolbar emite búsqueda, estado, limpieza y creación", async () => {
@@ -119,6 +119,8 @@ describe("componentes del catálogo de tipos de filtro", () => {
       "Las asociaciones con equipos no se modificarán",
     );
     expect(wrapper.text()).toContain("TRACTORES");
+    expect(wrapper.get("details").attributes("open")).toBeUndefined();
+    expect(wrapper.get("summary").text()).toContain("Resumen de equipos");
     expect(
       wrapper
         .findAll("button")
