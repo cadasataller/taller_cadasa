@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from "vue";
 import { storeToRefs } from "pinia";
-import { ArrowLeft, ChevronDown, ChevronUp, CirclePlus, Eraser, LibraryBig } from "lucide-vue-next";
+import { ArrowLeft, ChevronDown, ChevronUp, CirclePlus, Eraser } from "lucide-vue-next";
 import EquipoEngraseListItem from "./EquipoEngraseListItem.vue";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 import type {
@@ -24,7 +24,6 @@ const emit = defineEmits<{
   filterTipo: [number | null];
   filterModelo: [string];
   clearTipoModelo: [];
-  openCatalogo: [];
 }>();
 const featureAccessStore = useFeatureAccessStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
@@ -118,10 +117,6 @@ function alternarMenuEquipo() {
 function cerrarMenuEquipo() {
   showEquipoMenu.value = false;
 }
-function abrirCatalogo() {
-  cerrarMenuEquipo();
-  emit("openCatalogo");
-}
 </script>
 <template>
   <section
@@ -175,15 +170,6 @@ function abrirCatalogo() {
             >
               <CirclePlus class="h-4 w-4" aria-hidden="true" />
               Agregar Equipo
-            </button>
-            <button
-              type="button"
-              class="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-700 transition-colors hover:bg-main/5 hover:text-main"
-              role="menuitem"
-              @click="abrirCatalogo"
-            >
-              <LibraryBig class="h-4 w-4" aria-hidden="true" />
-              Ver catálogo
             </button>
           </div>
         </Transition>

@@ -100,13 +100,12 @@ const router = createRouter({
           meta: { requiredFeature: 'module_catalog' },
         },
         {
-          path: 'engrase/filtros/catalogo',
+          path: 'engrase/catalogo',
           name: 'CatalogoEngrase',
           component: () => import('@/views/engrase/catalogo/CatalogoEngraseView.vue'),
           redirect: { name: 'CatalogoEngraseTiposFiltro' },
           meta: {
             requiredFeatures: ['module_engrase', 'ver_filtros_engrase', 'editar_filtros_engrase'],
-            layout: 'fullscreen',
           },
           children: [
             {
@@ -128,6 +127,29 @@ const router = createRouter({
               path: 'sistemas',
               name: 'CatalogoEngraseSistemas',
               component: EmptyRouteComponent,
+            },
+          ],
+        },
+        {
+          path: 'engrase/filtros/catalogo',
+          name: 'CatalogoEngraseLegacy',
+          redirect: { name: 'CatalogoEngraseTiposFiltro' },
+          children: [
+            {
+              path: 'tipos-filtro',
+              redirect: { name: 'CatalogoEngraseTiposFiltro' },
+            },
+            {
+              path: 'filtros',
+              redirect: { name: 'CatalogoEngraseFiltros' },
+            },
+            {
+              path: 'aceites',
+              redirect: { name: 'CatalogoEngraseAceites' },
+            },
+            {
+              path: 'sistemas',
+              redirect: { name: 'CatalogoEngraseSistemas' },
             },
           ],
         },

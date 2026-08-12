@@ -67,13 +67,12 @@ describe("shell del catálogo de engrase", () => {
       resumen: { total: 0, activos: 0, desactivados: 0 },
     });
   });
-  it("expone una acción de retorno accesible", async () => {
+  it("presenta el Catálogo como sección propia de Engrase", () => {
     const wrapper = mount(CatalogoEngraseHeader);
 
-    await wrapper.get('button[aria-label="Volver a filtros de engrase"]').trigger("click");
-
-    expect(wrapper.emitted("back")).toHaveLength(1);
     expect(wrapper.text()).toContain("Catálogo de filtros y engrase");
+    expect(wrapper.text()).toContain("Engrase / Catálogo");
+    expect(wrapper.find("button").exists()).toBe(false);
   });
 
   it("ofrece los cuatro enlaces y un selector mobile", async () => {

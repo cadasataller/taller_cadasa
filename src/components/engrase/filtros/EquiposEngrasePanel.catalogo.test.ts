@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import EquiposEngrasePanel from "./EquiposEngrasePanel.vue";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 
-describe("entrada al catálogo desde Equipos", () => {
-  it("solo la muestra con edición, cierra el menú y emite la intención", async () => {
+describe("acciones del panel Equipos", () => {
+  it("no mezcla la navegación al catálogo con las acciones del equipo", async () => {
     const pinia = createPinia();
     const featureAccess = useFeatureAccessStore(pinia);
     featureAccess.isLoaded = true;
@@ -32,13 +32,8 @@ describe("entrada al catálogo desde Equipos", () => {
     });
 
     await wrapper.get('button[aria-label="Abrir acciones de equipos"]').trigger("click");
-    const catalogButton = wrapper.findAll('[role="menuitem"]')
-      .find((button) => button.text() === "Ver catálogo");
-
-    expect(catalogButton).toBeDefined();
-    await catalogButton!.trigger("click");
-
-    expect(wrapper.emitted("openCatalogo")).toHaveLength(1);
-    expect(wrapper.find('[role="menu"]').exists()).toBe(false);
+    expect(wrapper.find('[role="menu"]').text()).toContain("Agregar Equipo");
+    expect(wrapper.find('[role="menu"]').text()).not.toContain("Ver catálogo");
+    expect(wrapper.emitted("openCatalogo")).toBeUndefined();
   });
 });

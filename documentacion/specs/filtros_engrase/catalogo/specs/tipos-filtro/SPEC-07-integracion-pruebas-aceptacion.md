@@ -13,7 +13,7 @@ Implementar después de `SPEC-01` a `SPEC-06`.
 Ruta:
 
 ```txt
-/engrase/filtros/catalogo/tipos-filtro
+/engrase/catalogo/tipos-filtro
 ```
 
 Reemplazar solo el placeholder de Tipos de filtro por `CatalogoTiposFiltroSection`.
@@ -199,7 +199,7 @@ acciones de modal
 ## No regresión
 
 - `/engrase/filtros` sigue operando.
-- `Ver catálogo` mantiene permisos del spec general.
+- La subpestaña `Catálogo` mantiene permisos del spec general.
 - `/catalogo` global no cambia.
 - Solo edición de equipo modifica asociaciones.
 - Las otras pestañas no se implementan.
@@ -223,4 +223,3 @@ pnpm build
 - Sin consultas adicionales por filtros o detalle.
 - No modifica asociaciones.
 - Se integra sin implementar otras pestañas.
-

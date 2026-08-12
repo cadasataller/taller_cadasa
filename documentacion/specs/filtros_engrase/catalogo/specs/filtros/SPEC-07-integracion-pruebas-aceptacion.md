@@ -13,7 +13,7 @@ Implementar después de `SPEC-01` a `SPEC-06`.
 Ruta:
 
 ```txt
-/engrase/filtros/catalogo/filtros
+/engrase/catalogo/filtros
 ```
 
 Reemplazar únicamente el placeholder de Filtros por `CatalogoFiltrosSection`. No alterar la implementación de Tipos de filtro ni implementar Aceites o Sistemas.
@@ -212,4 +212,3 @@ Adaptar los nombres solo si `package.json` define equivalentes; no omitir typech
 - Cursores y estados Tailwind consistentes.
 - Sin consultas adicionales ni modificación de asociaciones.
 - Integración limitada a la pestaña Filtros.
-

@@ -28,9 +28,6 @@ async function update(filters: Partial<FiltrosEngraseQuery>) {
 function editarEquipo(codigo: string) {
   router.push({ name: "EquipoEngraseEditar", params: { codigo } });
 }
-function abrirCatalogo(): void {
-  void router.push({ name: "CatalogoEngrase" });
-}
 function cargarImagenVisible(equipoId: number): void {
   void f.cargarImagenEquipo(equipoId);
 }
@@ -93,7 +90,6 @@ async function clearAllFilters() {
             @filter-tipo="update({ tipoEquipoId: $event, modelo: '' })"
             @filter-modelo="update({ modelo: $event })"
             @clear-tipo-modelo="update({ tipoEquipoId: null, modelo: '' })"
-            @open-catalogo="abrirCatalogo"
           />
         </div>
         <div

@@ -51,20 +51,6 @@ function selectSection(sectionId: CatalogoEngraseSection): void {
   }
 }
 
-function backToFiltros(): void {
-  const previousLocation = window.history.state?.back;
-  const previousPath =
-    typeof previousLocation === "string" ? previousLocation : "";
-  const cameFromEngrase =
-    previousPath.includes("/engrase/") && !previousPath.includes("/catalogo");
-
-  if (cameFromEngrase) {
-    router.back();
-    return;
-  }
-
-  void router.push({ name: "FiltrosEngrase" });
-}
 </script>
 
 <template>
@@ -76,7 +62,7 @@ function backToFiltros(): void {
         : ''
     "
   >
-    <CatalogoEngraseHeader class="lg:shrink-0" @back="backToFiltros" />
+    <CatalogoEngraseHeader class="lg:shrink-0" />
     <CatalogoEngraseNavigation
       class="lg:shrink-0"
       :items="sections"

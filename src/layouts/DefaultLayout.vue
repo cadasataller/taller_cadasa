@@ -45,6 +45,7 @@ const MODULE_CATALOG_FEATURE = 'module_catalog';
 const CREATE_SOLICITUD_FEATURE = 'crear_solicitud_compra';
 const MODULE_ENGRASE_FEATURE = 'module_engrase';
 const VIEW_FILTROS_ENGRASE_FEATURE = 'ver_filtros_engrase';
+const EDIT_FILTROS_ENGRASE_FEATURE = 'editar_filtros_engrase';
 const engraseDesktopOpen = ref(false);
 const mobileEngraseOpen = ref(false);
 
@@ -60,7 +61,18 @@ const allMenuItems = [
 
 const canSeeEngrase = computed(() => isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(MODULE_ENGRASE_FEATURE));
 const canSeeFiltrosEngrase = computed(() => canSeeEngrase.value && featureAccessStore.tieneFuncionalidad(VIEW_FILTROS_ENGRASE_FEATURE));
+const canSeeCatalogoEngrase = computed(() =>
+  canSeeFiltrosEngrase.value
+  && featureAccessStore.tieneFuncionalidad(EDIT_FILTROS_ENGRASE_FEATURE)
+);
 const isEngraseRoute = computed(() => route.path.startsWith('/engrase'));
+const isCatalogoEngraseRoute = computed(() =>
+  route.path.startsWith('/engrase/catalogo')
+  || route.path.startsWith('/engrase/filtros/catalogo')
+);
+const isFiltrosEngraseRoute = computed(() =>
+  route.path.startsWith('/engrase/filtros') && !isCatalogoEngraseRoute.value
+);
 watch(isEngraseRoute, (active) => { if (active) engraseDesktopOpen.value = true; }, { immediate: true });
 
 const menuItems = computed(() => allMenuItems.filter((item) =>
@@ -234,7 +246,10 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
           <button type="button" class="flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all" :class="isEngraseRoute ? 'bg-main text-accent' : 'text-gray-400 hover:bg-main hover:text-white'" @click="engraseDesktopOpen = !engraseDesktopOpen" :aria-expanded="engraseDesktopOpen">
             <Droplets class="w-5 h-5 flex-shrink-0" /><span class="font-medium text-sm flex-1 text-left">Engrase</span><ChevronDown class="w-4 h-4 transition-transform" :class="{ 'rotate-180': engraseDesktopOpen }" />
           </button>
-          <router-link v-if="engraseDesktopOpen && canSeeFiltrosEngrase" to="/engrase/filtros" class="ml-5 flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'">Filtros</router-link>
+          <div v-if="engraseDesktopOpen" class="ml-5 space-y-1">
+            <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isFiltrosEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'">Filtros</router-link>
+            <router-link v-if="canSeeCatalogoEngrase" to="/engrase/catalogo" class="flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isCatalogoEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'">Catálogo</router-link>
+          </div>
         </div>
       </nav>
 
@@ -365,7 +380,10 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
       </nav>
       <div v-if="!hideDefaultLayout && mobileEngraseOpen && canSeeEngrase" class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl">
         <div class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"><span>Engrase</span><button type="button" class="p-2" @click="mobileEngraseOpen = false" aria-label="Cerrar subpestañas"><X class="w-5 h-5" /></button></div>
-        <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="block w-full rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-main" @click="mobileEngraseOpen = false">Filtros</router-link>
+        <div class="space-y-2">
+          <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="block w-full rounded-xl px-4 py-3 text-sm font-semibold" :class="isFiltrosEngraseRoute ? 'bg-main/10 text-main' : 'bg-gray-50 text-gray-600'" @click="mobileEngraseOpen = false">Filtros</router-link>
+          <router-link v-if="canSeeCatalogoEngrase" to="/engrase/catalogo" class="block w-full rounded-xl px-4 py-3 text-sm font-semibold" :class="isCatalogoEngraseRoute ? 'bg-main/10 text-main' : 'bg-gray-50 text-gray-600'" @click="mobileEngraseOpen = false">Catálogo</router-link>
+        </div>
       </div>
 
       <!-- FAB Mobile -->

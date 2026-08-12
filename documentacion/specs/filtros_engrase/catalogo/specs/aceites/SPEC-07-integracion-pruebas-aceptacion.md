@@ -13,7 +13,7 @@ Implementar después de `SPEC-01` a `SPEC-06`.
 Ruta:
 
 ```txt
-/engrase/filtros/catalogo/aceites
+/engrase/catalogo/aceites
 ```
 
 Reemplazar solo el placeholder de Aceites por `CatalogoAceitesSection`. No modificar Tipos de filtro o Filtros ni implementar Sistemas.
@@ -205,4 +205,3 @@ Adaptar nombres a scripts equivalentes de `package.json`, sin omitir verificaci�
 - Cursores Tailwind consistentes.
 - Sin llamadas adicionales ni mutación de asociaciones.
 - Integración limitada a Aceites.
-

@@ -1,6 +1,6 @@
 # SPEC-00 — Vista general y estructura base del Catálogo
 
-> Módulo: Equipos / Engrase / Filtros / Catálogo  
+> Módulo: Equipos / Engrase / Catálogo
 > Entrega: shell de navegación y UI base  
 > Datos: sin integración de RPC  
 > Responsive: mobile-first, con densidad ERP en desktop
@@ -18,8 +18,8 @@ Sistemas
 
 Esta entrega resuelve únicamente:
 
-- entrada al Catálogo desde la vista existente de Filtros de Engrase;
-- ruta, permisos y retorno a la vista de equipos;
+- entrada al Catálogo como subpestaña propia de Engrase;
+- ruta, permisos y convivencia con la subpestaña Filtros;
 - encabezado compacto;
 - selector de sección responsive;
 - contenedor común para contenido futuro;
@@ -57,8 +57,8 @@ Jerarquía de fuentes:
 ```txt
 ruta base del catálogo
 protección de acceso
-acción Ver catálogo
-encabezado y acción Volver
+subpestaña Catálogo en la navegación de Engrase
+encabezado contextual
 navegación entre cuatro secciones
 área común de contenido
 responsive desktop/tablet/mobile
@@ -89,8 +89,9 @@ La jerarquía funcional es:
 
 ```txt
 Engrase
-└── Filtros
-    ├── Vista operativa de equipos
+├── Filtros
+│   └── Vista operativa de equipos
+└── Catálogo
     └── Catálogo de filtros y engrase
 ```
 
@@ -107,7 +108,7 @@ Etiquetas:
 
 - Desktop/tablet: `Catálogo de filtros y engrase`.
 - Mobile: `Catálogo de engrase` si el ancho no permite el título largo.
-- Contexto opcional: `Engrase / Filtros`.
+- Contexto: `Engrase / Catálogo`.
 
 No usar solamente `Catálogo` si el layout no muestra el módulo padre.
 
@@ -116,7 +117,7 @@ No usar solamente `Catálogo` si el layout no muestra el módulo padre.
 ### Ruta base
 
 ```txt
-/engrase/filtros/catalogo
+/engrase/catalogo
 ```
 
 Nombre sugerido:
@@ -125,39 +126,13 @@ Nombre sugerido:
 CatalogoEngrase
 ```
 
-### Entrada desde Equipos
+### Entrada desde Engrase
 
-El botón existente `Ver Catalogo` del menú del panel Equipos debe:
+La navegación desktop y mobile de Engrase muestra `Catálogo` como subpestaña
+hermana de `Filtros`. La entrada requiere `editar_filtros_engrase`, navega a
+`CatalogoEngrase` y mantiene un estado activo independiente de `Filtros`.
 
-1. cambiar su etiqueta a `Ver catálogo`;
-2. emitir una intención de navegación;
-3. cerrar el menú;
-4. navegar a `CatalogoEngrase` desde la vista responsable;
-5. usar `cursor-pointer` cuando esté habilitado.
-
-Contrato sugerido:
-
-```txt
-emit: open-catalogo
-```
-
-El panel Equipos no debe conocer consultas ni lógica interna del Catálogo.
-
-### Acción Volver
-
-Destino:
-
-```txt
-/engrase/filtros
-```
-
-Reglas:
-
-- icono `ArrowLeft` y nombre accesible;
-- `cursor-pointer`;
-- target mínimo `32px` desktop y `44px` mobile;
-- no reiniciar manualmente el store de la vista anterior;
-- usar historial solo si el destino previo pertenece a Engrase; en otro caso navegar a `FiltrosEngrase`.
+El panel Equipos no contiene navegación al Catálogo.
 
 ### Secciones internas
 
@@ -180,10 +155,10 @@ Tipos de filtro → Filtros → Aceites → Sistemas
 La URL es la fuente de verdad de la sección activa. Rutas reservadas:
 
 ```txt
-/engrase/filtros/catalogo/tipos-filtro
-/engrase/filtros/catalogo/filtros
-/engrase/filtros/catalogo/aceites
-/engrase/filtros/catalogo/sistemas
+/engrase/catalogo/tipos-filtro
+/engrase/catalogo/filtros
+/engrase/catalogo/aceites
+/engrase/catalogo/sistemas
 ```
 
 La ruta base redirige de forma determinista a `tipos-filtro`. Mientras una sección no tenga spec propio, muestra el estado temporal de la sección 11.
@@ -201,7 +176,7 @@ editar_filtros_engrase
 ```
 
 - Los dos primeros mantienen acceso al módulo padre.
-- `editar_filtros_engrase` controla `Ver catálogo` y el acceso directo al Catálogo en esta primera definición.
+- `editar_filtros_engrase` controla la subpestaña `Catálogo` y su acceso directo.
 - Ocultar el botón no sustituye la protección de ruta.
 - No mostrar el shell mientras se resuelven permisos.
 - Permitir modo de solo lectura en el futuro requiere otro spec; no inferirlo aquí.
@@ -211,7 +186,6 @@ editar_filtros_engrase
 ```txt
 CatalogoEngraseView
 ├── CatalogoEngraseHeader
-│   ├── acción Volver
 │   └── título contextual
 ├── CatalogoEngraseNavigation
 │   ├── tabs desktop/tablet
@@ -230,9 +204,8 @@ CatalogoEngraseView
 
 ### `CatalogoEngraseHeader`
 
-- Presenta contexto y retorno.
+- Presenta el contexto `Engrase / Catálogo`.
 - No conoce stores de datos.
-- Emite `back`.
 
 ### `CatalogoEngraseNavigation`
 
@@ -265,7 +238,7 @@ En esta fase, `catalogoEngrase.types.ts` contiene solo tipos estructurales de na
 
 ```txt
 ┌──────────────────────────────────────────────────────────┐
-│ Volver  Catálogo de filtros y engrase                    │
+│ Engrase / Catálogo · Catálogo de filtros y engrase       │
 ├──────────────────────────────────────────────────────────┤
 │ Tipos de filtro | Filtros | Aceites | Sistemas           │
 ├──────────────────────────────────────────────────────────┤
@@ -320,7 +293,6 @@ Los controles futuros usarán normalmente `32px`–`36px`. No usar escala de lan
 ### Mobile: menor que `640px`
 
 - Encabezado compacto en una fila.
-- Botón Volver mínimo `44×44px`.
 - Sustituir tabs por selector de sección de ancho completo o menú accesible.
 - Mostrar claramente sección activa y opciones.
 - No comprimir cuatro nombres ni producir scroll horizontal de página.
@@ -366,7 +338,6 @@ El shell debe admitir título, descripción recuperable y acción `Reintentar`. 
 Todo elemento interactivo habilitado declara `cursor-pointer`:
 
 ```txt
-botón Volver
 tab o enlace de sección
 trigger del selector mobile
 opciones del selector mobile
@@ -389,7 +360,6 @@ No asignar `cursor-pointer` a superficies no clickeables.
 - Desktop/tablet: usar enlaces con `aria-current="page"` o un `tablist` completo; no mezclar patrones.
 - Si se usa `tablist`, implementar `tab`, `aria-selected`, `aria-controls` y flechas.
 - Mobile: etiqueta visible `Sección del catálogo`; no depender de placeholder.
-- Volver conserva texto visible cuando haya espacio y siempre tiene `aria-label`.
 - Foco visible y contraste AA.
 - La sección activa no depende solo de una línea verde.
 - Respetar `prefers-reduced-motion`.
@@ -465,10 +435,9 @@ El shell solo provee navegación, encabezado, contenedor, responsive transversal
 
 ### Routing y permisos
 
-- `Ver catálogo` abre la ruta base.
+- La subpestaña `Catálogo` abre la ruta base.
 - La ruta base redirige a la sección inicial.
 - Recargar conserva la sección activa.
-- Volver regresa a `/engrase/filtros`.
 - Sin permisos no existe acceso ni ruta directa.
 - Nunca se confunde con `/catalogo`.
 
@@ -502,9 +471,9 @@ Verificar:
 
 ## 18. Criterios de aceptación
 
-- Existe ruta propia dentro de Engrase/Filtros.
-- `Ver catálogo` abre esa ruta, no el Catálogo global.
-- La vista tiene encabezado compacto, retorno y cuatro destinos ordenados.
+- Existe ruta propia dentro de Engrase.
+- La subpestaña `Catálogo` abre esa ruta, no el Catálogo global.
+- La vista tiene encabezado compacto y cuatro destinos ordenados.
 - La URL representa la sección activa.
 - Desktop/tablet usan navegación compacta; mobile usa selector táctil.
 - No existe implementación funcional de pestañas.
@@ -514,4 +483,3 @@ Verificar:
 - Cada placeholder puede sustituirse de forma independiente.
 - Predominan medidas `xs/sm` sin sacrificar targets mobile.
 - Todo control clickeable habilitado usa `cursor-pointer`.
-

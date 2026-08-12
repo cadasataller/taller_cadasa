@@ -1,15 +1,15 @@
 # Specs — Catálogo de filtros y engrase
 
-> Módulo funcional: Equipos / Engrase / Filtros
+> Módulo funcional: Equipos / Engrase / Catálogo
 >
-> Entrada: menú desplegable del panel **Equipos** → **Ver catálogo**
-> Ruta base propuesta: `/engrase/filtros/catalogo`
+> Entrada: subpestaña **Catálogo** del menú **Engrase**
+> Ruta base: `/engrase/catalogo`
 
 ## Propósito
 
 Esta carpeta divide la implementación del Catálogo de engrase en entregas pequeñas e independientes.
 
-El Catálogo pertenece a la subpestaña **Filtros** del módulo Engrase. No pertenece a la ruta global `/catalogo` ni utiliza el módulo funcional `module_catalog`.
+El Catálogo es una subpestaña del módulo **Engrase**, al mismo nivel que **Filtros**. No pertenece a la ruta global `/catalogo` ni utiliza el módulo funcional `module_catalog`.
 
 La regla transversal del dominio es:
 

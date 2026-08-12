@@ -13,7 +13,7 @@ Implementar después de `SPEC-01` a `SPEC-06`.
 Ruta:
 
 ```txt
-/engrase/filtros/catalogo/sistemas
+/engrase/catalogo/sistemas
 ```
 
 Reemplazar solo el placeholder de Sistemas por `CatalogoSistemasSection`. No modificar las otras pestañas. Carga diferida al primer ingreso y reutilización durante la sesión.
@@ -146,4 +146,3 @@ Usar equivalentes de `package.json` si cambian los nombres.
 - Cursores Tailwind consistentes.
 - Sin requests adicionales ni mutación de asociaciones.
 - Integración limitada a Sistemas.
-
