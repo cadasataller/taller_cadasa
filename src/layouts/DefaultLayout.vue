@@ -8,6 +8,7 @@ import { useFiltrosCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/fil
 import { useAceitesCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/aceitesCatalogo.store';
 import { useSistemasCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/sistemasCatalogo.store';
 import { useDashboardHeaderNav } from '@/composables/useDashboardHeaderNav';
+import { useCatalogoEngrasePermissions } from '@/composables/engrase/catalogo/useCatalogoEngrasePermissions';
 import { 
   BarChart3, 
   Wrench, 
@@ -45,7 +46,6 @@ const MODULE_CATALOG_FEATURE = 'module_catalog';
 const CREATE_SOLICITUD_FEATURE = 'crear_solicitud_compra';
 const MODULE_ENGRASE_FEATURE = 'module_engrase';
 const VIEW_FILTROS_ENGRASE_FEATURE = 'ver_filtros_engrase';
-const EDIT_FILTROS_ENGRASE_FEATURE = 'editar_filtros_engrase';
 const engraseDesktopOpen = ref(false);
 const mobileEngraseOpen = ref(false);
 
@@ -61,9 +61,9 @@ const allMenuItems = [
 
 const canSeeEngrase = computed(() => isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(MODULE_ENGRASE_FEATURE));
 const canSeeFiltrosEngrase = computed(() => canSeeEngrase.value && featureAccessStore.tieneFuncionalidad(VIEW_FILTROS_ENGRASE_FEATURE));
+const { canViewCatalog } = useCatalogoEngrasePermissions();
 const canSeeCatalogoEngrase = computed(() =>
-  canSeeFiltrosEngrase.value
-  && featureAccessStore.tieneFuncionalidad(EDIT_FILTROS_ENGRASE_FEATURE)
+  canSeeEngrase.value && canViewCatalog.value
 );
 const isEngraseRoute = computed(() => route.path.startsWith('/engrase'));
 const isCatalogoEngraseRoute = computed(() =>

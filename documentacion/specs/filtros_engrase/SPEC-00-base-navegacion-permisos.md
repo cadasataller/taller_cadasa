@@ -26,7 +26,7 @@ Crear la entrada del módulo Engrase, su subnavegación y la protección por fun
 - La ruta canónica es `/engrase/filtros`.
 - `module_engrase` controla la visibilidad del módulo padre.
 - `ver_filtros_engrase` controla la visibilidad de la subpestaña y el acceso a la ruta.
-- `editar_filtros_engrase` controla adicionalmente la visibilidad y el acceso a `Catálogo`.
+- `ver_catalogo_engrase` controla la visibilidad y el acceso a `Catálogo`.
 - No usar el área del perfil como sustituto de `app_feature_access`.
 
 ## Archivos previstos
@@ -53,7 +53,7 @@ src/views/engrase/FiltrosEngraseView.vue
 - Al tocarlo se muestra una lista de subpestañas.
 - Cada subpestaña se presenta como botón táctil de ancho completo, un botón por fila.
 - `Filtros` solo aparece con `ver_filtros_engrase`.
-- `Catálogo` aparece con `ver_filtros_engrase` y `editar_filtros_engrase`.
+- `Catálogo` aparece con `module_engrase` y `ver_catalogo_engrase`.
 - Tocar `Filtros` navega a `/engrase/filtros`.
 - Debe ser posible cerrar la lista sin navegar.
 - El patrón debe admitir subpestañas futuras sin reescribir el template.

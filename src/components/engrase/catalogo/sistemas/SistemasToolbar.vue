@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Eraser, ListFilter, Plus, Search, X } from "lucide-vue-next";
 import type { CatalogoSistemaEstado, CatalogoSistemaUso } from "@/stores/dbequipos/engrase/catalogo/sistemasCatalogo.types";
-defineProps<{ busqueda: string; estado: CatalogoSistemaEstado; uso: CatalogoSistemaUso; canClear: boolean; activeFilterCount: number }>();
+defineProps<{ busqueda: string; estado: CatalogoSistemaEstado; uso: CatalogoSistemaUso; canClear: boolean; activeFilterCount: number; canCreate: boolean }>();
 const emit = defineEmits<{ updateBusqueda: [value:string]; updateEstado:[value:CatalogoSistemaEstado]; updateUso:[value:CatalogoSistemaUso]; openFilters:[]; clear:[]; create:[] }>();
 const value = (event: Event): string => (event.target as HTMLInputElement | HTMLSelectElement).value;
 </script>
@@ -10,6 +10,6 @@ const value = (event: Event): string => (event.target as HTMLInputElement | HTML
   <select :value="estado" aria-label="Estado" class="hidden h-9 cursor-pointer rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-main lg:block" @change="emit('updateEstado',value($event) as CatalogoSistemaEstado)"><option value="activos">Activos</option><option value="desactivados">Desactivados</option><option value="todos">Todos</option></select>
   <select :value="uso" aria-label="En uso" class="hidden h-9 cursor-pointer rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:border-main lg:block" @change="emit('updateUso',value($event) as CatalogoSistemaUso)"><option value="todos">Todos</option><option value="en-uso">En uso</option><option value="sin-uso">Sin uso</option></select>
   <div class="grid grid-cols-[1fr_44px] gap-2 lg:hidden"><button type="button" class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-main" @click="emit('openFilters')"><ListFilter class="h-4 w-4"/>Filtros<span v-if="activeFilterCount" class="rounded-full bg-main px-1.5 py-0.5 text-[10px] text-white">{{ activeFilterCount }}</span></button><button type="button" class="grid h-11 w-11 place-items-center rounded-md border border-gray-300 bg-white" :class="canClear ? 'cursor-pointer text-main' : 'cursor-not-allowed text-gray-300'" :disabled="!canClear" aria-label="Limpiar filtros" @click="emit('clear')"><Eraser class="h-4 w-4"/></button></div>
-  <button type="button" class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md bg-main px-3 text-sm font-semibold text-white shadow-sm hover:bg-main-light md:min-h-9 md:text-xs" @click="emit('create')"><Plus class="h-4 w-4"/>Nuevo sistema</button>
+  <button v-if="canCreate" type="button" class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md bg-main px-3 text-sm font-semibold text-white shadow-sm hover:bg-main-light md:min-h-9 md:text-xs" @click="emit('create')"><Plus class="h-4 w-4"/>Nuevo sistema</button>
   <button type="button" class="hidden h-9 items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-xs font-semibold lg:inline-flex" :class="canClear ? 'cursor-pointer text-main hover:bg-main/5' : 'cursor-not-allowed text-gray-400 opacity-50'" :disabled="!canClear" @click="emit('clear')"><Eraser class="h-4 w-4"/>Limpiar filtros</button>
 </div></template>

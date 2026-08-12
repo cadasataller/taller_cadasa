@@ -36,6 +36,7 @@ describe("componentes del catálogo de filtros", () => {
         estado: "activos",
         tiposFiltro: item.tiposFiltro,
         canClear: true,
+        canCreate: true,
       },
     });
     await w.get("input").setValue("B7");

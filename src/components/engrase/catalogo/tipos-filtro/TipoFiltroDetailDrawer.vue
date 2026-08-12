@@ -18,6 +18,7 @@ const props = defineProps<{
   draft: CatalogoTipoFiltroGuardarInput | null;
   hasChanges: boolean;
   canSubmit: boolean;
+  canSave: boolean;
   saving: boolean;
   fieldErrors: CatalogoTipoFiltroFieldErrors;
   saveError?: string | null;
@@ -150,7 +151,7 @@ watch(
 
           <div v-if="draft" class="flex-1 space-y-6 overflow-y-auto p-4 pb-24">
             <div v-if="saveError" class="rounded-md border border-danger/30 bg-danger-bg p-3 text-xs text-danger" role="alert">{{ saveError }}</div>
-            <TipoFiltroForm :draft="draft" :errors="fieldErrors" :disabled="saving" @update-draft="emit('updateDraft', $event)" @blur-name="emit('blurName')" />
+            <TipoFiltroForm :draft="draft" :errors="fieldErrors" :disabled="saving || !canSave" @update-draft="emit('updateDraft', $event)" @blur-name="emit('blurName')" />
             <template v-if="mode === 'editar' && item">
               <hr class="border-gray-200" />
               <TipoFiltroEquipmentTypes :items="item.impacto.tiposEquipo" />
@@ -159,15 +160,16 @@ watch(
             <p v-else class="rounded-md bg-gray-50 p-3 text-xs text-gray-500">Todavía no está asociado a equipos.</p>
           </div>
 
-          <footer class="sticky bottom-0 z-10 mt-auto grid grid-cols-2 gap-2 border-t border-gray-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <footer class="sticky bottom-0 z-10 mt-auto grid gap-2 border-t border-gray-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" :class="canSave ? 'grid-cols-2' : 'grid-cols-1'">
             <button
               type="button"
               class="min-h-11 rounded-md border border-gray-300 px-3 text-sm font-semibold text-gray-700 md:min-h-9 md:text-xs"
               :class="saving ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-gray-50'"
               :disabled="saving"
               @click="emit('cancel')"
-            >Cancelar</button>
+            >{{ canSave ? 'Cancelar' : 'Cerrar' }}</button>
             <button
+              v-if="canSave"
               type="button"
               class="inline-flex min-h-11 items-center justify-center rounded-md bg-main px-3 text-sm font-semibold text-white md:min-h-9 md:text-xs"
               :class="saving ? 'cursor-wait opacity-70' : canSubmit ? 'cursor-pointer hover:bg-main-light' : 'cursor-not-allowed opacity-50'"

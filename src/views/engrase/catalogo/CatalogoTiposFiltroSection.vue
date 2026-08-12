@@ -54,6 +54,7 @@ function openItem(item: CatalogoTipoFiltroItem): void {
           :busqueda="catalogo.busqueda.value"
           :estado="catalogo.estado.value"
           :can-clear="catalogo.hayFiltrosActivos.value"
+          :can-create="catalogo.canCreateCatalogItems.value"
           @update-busqueda="catalogo.actualizarBusqueda"
           @update-estado="catalogo.actualizarEstado"
           @clear="catalogo.limpiarFiltros"
@@ -80,6 +81,7 @@ function openItem(item: CatalogoTipoFiltroItem): void {
             :message="
               mensajeCatalogoTiposFiltroError(catalogo.errorInicial.value)
             "
+            :can-create="catalogo.canCreateCatalogItems.value"
             @retry="catalogo.reintentar"
             @clear="catalogo.limpiarFiltros"
             @create="catalogo.abrirCrear"
@@ -113,6 +115,7 @@ function openItem(item: CatalogoTipoFiltroItem): void {
       :draft="catalogo.draft.value"
       :has-changes="catalogo.hasChanges.value"
       :can-submit="catalogo.canSubmit.value"
+      :can-save="catalogo.canSave.value"
       :saving="catalogo.guardando.value"
       :field-errors="catalogo.fieldErrors.value"
       :save-error="saveErrorMessage"

@@ -30,7 +30,7 @@ afterEach(() => {
 describe("componentes del catálogo de tipos de filtro", () => {
   it("la toolbar emite búsqueda, estado, limpieza y creación", async () => {
     const wrapper = mount(TiposFiltroToolbar, {
-      props: { busqueda: "", estado: "activos", canClear: true },
+      props: { busqueda: "", estado: "activos", canClear: true, canCreate: true },
     });
 
     await wrapper.get("input").setValue("aire");
@@ -42,6 +42,19 @@ describe("componentes del catálogo de tipos de filtro", () => {
     expect(wrapper.emitted("updateEstado")?.[0]).toEqual(["desactivados"]);
     expect(wrapper.emitted("clear")).toHaveLength(1);
     expect(wrapper.emitted("create")).toHaveLength(1);
+  });
+
+  it("oculta las altas sin permiso de agregar", () => {
+    const wrapper = mount(TiposFiltroToolbar, {
+      props: {
+        busqueda: "",
+        estado: "activos",
+        canClear: false,
+        canCreate: false,
+      },
+    });
+
+    expect(wrapper.text()).not.toContain("Nuevo tipo de filtro");
   });
 
   it("la tabla anuncia orden y permite seleccionar con teclado", async () => {
@@ -138,6 +151,7 @@ describe("componentes del catálogo de tipos de filtro", () => {
         draft: { id: null, nombre: "", activo: true },
         hasChanges: false,
         canSubmit: false,
+        canSave: true,
         saving: false,
         fieldErrors: {},
       },
@@ -158,6 +172,28 @@ describe("componentes del catálogo de tipos de filtro", () => {
     expect(wrapper.get("aside").classes()).toEqual(
       expect.arrayContaining(["lg:right-0", "lg:bottom-0"]),
     );
+    wrapper.unmount();
+  });
+
+  it("mantiene el detalle en solo lectura sin permiso de edición", () => {
+    const wrapper = mount(TipoFiltroDetailDrawer, {
+      props: {
+        open: true,
+        mode: "editar",
+        item,
+        draft: { id: 7, nombre: "Aire", activo: true },
+        hasChanges: false,
+        canSubmit: false,
+        canSave: false,
+        saving: false,
+        fieldErrors: {},
+      },
+      global: { stubs: { Teleport: true } },
+    });
+
+    expect(wrapper.get("input").attributes("disabled")).toBeDefined();
+    expect(wrapper.text()).not.toContain("Guardar cambios");
+    expect(wrapper.get("footer button").text()).toBe("Cerrar");
     wrapper.unmount();
   });
 });

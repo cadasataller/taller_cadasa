@@ -8,6 +8,7 @@ import type {
 const props = defineProps<{
   busqueda: string; tipoFiltroId: number | null; compras: CatalogoFiltroCompras;
   estado: CatalogoFiltroEstado; tiposFiltro: readonly CatalogoTipoFiltroRelacionado[]; canClear: boolean;
+  canCreate: boolean;
 }>();
 const emit = defineEmits<{
   updateBusqueda: [value: string]; updateTipoFiltro: [value: number | null];
@@ -54,7 +55,7 @@ function type(event: Event): void {
       </select>
     </div>
 
-    <button type="button" class="col-span-2 inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md bg-main px-3 text-sm font-semibold text-white hover:bg-main-light sm:col-span-1 lg:h-9 lg:min-h-0 lg:text-xs" @click="emit('create')"><Plus class="h-4 w-4" aria-hidden="true" />Nuevo filtro</button>
+    <button v-if="canCreate" type="button" class="col-span-2 inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md bg-main px-3 text-sm font-semibold text-white hover:bg-main-light sm:col-span-1 lg:h-9 lg:min-h-0 lg:text-xs" @click="emit('create')"><Plus class="h-4 w-4" aria-hidden="true" />Nuevo filtro</button>
     <button type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-600 sm:row-start-1 sm:col-start-3 lg:h-9 lg:min-h-0 lg:text-xs" :class="canClear ? 'cursor-pointer hover:bg-main/5 hover:text-main' : 'cursor-not-allowed opacity-50'" :disabled="!canClear" aria-label="Limpiar filtros" @click="emit('clear')"><Eraser class="h-4 w-4" aria-hidden="true" /><span class="hidden lg:inline">Limpiar filtros</span></button>
   </div>
 </template>

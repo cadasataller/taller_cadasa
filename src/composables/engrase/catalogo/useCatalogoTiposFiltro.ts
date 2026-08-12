@@ -1,6 +1,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef } from "vue";
 import { storeToRefs } from "pinia";
 import { useTiposFiltroCatalogoStore } from "@/stores/dbequipos/engrase/catalogo/tiposFiltroCatalogo.store";
+import { useCatalogoEngrasePermissions } from "./useCatalogoEngrasePermissions";
 import {
   TIPO_FILTRO_NOMBRE_MAX,
   type CatalogoTipoFiltroEditorMode,
@@ -18,6 +19,7 @@ const EMPTY_DRAFT = (): CatalogoTipoFiltroGuardarInput => ({
 export function useCatalogoTiposFiltro() {
   const store = useTiposFiltroCatalogoStore();
   const state = storeToRefs(store);
+  const { canCreateCatalogItems, canEditCatalogItems } = useCatalogoEngrasePermissions();
   const modo = shallowRef<CatalogoTipoFiltroEditorMode>("cerrado");
   const draft = ref<CatalogoTipoFiltroGuardarInput | null>(null);
   const confirmacionAbierta = shallowRef(false);
@@ -44,8 +46,14 @@ export function useCatalogoTiposFiltro() {
       );
   });
   const drawerOpen = computed(() => modo.value !== "cerrado");
+  const canSave = computed(() =>
+    modo.value === "crear"
+      ? canCreateCatalogItems.value
+      : modo.value === "editar" && canEditCatalogItems.value,
+  );
   const canSubmit = computed(() =>
-    Boolean(draft.value)
+    canSave.value
+    && Boolean(draft.value)
     && hasChanges.value
     && !state.guardando.value
     && !fieldErrors.value.nombre,
@@ -58,6 +66,7 @@ export function useCatalogoTiposFiltro() {
   }
 
   function abrirCrear(): void {
+    if (!canCreateCatalogItems.value) return;
     rememberTrigger();
     store.limpiarErrorGuardado();
     store.seleccionar(null);
@@ -76,6 +85,7 @@ export function useCatalogoTiposFiltro() {
   }
 
   function updateDraft(value: CatalogoTipoFiltroGuardarInput): void {
+    if (!canSave.value) return;
     draft.value = value;
     store.limpiarErrorGuardado();
     if (fieldErrors.value.nombre && value.nombre.trim()) {
@@ -141,7 +151,7 @@ export function useCatalogoTiposFiltro() {
   }
 
   async function guardarDirectamente(): Promise<void> {
-    if (!draft.value || !validateName()) return;
+    if (!canSave.value || !draft.value || !validateName()) return;
     try {
       const item = await store.guardar({ ...draft.value, nombre: draft.value.nombre.trim() });
       mostrarExito(
@@ -158,7 +168,7 @@ export function useCatalogoTiposFiltro() {
   }
 
   async function submit(): Promise<void> {
-    if (!draft.value || !validateName() || !hasChanges.value) return;
+    if (!canSave.value || !draft.value || !validateName() || !hasChanges.value) return;
     if (modo.value === "crear") {
       await guardarDirectamente();
       return;
@@ -167,7 +177,7 @@ export function useCatalogoTiposFiltro() {
   }
 
   async function confirmarActualizacion(): Promise<void> {
-    if (state.guardando.value) return;
+    if (!canEditCatalogItems.value || state.guardando.value) return;
     await guardarDirectamente();
   }
 
@@ -191,6 +201,9 @@ export function useCatalogoTiposFiltro() {
     drawerOpen,
     hasChanges,
     canSubmit,
+    canSave,
+    canCreateCatalogItems,
+    canEditCatalogItems,
     fieldErrors,
     confirmacionAbierta,
     confirmarDescarteAbierto,

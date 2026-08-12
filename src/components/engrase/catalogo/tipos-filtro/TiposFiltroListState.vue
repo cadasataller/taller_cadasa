@@ -4,6 +4,7 @@ import { AlertCircle, FilterX, Inbox, Plus, RefreshCw } from "lucide-vue-next";
 defineProps<{
   kind: "loading" | "error" | "empty" | "no-results";
   message?: string | null;
+  canCreate: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -41,7 +42,7 @@ const emit = defineEmits<{
         @click="emit('clear')"
       ><FilterX class="h-4 w-4" aria-hidden="true" />Limpiar filtros</button>
       <button
-        v-else
+        v-else-if="canCreate"
         type="button"
         class="mt-4 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md bg-main px-3 text-xs font-semibold text-white hover:bg-main-light md:min-h-9"
         @click="emit('create')"

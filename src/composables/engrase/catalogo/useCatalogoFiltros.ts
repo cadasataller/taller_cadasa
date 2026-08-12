@@ -1,6 +1,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useFiltrosCatalogoStore } from "@/stores/dbequipos/engrase/catalogo/filtrosCatalogo.store";
+import { useCatalogoEngrasePermissions } from "./useCatalogoEngrasePermissions";
 import {
   FILTRO_CODIGO_MAX, type CatalogoFiltroEditorMode, type CatalogoFiltroFieldErrors,
   type CatalogoFiltroGuardarInput, type CatalogoFiltroItem,
@@ -13,6 +14,7 @@ const emptyDraft = (): CatalogoFiltroGuardarInput => ({
 export function useCatalogoFiltros() {
   const store = useFiltrosCatalogoStore();
   const state = storeToRefs(store);
+  const { canCreateCatalogItems, canEditCatalogItems } = useCatalogoEngrasePermissions();
   const modo = shallowRef<CatalogoFiltroEditorMode>("cerrado");
   const draft = ref<CatalogoFiltroGuardarInput | null>(null);
   const confirmacionAbierta = shallowRef(false);
@@ -34,13 +36,17 @@ export function useCatalogoFiltros() {
       || draft.value.activo !== original.value?.activo);
   });
   const drawerOpen = computed(() => modo.value !== "cerrado");
-  const canSubmit = computed(() => Boolean(draft.value) && hasChanges.value
+  const canSave = computed(() => modo.value === "crear"
+    ? canCreateCatalogItems.value
+    : modo.value === "editar" && canEditCatalogItems.value);
+  const canSubmit = computed(() => canSave.value && Boolean(draft.value) && hasChanges.value
     && !state.guardando.value && !fieldErrors.value.codigo);
 
   function rememberTrigger(element?: HTMLElement | null): void {
     triggerElement.value = element ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
   }
   function abrirCrear(): void {
+    if (!canCreateCatalogItems.value) return;
     rememberTrigger(); store.limpiarErrorGuardado(); store.seleccionar(null);
     modo.value = "crear"; draft.value = emptyDraft(); fieldErrors.value = {};
   }
@@ -50,6 +56,7 @@ export function useCatalogoFiltros() {
     fieldErrors.value = {};
   }
   function updateDraft(value: CatalogoFiltroGuardarInput): void {
+    if (!canSave.value) return;
     draft.value = value; store.limpiarErrorGuardado();
     if (fieldErrors.value.codigo && value.codigo.trim()) fieldErrors.value = {};
   }
@@ -86,7 +93,7 @@ export function useCatalogoFiltros() {
     if (state.errorGuardado.value?.codigo === "CODIGO_FILTRO_DUPLICADO") fieldErrors.value = { codigo: "Ya existe un filtro con ese código." };
   }
   async function guardarDirectamente(): Promise<void> {
-    if (!draft.value || !validateCode() || state.guardando.value) return;
+    if (!canSave.value || !draft.value || !validateCode() || state.guardando.value) return;
     const wasCreate = draft.value.id === null;
     try {
       await store.guardar({ ...draft.value, codigo: draft.value.codigo.trim() });
@@ -95,11 +102,14 @@ export function useCatalogoFiltros() {
     } catch { confirmacionAbierta.value = false; aplicarErrorGuardado(); }
   }
   async function submit(): Promise<void> {
-    if (!draft.value || !validateCode() || !hasChanges.value) return;
+    if (!canSave.value || !draft.value || !validateCode() || !hasChanges.value) return;
     if (modo.value === "crear") { await guardarDirectamente(); return; }
     confirmacionAbierta.value = true;
   }
-  const confirmarActualizacion = (): Promise<void> => guardarDirectamente();
+  const confirmarActualizacion = (): Promise<void> => {
+    if (!canEditCatalogItems.value) return Promise.resolve();
+    return guardarDirectamente();
+  };
   function cancelarConfirmacion(): void { if (!state.guardando.value) confirmacionAbierta.value = false; }
   function cancelarDescarte(): void { confirmarDescarteAbierto.value = false; }
 
@@ -110,7 +120,8 @@ export function useCatalogoFiltros() {
   onBeforeUnmount(() => { if (successTimer) clearTimeout(successTimer); });
 
   return {
-    ...state, modo, draft, original, drawerOpen, hasChanges, canSubmit, fieldErrors,
+    ...state, modo, draft, original, drawerOpen, hasChanges, canSubmit, canSave,
+    canCreateCatalogItems, canEditCatalogItems, fieldErrors,
     confirmacionAbierta, confirmarDescarteAbierto, filtrosMobileAbiertos, successMessage,
     inicializar: store.inicializar, reintentar: store.reintentar, actualizarBusqueda: store.actualizarBusqueda,
     actualizarTipoFiltro: store.actualizarTipoFiltro, actualizarCompras: store.actualizarCompras,

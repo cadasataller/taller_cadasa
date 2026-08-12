@@ -6,6 +6,7 @@ defineProps<{
   busqueda: string;
   estado: CatalogoEstadoFiltro;
   canClear: boolean;
+  canCreate: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -64,6 +65,7 @@ function onStateChange(event: Event): void {
     </div>
 
     <button
+      v-if="canCreate"
       type="button"
       class="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-md bg-main px-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-main-light focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main active:bg-main-dark sm:col-span-3 lg:col-span-1 md:min-h-9 md:text-xs"
       @click="emit('create')"

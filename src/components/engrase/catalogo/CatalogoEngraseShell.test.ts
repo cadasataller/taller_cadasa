@@ -3,7 +3,6 @@ import { createPinia } from "pinia";
 import { defineComponent } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import CatalogoEngraseHeader from "./CatalogoEngraseHeader.vue";
 import CatalogoEngraseNavigation from "./CatalogoEngraseNavigation.vue";
 import CatalogoEngraseSectionShell from "./CatalogoEngraseSectionShell.vue";
 import CatalogoEngraseView from "@/views/engrase/catalogo/CatalogoEngraseView.vue";
@@ -67,14 +66,6 @@ describe("shell del catálogo de engrase", () => {
       resumen: { total: 0, activos: 0, desactivados: 0 },
     });
   });
-  it("presenta el Catálogo como sección propia de Engrase", () => {
-    const wrapper = mount(CatalogoEngraseHeader);
-
-    expect(wrapper.text()).toContain("Catálogo de filtros y engrase");
-    expect(wrapper.text()).toContain("Engrase / Catálogo");
-    expect(wrapper.find("button").exists()).toBe(false);
-  });
-
   it("ofrece los cuatro enlaces y un selector mobile", async () => {
     const router = createTestRouter();
     await router.push({ name: "CatalogoEngraseFiltros" });

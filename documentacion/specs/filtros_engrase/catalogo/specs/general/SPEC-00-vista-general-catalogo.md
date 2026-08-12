@@ -129,7 +129,7 @@ CatalogoEngrase
 ### Entrada desde Engrase
 
 La navegación desktop y mobile de Engrase muestra `Catálogo` como subpestaña
-hermana de `Filtros`. La entrada requiere `editar_filtros_engrase`, navega a
+hermana de `Filtros`. La entrada requiere `ver_catalogo_engrase`, navega a
 `CatalogoEngrase` y mantiene un estado activo independiente de `Filtros`.
 
 El panel Equipos no contiene navegación al Catálogo.
@@ -171,12 +171,15 @@ Aplicar:
 
 ```txt
 module_engrase
-ver_filtros_engrase
-editar_filtros_engrase
+ver_catalogo_engrase
+editar_items_catalogo_engrase
+agregar_items_catalogo_engrase
 ```
 
-- Los dos primeros mantienen acceso al módulo padre.
-- `editar_filtros_engrase` controla la subpestaña `Catálogo` y su acceso directo.
+- `module_engrase` mantiene acceso al módulo padre.
+- `ver_catalogo_engrase` controla la subpestaña `Catálogo`, la carga de sus pestañas y el acceso directo.
+- `editar_items_catalogo_engrase` controla la edición y `Guardar cambios` de registros existentes.
+- `agregar_items_catalogo_engrase` controla los botones `Nuevo` y la creación de registros.
 - Ocultar el botón no sustituye la protección de ruta.
 - No mostrar el shell mientras se resuelven permisos.
 - Permitir modo de solo lectura en el futuro requiere otro spec; no inferirlo aquí.

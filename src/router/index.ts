@@ -105,7 +105,7 @@ const router = createRouter({
           component: () => import('@/views/engrase/catalogo/CatalogoEngraseView.vue'),
           redirect: { name: 'CatalogoEngraseTiposFiltro' },
           meta: {
-            requiredFeatures: ['module_engrase', 'ver_filtros_engrase', 'editar_filtros_engrase'],
+            requiredFeatures: ['module_engrase', 'ver_catalogo_engrase'],
           },
           children: [
             {

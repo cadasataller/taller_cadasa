@@ -3,8 +3,7 @@ import router from "./index";
 
 const requiredFeatures = [
   "module_engrase",
-  "ver_filtros_engrase",
-  "editar_filtros_engrase",
+  "ver_catalogo_engrase",
 ];
 
 describe("rutas del catálogo de engrase", () => {

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import CatalogoEngraseHeader from "@/components/engrase/catalogo/CatalogoEngraseHeader.vue";
 import CatalogoEngraseNavigation from "@/components/engrase/catalogo/CatalogoEngraseNavigation.vue";
 import CatalogoEngraseSectionShell from "@/components/engrase/catalogo/CatalogoEngraseSectionShell.vue";
 import CatalogoTiposFiltroSection from "./CatalogoTiposFiltroSection.vue";
@@ -62,7 +61,6 @@ function selectSection(sectionId: CatalogoEngraseSection): void {
         : ''
     "
   >
-    <CatalogoEngraseHeader class="lg:shrink-0" />
     <CatalogoEngraseNavigation
       class="lg:shrink-0"
       :items="sections"
