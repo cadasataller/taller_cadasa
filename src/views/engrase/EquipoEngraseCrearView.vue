@@ -119,15 +119,16 @@ async function guardarImagen(): Promise<void> {
 }
 </script>
 <template>
-  <EquipoCreacionLoadingState v-if="!isReady && !errorInicial" />
-  <EquipoCreacionErrorState
-    v-else-if="errorInicial"
-    :message="errorInicial.mensaje"
-    @back="wizard.volverAlListado"
-    @retry="wizard.reintentarCargaInicial"
-  />
-  <EquipoCreacionShell
-    v-else-if="auxiliares"
+  <div class="h-full">
+    <EquipoCreacionLoadingState v-if="!isReady && !errorInicial" />
+    <EquipoCreacionErrorState
+      v-else-if="errorInicial"
+      :message="errorInicial.mensaje"
+      @back="wizard.volverAlListado"
+      @retry="wizard.reintentarCargaInicial"
+    />
+    <EquipoCreacionShell
+      v-else-if="auxiliares"
     :step="pasoActual"
     :completed="completedSteps"
     :created="Boolean(draft.equipoCreado)"
@@ -146,7 +147,7 @@ async function guardarImagen(): Promise<void> {
     @save-image="guardarImagen"
     @skip="omitir"
     @finish="terminar"
-  >
+    >
     <div class="pb-5" aria-live="polite">
       <span class="sr-only">Paso {{ pasoActual }} de 5</span>
       <EquipoCreacionDatosStep
@@ -157,9 +158,11 @@ async function guardarImagen(): Promise<void> {
         :can-validate="store.canValidateCode"
         :validating="store.isValidatingCode"
         :errors="erroresPaso"
+        :is-duplicate-tipo-equipo="store.esTipoEquipoDuplicado"
         @codigo="store.actualizarCodigo"
         @validate="store.validarCodigoActual"
         @tipo="store.seleccionarTipoEquipo"
+        @create-tipo="store.crearYSeleccionarTipoEquipo"
         @subtipo="store.actualizarSubtipo"
         @estado="store.actualizarEstado"
         @add-etapa="store.agregarEtapa"
@@ -199,18 +202,18 @@ async function guardarImagen(): Promise<void> {
         @retry-cleanup="imagen.reintentarLimpiezaImagen"
       />
     </div>
-  </EquipoCreacionShell>
-  <EquipoCreacionExitDialog
-    v-if="activeOverlay?.kind === 'confirmar_salida'"
-    @continue="store.continuarCreando"
-    @discard="wizard.confirmarDescarteYVolver"
-  />
-  <div
-    v-if="editor"
-    class="fixed inset-0 z-50 grid place-items-end bg-main-dark/40 p-3 sm:place-items-center"
-    role="dialog"
-    aria-modal="true"
-  >
+    </EquipoCreacionShell>
+    <EquipoCreacionExitDialog
+      v-if="activeOverlay?.kind === 'confirmar_salida'"
+      @continue="store.continuarCreando"
+      @discard="wizard.confirmarDescarteYVolver"
+    />
+    <div
+      v-if="editor"
+      class="fixed inset-0 z-50 grid place-items-end bg-main-dark/40 p-3 sm:place-items-center"
+      role="dialog"
+      aria-modal="true"
+    >
     <section class="w-full max-w-md rounded-xl bg-white p-4 shadow-xl">
       <h2 class="font-bold">
         {{ editor === "filtro" ? "Agregar filtro" : "Agregar aceite" }}
@@ -271,5 +274,6 @@ async function guardarImagen(): Promise<void> {
         </button>
       </div>
     </section>
+    </div>
   </div>
 </template>

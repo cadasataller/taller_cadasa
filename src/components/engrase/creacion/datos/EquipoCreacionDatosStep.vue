@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, shallowRef } from "vue";
 import type {
   AuxiliaresEquipoEngrase,
   CrearEquipoDraft,
@@ -35,8 +35,22 @@ const emit = defineEmits<{
   addEtapa: [number];
   removeEtapa: [number];
 }>();
-const modeloInvalido = computed(() => !props.draft.datos.subtipo.trim());
-const tipoInvalido = computed(() => props.draft.datos.tipoEquipo === null);
+type CampoDatos = "codigo" | "tipo" | "subtipo" | "etapas";
+const camposTocados = shallowRef<Record<CampoDatos, boolean>>({
+  codigo: false,
+  tipo: false,
+  subtipo: false,
+  etapas: false,
+});
+const modeloInvalido = computed(
+  () => camposTocados.value.subtipo && !props.draft.datos.subtipo.trim(),
+);
+const tipoInvalido = computed(
+  () => camposTocados.value.tipo && props.draft.datos.tipoEquipo === null,
+);
+const etapasInvalidas = computed(
+  () => camposTocados.value.etapas && props.draft.datos.etapas.length === 0,
+);
 const opcionesModelo = computed<EquipoModeloOption[]>(() => {
   const opciones = new Map<string, EquipoModeloOption>();
   const tipoSeleccionado = props.draft.datos.tipoEquipo;
@@ -98,10 +112,14 @@ function seleccionarTipo(tipo: TipoEquipoDraftReference): void {
     subtiposSugeridos: existente ? [...existente.subtiposSugeridos] : [],
   });
 }
+
+function marcarCampoTocado(campo: CampoDatos): void {
+  camposTocados.value = { ...camposTocados.value, [campo]: true };
+}
 </script>
 <template>
   <section class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-    <h2 tabindex="-1" class="text-base font-bold text-gray-900">
+    <h2 tabindex="-1" class="text-base font-bold text-main">
       Datos del equipo
     </h2>
     
@@ -121,6 +139,7 @@ function seleccionarTipo(tipo: TipoEquipoDraftReference): void {
         :disabled="disabled"
         @update:model-value="emit('codigo', $event)"
         @validate="emit('validate')"
+        @blur="marcarCampoTocado('codigo')"
       /><EquipoTipoField
         class="[&_.multiselect]:!min-h-10 [&_.multiselect]:!text-xs [&_.multiselect__input]:!mb-0 [&_.multiselect__input]:!text-xs [&_.multiselect__select]:!h-10 [&_.multiselect__single]:!mb-0 [&_.multiselect__single]:!text-xs [&_.multiselect__tags]:!min-h-10 [&_.multiselect__tags]:!px-2 [&_.multiselect__tags]:!py-1"
         :tipos="auxiliares.tiposEquipo"
@@ -129,20 +148,23 @@ function seleccionarTipo(tipo: TipoEquipoDraftReference): void {
         :is-duplicate="isDuplicateTipoEquipo"
         @select="seleccionarTipo"
         @create="emit('createTipo', $event)"
+        @blur="marcarCampoTocado('tipo')"
       /><EquipoModeloField
         class="[&_.multiselect]:!min-h-10 [&_.multiselect]:!text-xs [&_.multiselect__input]:!mb-0 [&_.multiselect__input]:!text-xs [&_.multiselect__select]:!h-10 [&_.multiselect__single]:!mb-0 [&_.multiselect__single]:!text-xs [&_.multiselect__tags]:!min-h-10 [&_.multiselect__tags]:!px-2 [&_.multiselect__tags]:!py-1"
         :model-value="draft.datos.subtipo"
         :options="opcionesModelo"
         :invalid="modeloInvalido"
         @update:model-value="emit('subtipo', $event)"
+        @blur="marcarCampoTocado('subtipo')"
       />
       <EquipoEtapasField
         class="[&_.multiselect]:!min-h-10 [&_.multiselect]:!text-xs [&_.multiselect__input]:!mb-0 [&_.multiselect__input]:!text-xs [&_.multiselect__select]:!h-10 [&_.multiselect__single]:!mb-0 [&_.multiselect__single]:!text-xs [&_.multiselect__tags]:!min-h-10 [&_.multiselect__tags]:!px-2 [&_.multiselect__tags]:!py-1"
         :etapas="auxiliares.etapas"
         :seleccionadas="draft.datos.etapas"
-        :invalid="draft.datos.etapas.length === 0"
+        :invalid="etapasInvalidas"
         @add="emit('addEtapa', $event)"
         @remove="emit('removeEtapa', $event)"
+        @blur="marcarCampoTocado('etapas')"
       />
       <div class="md:col-span-2">
         <span class="text-xs font-bold text-gray-700">Estado</span>

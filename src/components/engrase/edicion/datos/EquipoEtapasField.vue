@@ -8,7 +8,7 @@ const props = defineProps<{
   seleccionadas: CatalogoIdNombre[];
   invalid?: boolean;
 }>();
-const emit = defineEmits<{ add: [number]; remove: [number] }>();
+const emit = defineEmits<{ add: [number]; remove: [number]; blur: [] }>();
 const options = computed<EquipoMultiselectOption[]>(() =>
   props.etapas.map((etapa) => ({
     key: String(etapa.id),
@@ -41,6 +41,7 @@ const selectedKeys = computed({
       :options="options"
       placeholder="Selecciona etapas"
       :invalid="invalid"
+      @close="emit('blur')"
     />
     <p v-if="invalid" class="text-xs text-danger" role="alert">
       Selecciona al menos una etapa.

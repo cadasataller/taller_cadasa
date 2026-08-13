@@ -12,7 +12,7 @@ const props = defineProps<{
   options: EquipoModeloOption[];
   invalid?: boolean;
 }>();
-const emit = defineEmits<{ "update:modelValue": [string] }>();
+const emit = defineEmits<{ "update:modelValue": [string]; blur: [] }>();
 
 const selected = computed<EquipoModeloOption | null>({
   get: () => {
@@ -54,6 +54,7 @@ function crearModelo(valor: string): void {
       no-result="Presiona Enter para crear el modelo"
       :class="{ 'equipo-modelo-multiselect': true, 'multiselect-invalid': invalid }"
       @tag="crearModelo"
+      @close="emit('blur')"
     >
       <template #singleLabel="{ option }">
         <span class="font-medium">{{ option.value }}</span>
