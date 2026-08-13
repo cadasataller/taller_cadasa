@@ -1,5 +1,9 @@
 import type { EquipoEngraseListItem } from "../filtrosEngrase.types";
 import type {
+  AuxiliaresEdicionEquipo,
+  ResultadoBusquedaFiltroOriginal as ResultadoBusquedaFiltroOriginalEdicion,
+} from "../edicion/equipoEngraseEdicion.types";
+import type {
   CatalogoDraftReference,
   CatalogoExistenteReference,
   CatalogoIdNombre,
@@ -14,6 +18,31 @@ export type {
   CatalogoTemporalReference,
   EquipoEstado,
 } from "../shared/equipoEngraseDraft.types";
+
+export type AuxiliaresEquipoEngrase = AuxiliaresEdicionEquipo;
+export type ResultadoBusquedaFiltroOriginal =
+  ResultadoBusquedaFiltroOriginalEdicion;
+
+export type ValidacionCodigoEquipoRespuesta =
+  | { puedeCrearse: true }
+  | {
+      puedeCrearse: false;
+      modeloExistente: string | null;
+      activoExistente: boolean | null;
+    };
+
+export interface ResumenOperacionesCreacionEquipo {
+  etapasAgregadas: number;
+  filtrosAgregados: number;
+  aceitesAgregados: number;
+}
+
+export interface CrearEquipoCompletoRespuesta {
+  codigo: string;
+  mensaje: string;
+  equipoLista: EquipoEngraseListItem;
+  resumenOperaciones: ResumenOperacionesCreacionEquipo;
+}
 
 export interface TipoEquipoExistenteCreacionReference
   extends CatalogoExistenteReference {

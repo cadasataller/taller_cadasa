@@ -1,4 +1,4 @@
-import type { EquipoEngraseListItem } from "../filtrosEngrase.types";
+import { mapEquipoEngraseListItem } from "../shared/equipoEngraseListItem.mapper";
 import { crearErrorEdicionEquipo } from "./equipoEngraseEdicion.errors";
 import type {
   AdministrarImagenEquipoDto,
@@ -139,20 +139,6 @@ export const mapBusquedaFiltroOriginal = (
     })),
   };
 };
-const mapEquipoLista = (
-  dto: NonNullable<ActualizarEquipoCompletoDto["equipo_lista"]>,
-): EquipoEngraseListItem => ({
-  id: dto.id,
-  codigo: dto.codigo,
-  tipo_equipo_id: dto.tipo_equipo_id,
-  tipo_equipo: dto.tipo_equipo,
-  subtipo: dto.subtipo,
-  estado: dto.estado,
-  main_storage_path: dto.main_storage_path,
-  tiene_imagen_main: dto.tiene_imagen_main,
-  imagen_actualizada_en: dto.imagen_actualizada_en,
-  etapas: dto.etapas.map(catalogo),
-});
 export const mapActualizarEquipoCompleto = (
   dto: ActualizarEquipoCompletoDto,
 ): ActualizarEquipoCompletoRespuesta => {
@@ -183,7 +169,7 @@ export const mapActualizarEquipoCompleto = (
   return {
     codigo: dto.codigo,
     mensaje: dto.mensaje,
-    equipoLista: mapEquipoLista(dto.equipo_lista),
+    equipoLista: mapEquipoEngraseListItem(dto.equipo_lista),
     cambiosDetalle: detalle,
     resumenOperaciones: resumen,
   };
