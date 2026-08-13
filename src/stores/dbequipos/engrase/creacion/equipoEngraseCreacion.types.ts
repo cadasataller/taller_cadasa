@@ -44,6 +44,29 @@ export interface CrearEquipoCompletoRespuesta {
   resumenOperaciones: ResumenOperacionesCreacionEquipo;
 }
 
+export type CrearEquipoSubmitState =
+  | { kind: "idle" }
+  | { kind: "creating" }
+  | { kind: "error"; codigo: string; mensaje: string }
+  | {
+      kind: "success";
+      mensaje: string;
+      resumen: ResumenOperacionesCreacionEquipo;
+    }
+  | {
+      kind: "success_with_local_warning";
+      mensaje: string;
+      warning: string;
+      resumen: ResumenOperacionesCreacionEquipo;
+    };
+
+export type ResultadoCrearEquipoSubmit =
+  | { kind: "success"; respuesta: CrearEquipoCompletoRespuesta }
+  | { kind: "invalid"; errores: CrearEquipoValidationIssue[] }
+  | { kind: "busy" }
+  | { kind: "already_created" }
+  | { kind: "error"; error: CrearEquipoError };
+
 export type CrearEquipoPaso = 1 | 2 | 3 | 4 | 5;
 
 export const CREAR_EQUIPO_PASOS = [

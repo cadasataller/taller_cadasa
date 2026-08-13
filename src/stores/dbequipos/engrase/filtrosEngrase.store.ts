@@ -17,6 +17,18 @@ import type {
   EtapaEngrase,
 } from "./filtrosEngrase.types";
 import type { EquipoImagenPersistida } from "./edicion/equipoEngraseEdicion.types";
+
+export type ResultadoAplicarEquipoCreado =
+  | { kind: "applied" }
+  | { kind: "code_conflict"; mensaje: string };
+
+const copiarEquipoLista = (equipo: EquipoEngraseListItem): EquipoEngraseListItem => ({
+  ...equipo,
+  etapas: equipo.etapas.map((etapa) => ({ ...etapa })),
+});
+
+const normalizarCodigo = (codigo: string): string => codigo.trim().toLocaleLowerCase();
+const normalizarNombre = (nombre: string): string => nombre.trim().toLocaleLowerCase();
 export const useFiltrosEngraseStore = defineStore(
   "dbequipos_engrase_filtros",
   () => {
@@ -42,7 +54,8 @@ export const useFiltrosEngraseStore = defineStore(
       errorInicial = ref<string | null>(null),
       errorEquipos = ref<string | null>(null),
       errorDetalle = ref<string | null>(null),
-      errorCambioEstado = ref<string | null>(null);
+      errorCambioEstado = ref<string | null>(null),
+      errorIntegracionCreacion = ref<string | null>(null);
     let catalogosCargados = false,
       idsCodigo = ref<Set<number> | null>(null),
       filtrosCache = new Map<number, EquipoFiltroDetalle[]>(),
@@ -338,6 +351,35 @@ export const useFiltrosEngraseStore = defineStore(
         equivalenciasPorFiltroId.value = {};
       }
     }
+    function aplicarEquipoCreado(equipo: EquipoEngraseListItem): ResultadoAplicarEquipoCreado {
+      const copia = copiarEquipoLista(equipo);
+      const mismoId = equipos.value.findIndex((item) => item.id === copia.id);
+      const conflictoCodigo = equipos.value.find((item) =>
+        item.id !== copia.id && normalizarCodigo(item.codigo) === normalizarCodigo(copia.codigo),
+      );
+      if (conflictoCodigo) {
+        const mensaje = "La lista local ya contiene otro equipo con este código; se sincronizará al recargar.";
+        errorIntegracionCreacion.value = mensaje;
+        return { kind: "code_conflict", mensaje };
+      }
+      errorIntegracionCreacion.value = null;
+      if (mismoId < 0) equipos.value.push(copia);
+      else equipos.value[mismoId] = copia;
+
+      if (!tiposEquipo.value.some((tipo) => tipo.id === copia.tipo_equipo_id) &&
+          !tiposEquipo.value.some((tipo) => normalizarNombre(tipo.nombre) === normalizarNombre(copia.tipo_equipo))) {
+        tiposEquipo.value.push({ id: copia.tipo_equipo_id, nombre: copia.tipo_equipo });
+      }
+      copia.etapas.forEach((etapa) => {
+        if (!etapas.value.some((item) => item.id === etapa.id) &&
+            !etapas.value.some((item) => normalizarNombre(item.nombre) === normalizarNombre(etapa.nombre))) {
+          etapas.value.push({ ...etapa });
+        }
+      });
+      filtrosCache.delete(copia.id);
+      aceitesCache.delete(copia.id);
+      return { kind: "applied" };
+    }
     function invalidarDetalleEquipo(equipoId: number): void {
       filtrosCache.delete(equipoId);
       aceitesCache.delete(equipoId);
@@ -402,6 +444,7 @@ export const useFiltrosEngraseStore = defineStore(
       errorEquipos,
       errorDetalle,
       errorCambioEstado,
+      errorIntegracionCreacion,
       equiposVisibles,
       equipoSeleccionado,
       filtroSeleccionado,
@@ -426,6 +469,7 @@ export const useFiltrosEngraseStore = defineStore(
       seleccionarFiltro,
       cambiarEstadoEquipo,
       aplicarEquipoActualizado,
+      aplicarEquipoCreado,
       invalidarDetalleEquipo,
       actualizarImagenEquipo,
       reintentarCarga,

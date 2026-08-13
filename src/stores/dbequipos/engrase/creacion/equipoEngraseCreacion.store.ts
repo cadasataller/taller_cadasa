@@ -9,7 +9,10 @@ import {
   normalizarTextoCreacion,
 } from "./equipoEngraseCreacion.draft";
 import { equipoEngraseCreacionService } from "./equipoEngraseCreacion.service";
-import { ErrorCreacionEquipo } from "./equipoEngraseCreacion.remote-errors";
+import { useFiltrosEngraseStore } from "../filtrosEngrase.store";
+import { construirPayloadCrearEquipo } from "./equipoEngraseCreacion.payload";
+import { mapearErrorRpcCreacionEquipo } from "./equipoEngraseCreacion.errors";
+import { ErrorCreacionEquipo, extraerCodigoErrorCreacionEquipo } from "./equipoEngraseCreacion.remote-errors";
 import {
   puedeSolicitarValidacionCodigo,
   validacionCorrespondeAlCodigoActual,
@@ -54,6 +57,8 @@ import type {
   CrearEquipoError,
   CrearEquipoOverlayState,
   CrearEquipoPaso,
+  CrearEquipoSubmitState,
+  ResultadoCrearEquipoSubmit,
   CrearEquipoValidationIssue,
   CrearEquipoValidationResult,
   EquipoEstado,
@@ -105,6 +110,7 @@ export const useEquipoEngraseCreacionStore = defineStore(
     const loadingInicial = shallowRef(false);
     const errorInicial = shallowRef<CrearEquipoError | null>(null);
     const validationErrors = ref<CrearEquipoValidationIssue[]>([]);
+    const submitState = shallowRef<CrearEquipoSubmitState>({ kind: "idle" });
     const activeOverlay = shallowRef<CrearEquipoOverlayState | null>(null);
     const filtroEditor = shallowRef<CrearEquipoFiltroEditorState>({ kind: "closed" });
     const cierreEditorFiltroPendiente = shallowRef(false);
@@ -118,6 +124,17 @@ export const useEquipoEngraseCreacionStore = defineStore(
 
     const isReady = computed(() => auxiliares.value !== null && !loadingInicial.value);
     const isCreated = computed(() => draft.value.equipoCreado !== null);
+    const isCreating = computed(() => submitState.value.kind === "creating");
+    const hasCreateError = computed(() => submitState.value.kind === "error");
+    const createError = computed(() => submitState.value.kind === "error"
+      ? { codigo: submitState.value.codigo, mensaje: submitState.value.mensaje }
+      : null);
+    const creationSummary = computed(() =>
+      submitState.value.kind === "success" || submitState.value.kind === "success_with_local_warning"
+        ? submitState.value.resumen
+        : null,
+    );
+    const isInteractionLocked = computed(() => isCreating.value || isCreated.value);
     const isDraftPhase = computed(() => !isCreated.value && pasoActual.value <= 4);
     const isImagePhase = computed(() => isCreated.value && pasoActual.value === 5);
     const hasActiveOverlay = computed(() => activeOverlay.value !== null);
@@ -127,16 +144,16 @@ export const useEquipoEngraseCreacionStore = defineStore(
         datos.etapas.length > 0 || datos.estado !== "activo" || draft.value.filtros.length > 0 || draft.value.aceites.length > 0;
     });
     const canValidateCode = computed(() =>
-      isReady.value && !isCreated.value && !isValidatingCode.value &&
+      isReady.value && !isInteractionLocked.value && !isValidatingCode.value &&
       puedeSolicitarValidacionCodigo(draft.value.datos.codigo),
     );
     const isValidatingCode = computed(() => draft.value.validacionCodigo.estado === "loading");
     const isCurrentCodeValidated = computed(() => validacionCorrespondeAlCodigoActual(draft.value));
     const canGoBack = computed(() =>
-      isDraftPhase.value && pasoActual.value > 1 && !loadingInicial.value && !hasActiveOverlay.value,
+      isDraftPhase.value && pasoActual.value > 1 && !loadingInicial.value && !hasActiveOverlay.value && !isCreating.value,
     );
     const canGoNext = computed(() => {
-      if (!isReady.value || hasActiveOverlay.value || !isDraftPhase.value || pasoActual.value === 4) return false;
+      if (!isReady.value || hasActiveOverlay.value || !isDraftPhase.value || pasoActual.value === 4 || isCreating.value) return false;
       return validarPaso(pasoActual.value).valido;
     });
     const completedSteps = computed(() =>
@@ -157,9 +174,13 @@ export const useEquipoEngraseCreacionStore = defineStore(
     const canOpenStep = computed(() => (paso: CrearEquipoPaso): boolean =>
       puedeAbrirPaso(paso),
     );
+    const canSubmitCreation = computed(() =>
+      isReady.value && pasoActual.value === 4 && !isCreated.value && !isCreating.value &&
+      !hasActiveOverlay.value && validarCreacionEquipoCompleta(draft.value).valido,
+    );
 
     function puedeMutarBorrador(): boolean {
-      return !isCreated.value;
+      return !isCreated.value && !isCreating.value;
     }
 
     function establecerErrores(errores: CrearEquipoValidationIssue[]): void {
@@ -341,7 +362,7 @@ export const useEquipoEngraseCreacionStore = defineStore(
     }
 
     function puedeAbrirPaso(paso: CrearEquipoPaso): boolean {
-      if (loadingInicial.value || hasActiveOverlay.value) return false;
+      if (loadingInicial.value || hasActiveOverlay.value || isCreating.value) return false;
       if (isCreated.value) return paso === 5;
       if (paso === 5) return false;
       return paso <= Math.min(mayorPasoCompletado.value + 1, 4);
@@ -354,7 +375,7 @@ export const useEquipoEngraseCreacionStore = defineStore(
     }
 
     function abrirOverlay(overlay: CrearEquipoOverlayState): boolean {
-      if (isCreated.value || activeOverlay.value !== null) return false;
+      if (isInteractionLocked.value || activeOverlay.value !== null) return false;
       if (overlay.kind === "agregar_filtro") {
         filtroEditor.value = { kind: "search", query: "", result: null, loading: false, error: null, dirty: false };
         cierreEditorFiltroPendiente.value = false;
@@ -582,12 +603,80 @@ export const useEquipoEngraseCreacionStore = defineStore(
       aceiteEditor.value = { kind: "closed" };
     }
 
+    async function crearEquipo(): Promise<ResultadoCrearEquipoSubmit> {
+      if (isCreating.value) return { kind: "busy" };
+      if (isCreated.value) return { kind: "already_created" };
+      if (pasoActual.value !== 4 || !isReady.value || hasActiveOverlay.value) {
+        const errores: CrearEquipoValidationIssue[] = [{
+          codigo: "CREACION_NO_DISPONIBLE",
+          mensaje: "Revisa el borrador antes de crear el equipo.",
+          paso: 4,
+          seccion: "general",
+        }];
+        establecerErrores(errores);
+        return { kind: "invalid", errores };
+      }
+
+      submitState.value = { kind: "creating" };
+      limpiarErrores();
+      const validacion = validarCreacionEquipoCompleta(draft.value);
+      if (!validacion.valido) {
+        establecerErrores(validacion.errores);
+        submitState.value = { kind: "idle" };
+        return { kind: "invalid", errores: validacion.errores };
+      }
+
+      const payload = construirPayloadCrearEquipo(draft.value);
+      if (!payload.ok) {
+        establecerErrores(payload.errores);
+        submitState.value = { kind: "idle" };
+        return { kind: "invalid", errores: payload.errores };
+      }
+
+      try {
+        const respuesta = await equipoEngraseCreacionService.crearEquipoCompleto(payload.argumento);
+        if (isCreated.value) return { kind: "already_created" };
+        let warning: string | null = null;
+        try {
+          const integracion = useFiltrosEngraseStore().aplicarEquipoCreado(respuesta.equipoLista);
+          warning = integracion.kind === "code_conflict" ? integracion.mensaje : null;
+        } catch {
+          warning = "El equipo fue creado, pero la lista local necesita sincronizarse.";
+        }
+        registrarEquipoCreado(respuesta.equipoLista);
+        submitState.value = warning !== null
+          ? { kind: "success_with_local_warning", mensaje: respuesta.mensaje, warning, resumen: respuesta.resumenOperaciones }
+          : { kind: "success", mensaje: respuesta.mensaje, resumen: respuesta.resumenOperaciones };
+        limpiarErrores();
+        return { kind: "success", respuesta };
+      } catch (error) {
+        const codigo = error instanceof ErrorCreacionEquipo
+          ? error.codigo
+          : error instanceof Error ? extraerCodigoErrorCreacionEquipo(error.message) : "ERROR_CREACION_EQUIPO";
+        const issue = mapearErrorRpcCreacionEquipo(codigo);
+        if (codigo === "EQUIPO_YA_EXISTE_EN_ENGRASE") {
+          draft.value.validacionCodigo = {
+            estado: "invalido",
+            codigo: normalizarCodigoCreacion(draft.value.datos.codigo),
+            modeloExistente: null,
+            activoExistente: null,
+          };
+        }
+        establecerErrores([issue]);
+        const errorCreacion: CrearEquipoError = { codigo, mensaje: issue.mensaje };
+        submitState.value = { kind: "error", ...errorCreacion };
+        return { kind: "error", error: errorCreacion };
+      }
+    }
+
     function reiniciarBorrador(): void {
+      if (isInteractionLocked.value) return;
       solicitudValidacion += 1;
       draft.value = crearEquipoDraftInicial();
       pasoActual.value = 1;
       mayorPasoCompletado.value = 0;
       validationErrors.value = [];
+      submitState.value = { kind: "idle" };
       activeOverlay.value = null;
       salidaSolicitada.value = false;
       solicitudBusquedaFiltro += 1;
@@ -598,6 +687,7 @@ export const useEquipoEngraseCreacionStore = defineStore(
     }
 
     function solicitarSalida(): boolean {
+      if (isCreating.value) return false;
       if (isCreated.value || !hasDraftContent.value) return true;
       if (hasActiveOverlay.value) return false;
       activeOverlay.value = { kind: "confirmar_salida" };
@@ -615,6 +705,7 @@ export const useEquipoEngraseCreacionStore = defineStore(
     }
 
     function resetCompleto(): void {
+      if (isInteractionLocked.value) return;
       reiniciarBorrador();
       solicitudCarga += 1;
       cargaPendiente = null;
@@ -631,6 +722,7 @@ export const useEquipoEngraseCreacionStore = defineStore(
       loadingInicial,
       errorInicial,
       validationErrors,
+      submitState,
       activeOverlay,
       filtroEditor,
       cierreEditorFiltroPendiente,
@@ -639,6 +731,12 @@ export const useEquipoEngraseCreacionStore = defineStore(
       salidaSolicitada,
       isReady,
       isCreated,
+      isCreating,
+      hasCreateError,
+      createError,
+      creationSummary,
+      canSubmitCreation,
+      isInteractionLocked,
       isDraftPhase,
       isImagePhase,
       hasActiveOverlay,
@@ -715,6 +813,7 @@ export const useEquipoEngraseCreacionStore = defineStore(
       continuarEditandoAceite,
       descartarEditorAceite,
       registrarEquipoCreado,
+      crearEquipo,
       limpiarErrores,
       limpiarErroresDeCampo,
       establecerErrores,
