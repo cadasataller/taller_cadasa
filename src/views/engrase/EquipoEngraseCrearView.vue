@@ -11,12 +11,14 @@ import EquipoCreacionExitDialog from "@/components/engrase/creacion/EquipoCreaci
 import EquipoCreacionDatosStep from "@/components/engrase/creacion/datos/EquipoCreacionDatosStep.vue";
 import EquipoCreacionFiltrosStep from "@/components/engrase/creacion/filtros/EquipoCreacionFiltrosStep.vue";
 import EquipoCreacionAceitesStep from "@/components/engrase/creacion/aceites/EquipoCreacionAceitesStep.vue";
+import EquipoCreacionAceiteOverlay from "@/components/engrase/creacion/aceites/EquipoCreacionAceiteOverlay.vue";
 import EquipoCreacionRevisionStep from "@/components/engrase/creacion/revision/EquipoCreacionRevisionStep.vue";
 import EquipoCreacionImagenStep from "@/components/engrase/creacion/imagen/EquipoCreacionImagenStep.vue";
 import { useEquipoEngraseCreacionWizard } from "@/composables/engrase/useEquipoEngraseCreacionWizard";
 import { useCrearEquipoImagen } from "@/composables/engrase/useCrearEquipoImagen";
 import { useEquipoOverlayMultiselect } from "@/composables/engrase/useEquipoOverlayMultiselect";
 import { useEquipoEngraseCreacionStore } from "@/stores/dbequipos/engrase/creacion/equipoEngraseCreacion.store";
+import type { CatalogoDraftReference } from "@/stores/dbequipos/engrase/creacion/equipoEngraseCreacion.types";
 
 const router = useRouter();
 const wizard = useEquipoEngraseCreacionWizard();
@@ -29,6 +31,7 @@ const {
   validationErrors,
   activeOverlay,
   filtroEditor,
+  aceiteEditor,
   isReady,
   errorInicial,
   isCreating,
@@ -38,15 +41,12 @@ const {
 } = storeToRefs(store);
 const imagen = useCrearEquipoImagen();
 const { multiselect, acomodarOpcionesEnOverlay } = useEquipoOverlayMultiselect();
-const editor = shallowRef<"aceite" | null>(null);
 const filtroOverlay = shallowRef<"search" | "create" | "edit" | null>(null);
 const filtroEditadoId = shallowRef<string | null>(null);
 const filtroCodigo = shallowRef("");
 const filtroCantidad = shallowRef(1);
 const filtroTipo = shallowRef<number | null>(null);
 const filtroEnCompras = shallowRef(true);
-const aceiteSistema = shallowRef<number | null>(null);
-const aceiteId = shallowRef<number | null>(null);
 const erroresPaso = computed(() =>
   validationErrors.value
     .filter((error) => error.paso === pasoActual.value)
@@ -72,9 +72,6 @@ const tipoFiltroSeleccionado = computed<OpcionTipoFiltro | null>({
   get: () => opcionesTipoFiltro.value.find((tipo) => tipo.id === filtroTipo.value) ?? null,
   set: (tipo) => { filtroTipo.value = tipo?.id ?? null; },
 });
-function cerrarEditor(): void {
-  editor.value = null;
-}
 function cerrarFiltroOverlay(): void {
   filtroOverlay.value = null;
   filtroEditadoId.value = null;
@@ -168,31 +165,28 @@ function onFiltroKeydown(event: KeyboardEvent): void {
 }
 onMounted(() => window.addEventListener("keydown", onFiltroKeydown));
 onBeforeUnmount(() => window.removeEventListener("keydown", onFiltroKeydown));
-function agregarAceite(): void {
-  const sistema = auxiliares.value?.sistemasAceite.find(
-    (item) => item.id === aceiteSistema.value,
-  );
-  const aceite = auxiliares.value?.aceites.find(
-    (item) => item.id === aceiteId.value,
-  );
-  if (!sistema || !aceite) return;
-  if (
-    store.agregarAceite({
-      sistema: {
-        estado: "existente",
-        id: sistema.id,
-        tempId: null,
-        nombre: sistema.nombre,
-      },
-      aceite: {
-        estado: "existente",
-        id: aceite.id,
-        tempId: null,
-        nombre: aceite.nombre,
-      },
-    }).ok
-  )
-    cerrarEditor();
+const aceiteEditado = computed(() =>
+  aceiteEditor.value.kind === "edit"
+    ? draft.value.aceites.find((aceite) => aceite.draftId === aceiteEditor.value.draftId)
+    : undefined,
+);
+const referenciasSistemaAceite = computed(() => [
+  ...(auxiliares.value?.sistemasAceite ?? []).map((sistema) => ({ estado: "existente" as const, id: sistema.id, tempId: null, nombre: sistema.nombre })),
+  ...store.obtenerSistemasTemporales(),
+]);
+const referenciasAceite = computed(() => [
+  ...(auxiliares.value?.aceites ?? []).map((aceite) => ({ estado: "existente" as const, id: aceite.id, tempId: null, nombre: aceite.nombre })),
+  ...store.obtenerAceitesTemporales(),
+]);
+function abrirAgregarAceite(): void { store.abrirAgregarAceite(); }
+function abrirEditarAceite(draftId: string): void { store.abrirEditarAceite(draftId); }
+function cerrarEditorAceite(): void { store.descartarEditorAceite(); }
+function confirmarAceite(sistema: CatalogoDraftReference, aceite: CatalogoDraftReference): void {
+  if (aceiteEditor.value.kind === "add") store.agregarAceite({ sistema, aceite });
+  else if (aceiteEditor.value.kind === "edit") store.actualizarAceite({ draftId: aceiteEditor.value.draftId, sistema, aceite });
+}
+function sistemaAceiteOcupado(sistema: CatalogoDraftReference): boolean {
+  return store.estaSistemaOcupado(sistema, aceiteEditor.value.kind === "edit" ? aceiteEditor.value.draftId : undefined);
 }
 async function crear(): Promise<void> {
   await store.crearEquipo();
@@ -279,8 +273,8 @@ async function guardarImagen(): Promise<void> {
         :aceites="draft.aceites"
         :disabled="isInteractionLocked"
         :errors="erroresPaso"
-        @add="editor = 'aceite'"
-        @edit="editor = 'aceite'"
+        @add="abrirAgregarAceite"
+        @edit="abrirEditarAceite"
         @remove="store.quitarAceite"
       />
       <EquipoCreacionRevisionStep
@@ -347,49 +341,18 @@ async function guardarImagen(): Promise<void> {
       </aside>
     </div>
     </Teleport>
-    <div
-      v-if="editor"
-      class="fixed inset-0 z-50 grid place-items-end bg-main-dark/40 p-3 sm:place-items-center"
-      role="dialog"
-      aria-modal="true"
-    >
-    <section class="w-full max-w-md rounded-xl bg-white p-4 shadow-xl">
-      <h2 class="font-bold">Agregar aceite</h2>
-      <div class="mt-3 grid gap-3">
-        <select v-model="aceiteSistema" class="min-h-10 rounded border px-2">
-          <option :value="null">Sistema…</option>
-          <option
-            v-for="sistema in auxiliares?.sistemasAceite"
-            :key="sistema.id"
-            :value="sistema.id"
-          >
-            {{ sistema.nombre }}
-          </option></select
-        ><select v-model="aceiteId" class="min-h-10 rounded border px-2">
-          <option :value="null">Aceite…</option>
-          <option
-            v-for="aceite in auxiliares?.aceites"
-            :key="aceite.id"
-            :value="aceite.id"
-          >
-            {{ aceite.nombre }}
-          </option>
-        </select>
-      </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <button
-          class="min-h-10 rounded border px-3 text-xs font-bold"
-          @click="cerrarEditor"
-        >
-          Cancelar</button
-        ><button
-          class="min-h-10 rounded bg-main px-3 text-xs font-bold text-white"
-          @click="agregarAceite"
-        >
-          Agregar
-        </button>
-      </div>
-    </section>
-    </div>
+    <EquipoCreacionAceiteOverlay
+      v-if="aceiteEditor.kind !== 'closed' && auxiliares"
+      :mode="aceiteEditor"
+      :asociacion="aceiteEditado"
+      :sistemas="referenciasSistemaAceite"
+      :aceites="referenciasAceite"
+      :crear-sistema="store.crearSistemaTemporal"
+      :crear-aceite="store.crearAceiteTemporal"
+      :has-system-conflict="sistemaAceiteOcupado"
+      :error="aceiteEditor.error"
+      @close="cerrarEditorAceite"
+      @confirm="confirmarAceite"
+    />
   </div>
 </template>
