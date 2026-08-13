@@ -34,7 +34,8 @@ function actualizar(event: Event): void {
       <button
         v-if="validation.estado === 'idle' || validating"
         type="button"
-        class="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md border border-main px-3 text-xs font-semibold text-main transition hover:bg-main/10 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9"
+        class="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-md border border-main px-3 text-xs font-semibold text-main transition hover:bg-main/10 disabled:opacity-50 sm:min-h-9"
+        :class="validating ? 'cursor-wait' : !canValidate || disabled ? 'cursor-not-allowed' : 'cursor-pointer'"
         :disabled="!canValidate || validating || disabled"
         @click="emit('validate')"
       >

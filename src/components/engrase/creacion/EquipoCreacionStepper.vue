@@ -29,7 +29,7 @@ const pasos: Array<{ numero: CrearEquipoPaso; titulo: string }> = [
         <button
           v-if="canOpen(paso.numero)"
           type="button"
-          class="grid justify-items-center gap-1 text-xs font-semibold"
+          class="grid cursor-pointer justify-items-center gap-1 text-xs font-semibold"
           :aria-current="current === paso.numero ? 'step' : undefined"
           @click="emit('go', paso.numero)"
         >

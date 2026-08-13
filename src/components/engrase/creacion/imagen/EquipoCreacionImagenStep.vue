@@ -36,7 +36,7 @@ const emit = defineEmits<{ select: [File]; retryCleanup: [] }>();
     </p>
     <button
       v-if="state.kind === 'cleanup_pending'"
-      class="mt-2 min-h-10 rounded border px-3 text-xs font-bold"
+      class="mt-2 min-h-10 cursor-pointer rounded border px-3 text-xs font-bold"
       @click="emit('retryCleanup')"
     >
       Reintentar limpieza

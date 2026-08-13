@@ -171,7 +171,7 @@ function marcarCampoTocado(campo: CampoDatos): void {
         <div class="mt-1 grid grid-cols-2 gap-2" role="group" aria-label="Estado del equipo">
           <button
             type="button"
-            class="min-h-10 cursor-pointer rounded-md border px-3 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main"
+            class="min-h-10 cursor-pointer rounded-md border px-3 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main disabled:cursor-not-allowed"
             :class="
               draft.datos.estado === 'activo'
                 ? 'border-success bg-success-bg text-success'
@@ -185,7 +185,7 @@ function marcarCampoTocado(campo: CampoDatos): void {
           </button>
           <button
             type="button"
-            class="min-h-10 cursor-pointer rounded-md border px-3 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main"
+            class="min-h-10 cursor-pointer rounded-md border px-3 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main disabled:cursor-not-allowed"
             :class="
               draft.datos.estado === 'descartado'
                 ? 'border-danger bg-danger-bg text-danger'

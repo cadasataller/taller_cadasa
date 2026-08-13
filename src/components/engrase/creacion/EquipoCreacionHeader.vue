@@ -10,7 +10,7 @@ const emit = defineEmits<{ back: [] }>();
     >
       <button
         type="button"
-        class="inline-flex min-h-10 items-center gap-1 text-xs font-bold text-main hover:bg-main/10"
+        class="inline-flex min-h-10 cursor-pointer items-center gap-1 text-xs font-bold text-main hover:bg-main/10"
         @click="emit('back')"
       >
         <ArrowLeft class="h-4 w-4" />

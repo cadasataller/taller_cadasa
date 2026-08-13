@@ -33,6 +33,7 @@ const emit = defineEmits<{
       v-if="step === 1"
       type="button"
       class="min-h-11 rounded-md border border-gray-300 px-3 text-xs font-bold"
+      :class="creating ? 'cursor-wait' : 'cursor-pointer'"
       :disabled="creating"
       @click="emit('cancel')"
     >
@@ -41,6 +42,7 @@ const emit = defineEmits<{
       v-else-if="step < 5"
       type="button"
       class="min-h-11 rounded-md border border-gray-300 px-3 text-xs font-bold"
+      :class="creating ? 'cursor-wait' : 'cursor-pointer'"
       :disabled="creating"
       @click="emit('back')"
     >
@@ -49,6 +51,7 @@ const emit = defineEmits<{
       v-if="step < 4"
       type="button"
       class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white disabled:opacity-50"
+      :class="nextDisabled ? 'cursor-not-allowed' : 'cursor-pointer'"
       :disabled="nextDisabled"
       @click="emit('next')"
     >
@@ -57,6 +60,7 @@ const emit = defineEmits<{
       v-else-if="step === 4"
       type="button"
       class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white disabled:opacity-50"
+      :class="creating ? 'cursor-wait' : nextDisabled ? 'cursor-not-allowed' : 'cursor-pointer'"
       :disabled="nextDisabled"
       @click="emit('create')"
     >
@@ -67,6 +71,7 @@ const emit = defineEmits<{
       ><button
         type="button"
         class="min-h-11 rounded-md border border-gray-300 px-3 text-xs font-bold"
+        :class="imageSaving ? 'cursor-wait' : 'cursor-pointer'"
         :disabled="imageSaving"
         @click="emit('skip')"
       >
@@ -75,6 +80,7 @@ const emit = defineEmits<{
         v-if="canSaveImage"
         type="button"
         class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white"
+        :class="imageSaving ? 'cursor-wait' : 'cursor-pointer'"
         :disabled="imageSaving"
         @click="emit('saveImage')"
       >
@@ -83,6 +89,7 @@ const emit = defineEmits<{
         v-else
         type="button"
         class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white disabled:opacity-50"
+        :class="imageSaving ? 'cursor-wait' : canFinish ? 'cursor-pointer' : 'cursor-not-allowed'"
         :disabled="!canFinish"
         @click="emit('finish')"
       >
