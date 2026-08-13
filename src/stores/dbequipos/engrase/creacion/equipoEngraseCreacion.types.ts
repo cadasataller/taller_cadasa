@@ -44,6 +44,37 @@ export interface CrearEquipoCompletoRespuesta {
   resumenOperaciones: ResumenOperacionesCreacionEquipo;
 }
 
+export type CrearEquipoPaso = 1 | 2 | 3 | 4 | 5;
+
+export const CREAR_EQUIPO_PASOS = [
+  { numero: 1, clave: "datos", titulo: "Datos del equipo" },
+  { numero: 2, clave: "filtros", titulo: "Filtros" },
+  { numero: 3, clave: "aceites", titulo: "Aceites" },
+  { numero: 4, clave: "revisar", titulo: "Revisar" },
+  { numero: 5, clave: "imagen", titulo: "Imagen" },
+] as const;
+
+export interface CrearEquipoError {
+  codigo: string;
+  mensaje: string;
+}
+
+export type CrearEquipoOverlay =
+  | "confirmar_salida"
+  | "nuevo_tipo_equipo"
+  | "agregar_filtro"
+  | "editar_filtro"
+  | "agregar_aceite"
+  | "editar_aceite";
+
+export type CrearEquipoOverlayState =
+  | { kind: "confirmar_salida" }
+  | { kind: "nuevo_tipo_equipo" }
+  | { kind: "agregar_filtro" }
+  | { kind: "editar_filtro"; draftId: string }
+  | { kind: "agregar_aceite" }
+  | { kind: "editar_aceite"; draftId: string };
+
 export interface TipoEquipoExistenteCreacionReference
   extends CatalogoExistenteReference {
   subtiposSugeridos: string[];
