@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { nextTick } from "vue";
 import { createPinia, setActivePinia } from "pinia";
 
 const subirMock = vi.hoisted(() => vi.fn());
 const eliminarMock = vi.hoisted(() => vi.fn());
+const obtenerUrlFirmadaMock = vi.hoisted(() => vi.fn());
 const rpcMock = vi.hoisted(() => vi.fn());
 const prepararMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/stores/dbequipos/engrase/imagen/equipoEngraseImagen.storage.service", () => ({
-  equipoEngraseImagenStorageService: { subir: subirMock, eliminar: eliminarMock },
+  equipoEngraseImagenStorageService: {
+    subir: subirMock,
+    eliminar: eliminarMock,
+    obtenerUrlFirmada: obtenerUrlFirmadaMock,
+  },
 }));
 vi.mock("@/stores/dbequipos/engrase/creacion/equipoEngraseCreacion.imagen.service", () => ({
   equipoEngraseCreacionImagenService: { agregarImagenEquipoCreado: rpcMock },
@@ -26,7 +32,11 @@ const equipo = {
 };
 
 describe("flujo de imagen posterior a la creación", () => {
-  beforeEach(() => { setActivePinia(createPinia()); vi.clearAllMocks(); });
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    obtenerUrlFirmadaMock.mockResolvedValue("https://storage.test/signed-image");
+  });
 
   it("sube, registra y actualiza wizard y listado sin recargar", async () => {
     const store = useEquipoEngraseCreacionStore();
@@ -47,6 +57,9 @@ describe("flujo de imagen posterior a la creación", () => {
     expect(rpcMock).toHaveBeenCalledOnce();
     expect(store.draft.equipoCreado?.tiene_imagen_main).toBe(true);
     expect(useFiltrosEngraseStore().equipos[0].tiene_imagen_main).toBe(true);
+    await nextTick();
+    await nextTick();
+    expect(imagen.currentImageUrl.value).toBe("https://storage.test/signed-image");
     expect(imagen.finalizarCreacion()).toMatchObject({ ok: true, equipo: { id: 10 } });
   });
 

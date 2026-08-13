@@ -27,74 +27,81 @@ const emit = defineEmits<{
 </script>
 <template>
   <footer
-    class="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-gray-200 bg-white/95 px-4 py-2 backdrop-blur sm:flex-row sm:justify-end"
+    class="sticky bottom-0 z-20 flex flex-col gap-2 border-t border-gray-200 bg-white/95 px-4 py-2 backdrop-blur sm:flex-row sm:items-center"
   >
     <button
-      v-if="step === 1"
+      v-if="step < 5"
       type="button"
-      class="min-h-11 rounded-md border border-gray-300 px-3 text-xs font-bold"
+      class="min-h-11 cursor-pointer rounded-md bg-danger px-3 text-xs font-bold text-white transition-colors hover:bg-danger/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:cursor-wait disabled:opacity-50 sm:mr-auto"
       :class="creating ? 'cursor-wait' : 'cursor-pointer'"
       :disabled="creating"
       @click="emit('cancel')"
     >
-      <X class="mr-1 inline h-4 w-4" />Cancelar</button
-    ><button
-      v-else-if="step < 5"
-      type="button"
-      class="min-h-11 rounded-md border border-gray-300 px-3 text-xs font-bold"
-      :class="creating ? 'cursor-wait' : 'cursor-pointer'"
-      :disabled="creating"
-      @click="emit('back')"
-    >
-      <ArrowLeft class="mr-1 inline h-4 w-4" />Atrás</button
-    ><button
-      v-if="step < 4"
-      type="button"
-      class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white disabled:opacity-50"
-      :class="nextDisabled ? 'cursor-not-allowed' : 'cursor-pointer'"
-      :disabled="nextDisabled"
-      @click="emit('next')"
-    >
-      Siguiente <ArrowRight class="ml-1 inline h-4 w-4" /></button
-    ><button
-      v-else-if="step === 4"
-      type="button"
-      class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white disabled:opacity-50"
-      :class="creating ? 'cursor-wait' : nextDisabled ? 'cursor-not-allowed' : 'cursor-pointer'"
-      :disabled="nextDisabled"
-      @click="emit('create')"
-    >
-      <Loader2 v-if="creating" class="mr-1 inline h-4 w-4 animate-spin" />{{
-        creating ? "Creando equipo…" : "Crear equipo"
-      }}</button
-    ><template v-else
-      ><button
+      <X class="mr-1 inline h-4 w-4" aria-hidden="true" />Cancelar creación
+    </button>
+
+    <div class="flex flex-col gap-2 sm:ml-auto sm:flex-row">
+      <button
+        v-if="step > 1 && step < 5"
         type="button"
         class="min-h-11 rounded-md border border-gray-300 px-3 text-xs font-bold"
-        :class="imageSaving ? 'cursor-wait' : 'cursor-pointer'"
-        :disabled="imageSaving"
-        @click="emit('skip')"
+        :class="creating ? 'cursor-wait' : 'cursor-pointer'"
+        :disabled="creating"
+        @click="emit('back')"
       >
-        Omitir por ahora</button
-      ><button
-        v-if="canSaveImage"
-        type="button"
-        class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white"
-        :class="imageSaving ? 'cursor-wait' : 'cursor-pointer'"
-        :disabled="imageSaving"
-        @click="emit('saveImage')"
-      >
-        <Save class="mr-1 inline h-4 w-4" />Guardar imagen</button
-      ><button
-        v-else
+        <ArrowLeft class="mr-1 inline h-4 w-4" />Atrás
+      </button>
+      <button
+        v-if="step < 4"
         type="button"
         class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white disabled:opacity-50"
-        :class="imageSaving ? 'cursor-wait' : canFinish ? 'cursor-pointer' : 'cursor-not-allowed'"
-        :disabled="!canFinish"
-        @click="emit('finish')"
+        :class="nextDisabled ? 'cursor-not-allowed' : 'cursor-pointer'"
+        :disabled="nextDisabled"
+        @click="emit('next')"
       >
-        <Check class="mr-1 inline h-4 w-4" />Finalizar
-      </button></template
-    >
+        Siguiente <ArrowRight class="ml-1 inline h-4 w-4" />
+      </button>
+      <button
+        v-else-if="step === 4"
+        type="button"
+        class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white disabled:opacity-50"
+        :class="creating ? 'cursor-wait' : nextDisabled ? 'cursor-not-allowed' : 'cursor-pointer'"
+        :disabled="nextDisabled"
+        @click="emit('create')"
+      >
+        <Loader2 v-if="creating" class="mr-1 inline h-4 w-4 animate-spin" />{{ creating ? "Creando equipo…" : "Crear equipo" }}
+      </button>
+      <template v-else>
+        <button
+          type="button"
+          class="min-h-11 rounded-md border border-gray-300 px-3 text-xs font-bold"
+          :class="imageSaving ? 'cursor-wait' : 'cursor-pointer'"
+          :disabled="imageSaving"
+          @click="emit('skip')"
+        >
+          Omitir por ahora
+        </button>
+        <button
+          v-if="canSaveImage"
+          type="button"
+          class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white"
+          :class="imageSaving ? 'cursor-wait' : 'cursor-pointer'"
+          :disabled="imageSaving"
+          @click="emit('saveImage')"
+        >
+          <Save class="mr-1 inline h-4 w-4" />Guardar imagen
+        </button>
+        <button
+          v-else
+          type="button"
+          class="min-h-11 rounded-md bg-main px-4 text-xs font-bold text-white disabled:opacity-50"
+          :class="imageSaving ? 'cursor-wait' : canFinish ? 'cursor-pointer' : 'cursor-not-allowed'"
+          :disabled="!canFinish"
+          @click="emit('finish')"
+        >
+          <Check class="mr-1 inline h-4 w-4" />Finalizar
+        </button>
+      </template>
+    </div>
   </footer>
 </template>

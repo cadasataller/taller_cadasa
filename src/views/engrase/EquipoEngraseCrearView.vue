@@ -282,15 +282,20 @@ async function guardarImagen(): Promise<void> {
         :draft="draft"
         :errors="erroresPaso"
         :creating="isCreating"
+        @edit="store.irAPaso"
       />
       <EquipoCreacionImagenStep
         v-else
         :preview-url="imagen.preparedImage.value?.previewUrl ?? null"
+        :current-image-url="imagen.currentImageUrl.value"
+        :current-image-loading="imagen.currentImageLoading.value"
+        :current-image-error="imagen.currentImageError.value"
         :state="imagen.imageState.value"
         :has-image="imagen.hasRegisteredImage.value"
         :warning="imagen.localWarning.value"
         @select="imagen.seleccionarImagen"
         @retry-cleanup="imagen.reintentarLimpiezaImagen"
+        @retry-current-image="imagen.reintentarImagenActual"
       />
     </div>
     </EquipoCreacionShell>

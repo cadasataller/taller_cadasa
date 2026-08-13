@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, shallowRef } from "vue";
+import { computed, onBeforeUnmount, shallowRef, watch } from "vue";
 import { useFiltrosEngraseStore } from "@/stores/dbequipos/engrase/filtrosEngrase.store";
 import { useEquipoEngraseCreacionStore } from "@/stores/dbequipos/engrase/creacion/equipoEngraseCreacion.store";
 import { equipoEngraseCreacionImagenService } from "@/stores/dbequipos/engrase/creacion/equipoEngraseCreacion.imagen.service";
@@ -21,6 +21,10 @@ export function useCrearEquipoImagen() {
   const preparedImage = shallowRef<ImagenEquipoPreparada | null>(null);
   const imageState = shallowRef<CrearEquipoImagenState>({ kind: "idle" });
   const localWarning = shallowRef<string | null>(null);
+  const currentImageUrl = shallowRef<string | null>(null);
+  const currentImageLoading = shallowRef(false);
+  const currentImageError = shallowRef<string | null>(null);
+  let imageUrlRequest = 0;
   const isImageProcessing = computed(
     () =>
       imageState.value.kind === "preparing" ||
@@ -52,6 +56,36 @@ export function useCrearEquipoImagen() {
       !isImageProcessing.value &&
       (store.finalizacionState.kind === "image_saved" ||
         store.finalizacionState.kind === "image_skipped"),
+  );
+
+  async function cargarImagenActual(path: string | null): Promise<void> {
+    const request = ++imageUrlRequest;
+    currentImageError.value = null;
+    if (!path) {
+      currentImageUrl.value = null;
+      currentImageLoading.value = false;
+      return;
+    }
+    currentImageUrl.value = null;
+    currentImageLoading.value = true;
+    try {
+      const signedUrl = await equipoEngraseImagenStorageService.obtenerUrlFirmada(path);
+      if (request !== imageUrlRequest) return;
+      currentImageUrl.value = signedUrl;
+    } catch (error) {
+      if (request !== imageUrlRequest) return;
+      currentImageError.value = error instanceof Error
+        ? error.message
+        : "No se pudo cargar la imagen actual.";
+    } finally {
+      if (request === imageUrlRequest) currentImageLoading.value = false;
+    }
+  }
+
+  watch(
+    () => store.draft.equipoCreado?.main_storage_path ?? null,
+    (path) => { void cargarImagenActual(path); },
+    { immediate: true },
   );
 
   function limpiarPreview(): void {
@@ -202,12 +236,18 @@ export function useCrearEquipoImagen() {
     store.resetCompleto();
   }
 
-  onBeforeUnmount(limpiarPreview);
+  onBeforeUnmount(() => {
+    imageUrlRequest += 1;
+    limpiarPreview();
+  });
 
   return {
     preparedImage,
     imageState,
     localWarning,
+    currentImageUrl,
+    currentImageLoading,
+    currentImageError,
     isImageProcessing,
     hasPreparedImage,
     hasRegisteredImage,
@@ -219,6 +259,8 @@ export function useCrearEquipoImagen() {
     guardarImagen,
     reintentarLimpiezaImagen,
     limpiarPreview,
+    reintentarImagenActual: () =>
+      cargarImagenActual(store.draft.equipoCreado?.main_storage_path ?? null),
     omitirImagen,
     finalizarCreacion,
     resetDespuesDeFinalizar,
