@@ -628,6 +628,14 @@ Debe adaptarse:
 - lista vacía explícitamente opcional;
 - bloqueo total después de entrar a Imagen.
 
+La adaptación visual posterior debe conservar la corrección responsive ya centralizada en:
+
+```text
+src/composables/engrase/useEquipoOverlayMultiselect.ts
+```
+
+Los selectores de Sistema y Aceite usados al agregar o editar una asociación dentro de un bottom sheet deben reutilizar ese composable y el contenedor desplazable del overlay debe exponer `data-equipo-overlay-scroll`. El detalle de posicionamiento, recálculo y pruebas pertenece a `SPEC-09`; no debe duplicarse dentro de la lógica del borrador ni en cada formulario.
+
 Preferir componentes presentacionales neutrales o variantes explícitas. No propagar condicionales ambiguos de modo por toda la jerarquía.
 
 ## 32. Accesibilidad futura que condiciona contratos

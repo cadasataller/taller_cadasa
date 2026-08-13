@@ -582,6 +582,8 @@ Modos mínimos:
 - focus trap sólo cuando funciona como diálogo modal;
 - restaurar foco al botón que abrió el overlay.
 
+Los multiselect de tipo usados al buscar, crear o editar un filtro deben cumplir además el contrato específico de posicionamiento definido en `20.6`.
+
 ### 20.2. Búsqueda
 
 La UI llama la acción de búsqueda del store con sólo el código. El servicio de creación debe omitir `p_codigo_equipo`.
@@ -637,6 +639,41 @@ mismo tipo ya ocupado         → bloqueado
 - confirmar agrega o actualiza el borrador y cierra el overlay;
 - cancelar descarta únicamente el estado efímero del overlay.
 
+### 20.6. Multiselect dentro del bottom sheet
+
+Existe una restricción conocida de `vue-multiselect` dentro de un bottom sheet con encabezado fijo, altura máxima y contenido interno con `overflow-y-auto`.
+
+Sin la adaptación, el componente puede calcular la dirección usando el espacio de toda la ventana, abrir la lista hacia arriba y quedar recortado detrás del encabezado por el contenedor con overflow. Elevar el `z-index` no resuelve el problema porque el recorte ocurre en el ancestro desplazable, no en el orden de apilamiento.
+
+La creación debe reutilizar la corrección existente:
+
+```text
+src/composables/engrase/useEquipoOverlayMultiselect.ts
+```
+
+Aplicarla a:
+
+- Tipo al buscar un filtro existente;
+- Tipo al crear un filtro nuevo;
+- Tipo al editar una asociación de filtro.
+
+Contrato obligatorio:
+
+1. el `VueMultiselect` expone la template ref `multiselect` esperada por el composable;
+2. configura `open-direction="below"`;
+3. conecta `@open="acomodarOpcionesEnOverlay"`;
+4. el contenedor interno que realmente desplaza el contenido del overlay expone `data-equipo-overlay-scroll`;
+5. en móvil, al abrir, se espera `nextTick()`;
+6. se encuentra el ancestro desplazable mediante ese atributo;
+7. se desplaza el sheet para colocar el control dentro del área visible, inmediatamente debajo del encabezado y con el margen definido por el helper;
+8. se espera un segundo `nextTick()`;
+9. se invoca `adjustPosition()` para que `vue-multiselect` recalcule la altura disponible;
+10. si existen muchas opciones, el menú conserva su propio desplazamiento interno.
+
+En escritorio el composable no debe mover el drawer. Si el selector no está dentro de un contenedor identificado, debe terminar sin error ni scroll global.
+
+No copiar esta secuencia en cada formulario. `EquipoCatalogSelect.vue`, `EquipoTipoFiltroNuevoField.vue` o sus extracciones neutrales deben seguir siendo los puntos de integración compartidos. `append-to-body` o un `z-index` mayor no sustituyen este contrato.
+
 ## 21. Paso 3 — Aceites
 
 `EquipoCreacionAceitesStep.vue` muestra:
@@ -674,6 +711,8 @@ Reglas:
 - aceite existente o nuevo;
 - aviso `La asociación se aplicará al crear el equipo`;
 - CTA `Agregar` o `Actualizar` según modo.
+
+Los multiselect de Sistema y Aceite, tanto al agregar como al editar, deben reutilizar `useEquipoOverlayMultiselect.ts` y cumplir el contrato completo de `20.6`. El contenedor con `overflow-y-auto` de este overlay también debe exponer `data-equipo-overlay-scroll`.
 
 Los sistemas ocupados:
 
@@ -908,6 +947,13 @@ Reglas:
 - todos los overlays tienen título mediante `aria-labelledby`;
 - formularios largos tienen footer interno sticky sin tapar campos.
 
+Para overlays que contienen `vue-multiselect`:
+
+- el nodo con `overflow-y-auto` debe ser el mismo identificado por `data-equipo-overlay-scroll`;
+- abrir una lista en móvil debe acomodar el selector debajo del header antes de recalcular su posición;
+- listas extensas desplazan sus opciones internamente y no deben expandir el sheet más allá de su altura máxima;
+- no intentar corregir un recorte por overflow únicamente aumentando `z-index`.
+
 ## 29. Responsive mobile-first
 
 ### 29.1. XS
@@ -922,6 +968,7 @@ Reglas:
 - filas convertidas en cards compactas, no tablas rígidas;
 - chips con wrap;
 - overlays como bottom sheets de altura limitada y contenido desplazable;
+- al abrir un multiselect, el sheet desplaza su contenido para mantener el control y la lista debajo del encabezado fijo;
 - respetar teclado virtual y safe areas;
 - Galería y Tomar foto permanecen accesibles.
 
@@ -999,6 +1046,7 @@ Se permite reutilizar:
 - selectores de catálogo;
 - formularios internos de filtros y aceites;
 - patrón drawer/bottom sheet;
+- `useEquipoOverlayMultiselect.ts` para posicionar y recalcular selectores dentro de bottom sheets;
 - filas e iconografía si aceptan un contrato neutral;
 - cropper y preview de imagen;
 - header como referencia visual, no necesariamente como componente directo.
@@ -1134,6 +1182,12 @@ Cubrir:
 - al editar, el tipo propio no se considera ocupado;
 - cerrar overlay descarta estado efímero y restaura foco;
 - drawer y bottom sheet comparten acciones.
+- los selectores de tipo fuerzan `openDirection="below"`;
+- al abrir en móvil, el contenedor `data-equipo-overlay-scroll` se desplaza para mostrar el selector bajo el header;
+- `adjustPosition()` se ejecuta después de actualizar scroll y DOM;
+- abrir el mismo selector en escritorio no modifica el scroll del drawer;
+- ausencia del contenedor identificado no produce error ni desplaza la ventana;
+- una lista extensa conserva scroll interno y no queda recortada detrás del encabezado.
 
 ## 40. Pruebas de Aceites
 
@@ -1147,6 +1201,9 @@ Cubrir:
 - referencias nuevas aparecen correctamente;
 - mensaje indica que se aplicará al crear;
 - accesibilidad del overlay y restauración de foco.
+- los selectores de Sistema y Aceite reutilizan el mismo comportamiento de apertura hacia abajo;
+- el caso móvil verifica scroll del sheet y recálculo de posición para ambos selectores;
+- el comportamiento se conserva en agregar y editar sin implementar handlers duplicados.
 
 ## 41. Pruebas de Revisión y submit
 
@@ -1216,6 +1273,8 @@ No basar toda la verificación responsive en snapshots de clases. Probar tambié
 - No mostrar un botón Cancelar creación después de crear.
 - No navegar desde componentes presentacionales.
 - No duplicar DOM completo para móvil y escritorio.
+- No duplicar en cada formulario la lógica de scroll y recálculo de `vue-multiselect`.
+- No intentar resolver el recorte de listas dentro del bottom sheet sólo con `z-index`.
 - No agregar permisos, RPC o dependencias.
 - No usar estados de edición como `pendiente_eliminacion`.
 - No depender sólo de color para estados o badges.
@@ -1247,6 +1306,8 @@ No basar toda la verificación responsive en snapshots de clases. Probar tambié
 - Un fallo de imagen nunca revierte ni oculta la creación exitosa.
 - Finalizar u omitir vuelve al listado y limpia únicamente el store del wizard.
 - Los overlays funcionan como drawer en escritorio y bottom sheet en móvil.
+- Todos los multiselect de filtros y aceites dentro de bottom sheets abren hacia abajo, permanecen visibles bajo el encabezado y recalculan su posición mediante el composable compartido.
+- Los menús con muchas opciones usan desplazamiento interno sin quedar recortados por el contenedor del sheet.
 - La UI es operable con teclado, comunica estados sin depender de color y administra el foco.
 - Existen pruebas de ruta, pasos, formularios, overlays, submit, imagen, salida y accesibilidad.
 

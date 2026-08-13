@@ -785,6 +785,14 @@ Debe adaptarse:
 - permitir mismo filtro ID con otro tipo;
 - ocultar equivalencias y estados `Activo/Nuevo/Actualizado` propios de edición cuando no aporten al flujo.
 
+La adaptación visual posterior debe conservar la corrección responsive ya centralizada en:
+
+```text
+src/composables/engrase/useEquipoOverlayMultiselect.ts
+```
+
+Los selectores de tipo usados al buscar, crear o editar un filtro dentro de un bottom sheet deben reutilizar ese composable y el contenedor desplazable del overlay debe exponer `data-equipo-overlay-scroll`. El detalle de posicionamiento, recálculo y pruebas pertenece a `SPEC-09`; no debe duplicarse dentro de la lógica del borrador ni en cada formulario.
+
 La implementación no debe introducir condicionales dispersos `isCreation` en todos los componentes. Preferir extraer componentes presentacionales neutrales o añadir variantes con contratos explícitos.
 
 ## 34. Accesibilidad futura que condiciona los contratos
