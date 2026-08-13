@@ -290,7 +290,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
     }
     function actualizarCodigo(codigo: string): void { if (draft.value) draft.value.equipo.codigo = codigo.trim(); }
     function seleccionarTipoEquipo(tipo: EquipoEdicionDraft["tipoEquipoReferencia"]): void { if (!draft.value) return; draft.value.tipoEquipoReferencia = clonarTipoEquipoReferencia(tipo); draft.value.equipo.tipoEquipoId = tipo.estado === "existente" ? tipo.id : 0; draft.value.equipo.tipoEquipo = tipo.nombre; }
-    function actualizarSubtipo(subtipo: string): void { if (draft.value) draft.value.equipo.subtipo = subtipo.trim(); }
+    function actualizarSubtipo(subtipo: string): void { if (draft.value) draft.value.equipo.subtipo = normalizarTexto(subtipo).toLocaleUpperCase("es"); }
     function actualizarEstado(estado: EquipoEstado): void { if (draft.value) draft.value.equipo.estado = estado; }
     function agregarEtapa(etapaId: number): void { if (!draft.value || draft.value.etapas.some((etapa) => etapa.id === etapaId)) return; const etapa = auxiliares.value?.etapas.find((item) => item.id === etapaId); if (etapa) draft.value.etapas.push({ ...etapa }); }
     function quitarEtapa(etapaId: number): void { if (!draft.value || draft.value.etapas.length <= 1) return; draft.value.etapas = draft.value.etapas.filter((etapa) => etapa.id !== etapaId); }

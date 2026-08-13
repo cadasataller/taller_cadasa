@@ -50,7 +50,7 @@ export const construirCambiosEquipo = (
   if (normalizarTexto(draft.equipo.codigo) !== normalizarTexto(original.equipo.codigo))
     datos.codigo_nuevo = normalizarTexto(draft.equipo.codigo);
   if (normalizarTexto(draft.equipo.subtipo) !== normalizarTexto(original.equipo.subtipo))
-    datos.subtipo = normalizarTexto(draft.equipo.subtipo);
+    datos.subtipo = normalizarTexto(draft.equipo.subtipo).toLocaleUpperCase("es");
   if (draft.equipo.estado !== original.equipo.estado) datos.estado = draft.equipo.estado;
   if (draft.tipoEquipoReferencia.estado === "nuevo" || draft.tipoEquipoReferencia.id !== original.equipo.tipoEquipoId)
     datos.tipo_equipo = entidadPayload(draft.tipoEquipoReferencia);

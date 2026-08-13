@@ -169,6 +169,7 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
             v-if="editor.auxiliares.value"
             :draft="editor.draft.value"
             :auxiliares="editor.auxiliares.value"
+            :model-options="editor.modelOptions.value"
             :is-duplicate-tipo-equipo="editor.esTipoEquipoDuplicado"
             @update-codigo="editor.actualizarCodigo"
             @select-tipo-equipo="editor.seleccionarTipoEquipo"

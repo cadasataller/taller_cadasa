@@ -48,6 +48,7 @@ export const useFiltrosEngraseStore = defineStore(
       filtrosCache = new Map<number, EquipoFiltroDetalle[]>(),
       aceitesCache = new Map<number, EquipoAceiteDetalle[]>(),
       imagenesRequest = new Map<string, Promise<void>>(),
+      equiposRequest: Promise<void> | null = null,
       request: Promise<void> | null = null,
       sugerenciasRequest = 0;
     const equiposVisibles = computed(() =>
@@ -112,18 +113,30 @@ export const useFiltrosEngraseStore = defineStore(
       ]);
       catalogosCargados = true;
     }
+    async function solicitarEquipos() {
+      if (equiposRequest) return equiposRequest;
+      equiposRequest = (async () => {
+        loadingEquipos.value = true;
+        errorEquipos.value = null;
+        try {
+          equipos.value = await filtrosEngraseService.obtenerEquipos();
+        } catch (e) {
+          errorEquipos.value =
+            e instanceof Error ? e.message : "No se pudieron cargar equipos";
+        } finally {
+          loadingEquipos.value = false;
+          equiposRequest = null;
+        }
+      })();
+      return equiposRequest;
+    }
     async function cargarEquipos() {
-      loadingEquipos.value = true;
-      errorEquipos.value = null;
-      try {
-        equipos.value = await filtrosEngraseService.obtenerEquipos();
-        await asegurarSeleccion();
-      } catch (e) {
-        errorEquipos.value =
-          e instanceof Error ? e.message : "No se pudieron cargar equipos";
-      } finally {
-        loadingEquipos.value = false;
-      }
+      await solicitarEquipos();
+      await asegurarSeleccion();
+    }
+    async function asegurarEquiposCargados() {
+      if (equipos.value.length > 0) return;
+      await solicitarEquipos();
     }
     async function cargarImagenEquipo(equipoId: number): Promise<void> {
       const equipo = equipos.value.find((item) => item.id === equipoId);
@@ -400,6 +413,7 @@ export const useFiltrosEngraseStore = defineStore(
       inicializar,
       cargarCatalogos,
       cargarEquipos,
+      asegurarEquiposCargados,
       cargarImagenEquipo,
       cargarFiltrosEquipo,
       buscarSugerencias,

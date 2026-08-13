@@ -229,7 +229,7 @@ describe("store de edición de equipo", () => {
     expect([primero.kind, segundo.kind]).toContain("success");
     expect([primero.kind, segundo.kind]).toContain("busy");
     expect(actualizarEquipoCompleto).toHaveBeenCalledOnce();
-    expect(actualizarEquipoCompleto).toHaveBeenCalledWith({ codigoOriginal: "410002", cambios: { datos_equipo: { estado_operacion: "actualizado", subtipo: "Bus urbano" } } });
+    expect(actualizarEquipoCompleto).toHaveBeenCalledWith({ codigoOriginal: "410002", cambios: { datos_equipo: { estado_operacion: "actualizado", subtipo: "BUS URBANO" } } });
     expect(store.isDirty).toBe(false);
     expect(store.successMessage).toBe("Equipo actualizado.");
     expect(listado.equipos[0]?.subtipo).toBe("Bus urbano");

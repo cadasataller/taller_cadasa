@@ -1,14 +1,27 @@
-import { nextTick, onBeforeUnmount, onMounted, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import { useEquipoEngraseEdicionStore } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.store";
+import { useFiltrosEngraseStore } from "@/stores/dbequipos/engrase/filtrosEngrase.store";
+import { crearOpcionesModelo } from "@/stores/dbequipos/engrase/edicion/equipoEngraseModelos";
 import type { MoverImagenEquipo } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.store";
 
 export function useEquipoEngraseEditor() {
   const route = useRoute();
   const router = useRouter();
   const store = useEquipoEngraseEdicionStore();
+  const listadoStore = useFiltrosEngraseStore();
   const state = storeToRefs(store);
+  const { equipos } = storeToRefs(listadoStore);
+  const modelOptions = computed(() =>
+    crearOpcionesModelo({
+      equipos: equipos.value,
+      modeloActual: state.draft.value?.equipo.subtipo ?? "",
+      tipoEquipoId: state.draft.value?.equipo.tipoEquipoId ?? 0,
+      tipoEquipo: state.draft.value?.equipo.tipoEquipo ?? "",
+    }),
+  );
+  void listadoStore.asegurarEquiposCargados();
   const codigoRuta = (): string =>
     typeof route.params.codigo === "string" ? route.params.codigo : "";
   const cargarRuta = (): Promise<void> => store.cargar(codigoRuta());
@@ -53,6 +66,7 @@ export function useEquipoEngraseEditor() {
   });
   return {
     ...state,
+    modelOptions,
     volver,
     descartarYVolver,
     continuarEditando: store.continuarEditando,
