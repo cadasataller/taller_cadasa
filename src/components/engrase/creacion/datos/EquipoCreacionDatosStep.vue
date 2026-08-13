@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type {
   AuxiliaresEquipoEngrase,
   CrearEquipoDraft,
@@ -6,6 +7,15 @@ import type {
   TipoEquipoCreacionReference,
 } from "@/stores/dbequipos/engrase/creacion/equipoEngraseCreacion.types";
 import EquipoCreacionCodigoField from "./EquipoCreacionCodigoField.vue";
+import EquipoEtapasField from "../../edicion/datos/EquipoEtapasField.vue";
+import EquipoModeloField from "../../edicion/datos/EquipoModeloField.vue";
+import EquipoTipoField from "../../edicion/datos/EquipoTipoField.vue";
+import {
+  normalizarModeloEquipo,
+  type EquipoModeloOption,
+} from "@/stores/dbequipos/engrase/edicion/equipoEngraseModelos";
+import type { TipoEquipoDraftReference } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.types";
+
 const props = defineProps<{
   draft: CrearEquipoDraft;
   auxiliares: AuxiliaresEquipoEngrase;
@@ -13,36 +23,80 @@ const props = defineProps<{
   canValidate: boolean;
   validating: boolean;
   errors: string[];
+  isDuplicateTipoEquipo: (nombre: string) => boolean;
 }>();
 const emit = defineEmits<{
   codigo: [string];
   validate: [];
   tipo: [TipoEquipoCreacionReference];
+  createTipo: [string];
   subtipo: [string];
   estado: [EquipoEstado];
   addEtapa: [number];
   removeEtapa: [number];
 }>();
-const estados: EquipoEstado[] = ["activo", "descartado"];
-function seleccionarTipo(event: Event): void {
-  const id = Number((event.target as HTMLSelectElement).value);
-  const tipo = props.auxiliares.tiposEquipo.find((x) => x.id === id);
-  if (tipo)
-    emit("tipo", {
-      estado: "existente",
-      id: tipo.id,
-      tempId: null,
-      nombre: tipo.nombre,
-      subtiposSugeridos: [...tipo.subtiposSugeridos],
+const modeloInvalido = computed(() => !props.draft.datos.subtipo.trim());
+const tipoInvalido = computed(() => props.draft.datos.tipoEquipo === null);
+const opcionesModelo = computed<EquipoModeloOption[]>(() => {
+  const opciones = new Map<string, EquipoModeloOption>();
+  const tipoSeleccionado = props.draft.datos.tipoEquipo;
+
+  props.auxiliares.tiposEquipo.forEach((tipo) => {
+    tipo.subtiposSugeridos.forEach((subtipo) => {
+      const valor = normalizarModeloEquipo(subtipo);
+      if (!valor) return;
+      const existente = opciones.get(valor);
+      if (existente) {
+        existente.tiposEquipo.push(tipo.nombre);
+        return;
+      }
+      opciones.set(valor, {
+        key: valor,
+        value: valor,
+        tiposEquipo: [tipo.nombre],
+        esActual: valor === normalizarModeloEquipo(props.draft.datos.subtipo),
+        correspondeAlTipoActual: tipo.id === tipoSeleccionado?.id,
+      });
     });
-}
-function actualizarSubtipo(event: Event): void {
-  emit("subtipo", (event.target as HTMLInputElement).value);
-}
-function cambiarEtapa(id: number, event: Event): void {
-  (event.target as HTMLInputElement).checked
-    ? emit("addEtapa", id)
-    : emit("removeEtapa", id);
+  });
+
+  const actual = normalizarModeloEquipo(props.draft.datos.subtipo);
+  if (actual && !opciones.has(actual)) {
+    opciones.set(actual, {
+      key: actual,
+      value: actual,
+      tiposEquipo: tipoSeleccionado ? [tipoSeleccionado.nombre] : [],
+      esActual: true,
+      correspondeAlTipoActual: true,
+    });
+  }
+
+  return [...opciones.values()]
+    .map((opcion) => ({
+      ...opcion,
+      tiposEquipo: [...new Set(opcion.tiposEquipo)].sort((a, b) =>
+        a.localeCompare(b, "es"),
+      ),
+      esActual: opcion.value === actual,
+      correspondeAlTipoActual: Boolean(
+        tipoSeleccionado && opcion.tiposEquipo.includes(tipoSeleccionado.nombre),
+      ),
+    }))
+    .sort((a, b) => {
+      const prioridadA = a.esActual ? 0 : a.correspondeAlTipoActual ? 1 : 2;
+      const prioridadB = b.esActual ? 0 : b.correspondeAlTipoActual ? 1 : 2;
+      return prioridadA - prioridadB || a.value.localeCompare(b.value, "es");
+    });
+});
+
+function seleccionarTipo(tipo: TipoEquipoDraftReference): void {
+  const existente = tipo.estado === "existente"
+    ? props.auxiliares.tiposEquipo.find((item) => item.id === tipo.id)
+    : undefined;
+  emit("tipo", {
+    ...tipo,
+    subtiposSugeridos: existente ? [...existente.subtiposSugeridos] : [],
+  });
 }
 </script>
 <template>
@@ -50,9 +104,7 @@ function cambiarEtapa(id: number, event: Event): void {
     <h2 tabindex="-1" class="text-base font-bold text-gray-900">
       Datos del equipo
     </h2>
-    <p class="mt-1 text-xs text-gray-500">
-      La imagen se agregará después de crear el equipo.
-    </p>
+    
     <div
       v-if="errors.length"
       class="mt-3 rounded-md bg-danger-bg p-2 text-xs text-danger"
@@ -69,66 +121,59 @@ function cambiarEtapa(id: number, event: Event): void {
         :disabled="disabled"
         @update:model-value="emit('codigo', $event)"
         @validate="emit('validate')"
-      /><label class="grid gap-1 text-xs font-bold text-gray-700"
-        >Tipo de equipo<select
-          class="min-h-10 rounded-md border px-2"
-          :disabled="disabled"
-          :value="
-            draft.datos.tipoEquipo?.estado === 'existente'
-              ? draft.datos.tipoEquipo.id
-              : ''
-          "
-          @change="seleccionarTipo"
-        >
-          <option value="">Selecciona…</option>
-          <option
-            v-for="tipo in auxiliares.tiposEquipo"
-            :key="tipo.id"
-            :value="tipo.id"
-          >
-            {{ tipo.nombre }}
-          </option>
-        </select></label
-      ><label class="grid gap-1 text-xs font-bold text-gray-700"
-        >Modelo / subtipo<input
-          class="min-h-10 rounded-md border px-2"
-          :disabled="disabled"
-          :value="draft.datos.subtipo"
-          @input="actualizarSubtipo"
-      /></label>
-      <div class="grid gap-1 text-xs font-bold text-gray-700">
-        <span>Etapas</span>
-        <div class="flex flex-wrap gap-2">
-          <label
-            v-for="etapa in auxiliares.etapas"
-            :key="etapa.id"
-            class="inline-flex items-center gap-1 rounded border px-2 py-1 font-normal"
-            ><input
-              type="checkbox"
-              :checked="draft.datos.etapas.some((x) => x.id === etapa.id)"
-              :disabled="disabled"
-              @change="cambiarEtapa(etapa.id, $event)"
-            />{{ etapa.nombre }}</label
-          >
-        </div>
-      </div>
+      /><EquipoTipoField
+        class="[&_.multiselect]:!min-h-10 [&_.multiselect]:!text-xs [&_.multiselect__input]:!mb-0 [&_.multiselect__input]:!text-xs [&_.multiselect__select]:!h-10 [&_.multiselect__single]:!mb-0 [&_.multiselect__single]:!text-xs [&_.multiselect__tags]:!min-h-10 [&_.multiselect__tags]:!px-2 [&_.multiselect__tags]:!py-1"
+        :tipos="auxiliares.tiposEquipo"
+        :selected="draft.datos.tipoEquipo"
+        :invalid="tipoInvalido"
+        :is-duplicate="isDuplicateTipoEquipo"
+        @select="seleccionarTipo"
+        @create="emit('createTipo', $event)"
+      /><EquipoModeloField
+        class="[&_.multiselect]:!min-h-10 [&_.multiselect]:!text-xs [&_.multiselect__input]:!mb-0 [&_.multiselect__input]:!text-xs [&_.multiselect__select]:!h-10 [&_.multiselect__single]:!mb-0 [&_.multiselect__single]:!text-xs [&_.multiselect__tags]:!min-h-10 [&_.multiselect__tags]:!px-2 [&_.multiselect__tags]:!py-1"
+        :model-value="draft.datos.subtipo"
+        :options="opcionesModelo"
+        :invalid="modeloInvalido"
+        @update:model-value="emit('subtipo', $event)"
+      />
+      <EquipoEtapasField
+        class="[&_.multiselect]:!min-h-10 [&_.multiselect]:!text-xs [&_.multiselect__input]:!mb-0 [&_.multiselect__input]:!text-xs [&_.multiselect__select]:!h-10 [&_.multiselect__single]:!mb-0 [&_.multiselect__single]:!text-xs [&_.multiselect__tags]:!min-h-10 [&_.multiselect__tags]:!px-2 [&_.multiselect__tags]:!py-1"
+        :etapas="auxiliares.etapas"
+        :seleccionadas="draft.datos.etapas"
+        :invalid="draft.datos.etapas.length === 0"
+        @add="emit('addEtapa', $event)"
+        @remove="emit('removeEtapa', $event)"
+      />
       <div class="md:col-span-2">
         <span class="text-xs font-bold text-gray-700">Estado</span>
-        <div class="mt-1 flex gap-2">
+        <div class="mt-1 grid grid-cols-2 gap-2" role="group" aria-label="Estado del equipo">
           <button
-            v-for="estado in estados"
-            :key="estado"
             type="button"
-            class="min-h-10 rounded-md border px-3 text-xs font-bold capitalize"
+            class="min-h-10 cursor-pointer rounded-md border px-3 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main"
             :class="
-              draft.datos.estado === estado
-                ? 'border-main bg-main/10 text-main'
-                : ''
+              draft.datos.estado === 'activo'
+                ? 'border-success bg-success-bg text-success'
+                : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
             "
+            :aria-pressed="draft.datos.estado === 'activo'"
             :disabled="disabled"
-            @click="emit('estado', estado)"
+            @click="emit('estado', 'activo')"
           >
-            {{ estado }}
+            Activo
+          </button>
+          <button
+            type="button"
+            class="min-h-10 cursor-pointer rounded-md border px-3 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-main"
+            :class="
+              draft.datos.estado === 'descartado'
+                ? 'border-danger bg-danger-bg text-danger'
+                : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+            "
+            :aria-pressed="draft.datos.estado === 'descartado'"
+            :disabled="disabled"
+            @click="emit('estado', 'descartado')"
+          >
+            Descartado
           </button>
         </div>
       </div>

@@ -15,7 +15,7 @@ function actualizar(event: Event): void {
 </script>
 <template>
   <label class="grid gap-1 text-xs font-bold text-gray-700"
-    >Código<input
+    >Número de equipo<input
       id="equipo-creacion-codigo"
       class="min-h-10 rounded-md border px-2"
       :disabled="disabled"

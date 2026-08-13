@@ -4,7 +4,7 @@ defineProps<{ created: boolean; creating: boolean }>();
 const emit = defineEmits<{ back: [] }>();
 </script>
 <template>
-  <header class="mx-auto w-full max-w-6xl px-3 pt-3 sm:px-5">
+  <header class="mx-auto w-full max-w-[1600px] px-3 pt-3 sm:px-5">
     <div
       class="flex min-h-14 items-center gap-3 rounded-xl border border-gray-200 bg-white px-3 shadow-sm"
     >
