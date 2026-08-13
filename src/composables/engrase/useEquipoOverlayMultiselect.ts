@@ -3,6 +3,7 @@ import { nextTick, useTemplateRef } from "vue";
 type MultiselectPositionHandle = {
   $el: HTMLElement;
   adjustPosition: () => void;
+  useTeleport?: boolean;
 };
 
 export function useEquipoOverlayMultiselect() {
@@ -10,6 +11,8 @@ export function useEquipoOverlayMultiselect() {
     useTemplateRef<MultiselectPositionHandle>("multiselect");
 
   async function acomodarOpcionesEnOverlay(): Promise<void> {
+    if (multiselect.value?.useTeleport) return;
+
     if (
       typeof window.matchMedia !== "function" ||
       !window.matchMedia("(max-width: 639px)").matches

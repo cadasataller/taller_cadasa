@@ -273,6 +273,13 @@
   box-shadow: var(--shadow-md);
 }
 
+/* La lista se teletransporta al body para escapar del overflow del bottom sheet. */
+.equipo-filtro-options-layer {
+  z-index: 10000 !important;
+  border-color: var(--color-second-deep);
+  box-shadow: var(--shadow-lg);
+}
+
 @media (max-width: 639px) {
   .multiselect,
   .multiselect__input,
