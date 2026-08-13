@@ -33,6 +33,9 @@ describe("overlay de aceites", () => {
 
   it("cierra directamente cuando el formulario no cambió", async () => {
     const wrapper = mountOverlay();
+    expect(
+      document.querySelector("[data-equipo-overlay-scroll]"),
+    ).not.toBeNull();
     await document.querySelector<HTMLButtonElement>('[aria-label="Cerrar"]')?.click();
     expect(wrapper.emitted("close")).toHaveLength(1);
   });

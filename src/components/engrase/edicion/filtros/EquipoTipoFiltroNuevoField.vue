@@ -2,6 +2,7 @@
 import { computed, shallowRef } from "vue";
 import VueMultiselect from "vue-multiselect";
 import { Info, Plus, Truck } from "lucide-vue-next";
+import { useEquipoOverlayMultiselect } from "@/composables/engrase/useEquipoOverlayMultiselect";
 import { crearTempId } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.tempIds";
 import type {
   TipoFiltroAuxiliar,
@@ -31,8 +32,9 @@ type Option = {
   assignedToSearchedCode: boolean;
   $isDisabled: boolean;
 };
-
 const temporal = shallowRef<TipoFiltroDraftReference[]>([]);
+const { multiselect, acomodarOpcionesEnOverlay } =
+  useEquipoOverlayMultiselect();
 const normalizar = (valor: string): string => valor.trim().replace(/\s+/g, " ");
 const clave = (valor: string): string =>
   normalizar(valor)
@@ -124,17 +126,20 @@ function crearTipo(nombre: string): void {
   <div class="grid gap-1.5">
     <label class="text-xs font-semibold text-gray-700">Tipo de filtro</label>
     <VueMultiselect
+      ref="multiselect"
       v-model="model"
       :options="options"
       track-by="key"
       label="label"
       :searchable="true"
+      open-direction="below"
       :taggable="true"
       tag-placeholder="Crear tipo nuevo"
       select-label="Seleccionar"
       selected-label="Seleccionado"
       no-options="No hay tipos disponibles"
       no-result="Sin resultados"
+      @open="acomodarOpcionesEnOverlay"
       @tag="crearTipo"
     >
       <template #option="{ option }">

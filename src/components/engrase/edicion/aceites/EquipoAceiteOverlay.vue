@@ -112,7 +112,10 @@ onBeforeUnmount(() => {
             <X class="h-4 w-4" />
           </button>
         </header>
-        <div class="flex-1 overflow-y-auto p-3">
+        <div
+          class="flex-1 overflow-y-auto p-3"
+          data-equipo-overlay-scroll
+        >
           <EquipoAceiteForm
             :mode="mode"
             :aceite="aceite"

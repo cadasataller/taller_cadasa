@@ -1,5 +1,5 @@
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { flushPromises, mount } from "@vue/test-utils";
+import { describe, expect, it, vi } from "vitest";
 import EquipoTipoFiltroNuevoField from "./EquipoTipoFiltroNuevoField.vue";
 
 describe("EquipoTipoFiltroNuevoField", () => {
@@ -68,5 +68,43 @@ describe("EquipoTipoFiltroNuevoField", () => {
     expect(options[1]?.text()).toContain("Sugerido");
     expect(options[1]?.classes()).toContain("multiselect__option--disabled");
     expect(options[2]?.classes()).not.toContain("multiselect__option--disabled");
+  });
+
+  it("lleva el selector al área visible del bottom sheet antes de mostrar opciones", async () => {
+    const matchMediaOriginal = window.matchMedia;
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn(() => ({ matches: true })),
+    });
+    const scrollContainer = document.createElement("div");
+    scrollContainer.dataset.equipoOverlayScroll = "";
+    scrollContainer.scrollTop = 20;
+    scrollContainer.getBoundingClientRect = () =>
+      ({ top: 100 } as DOMRect);
+    document.body.appendChild(scrollContainer);
+    const wrapper = mount(EquipoTipoFiltroNuevoField, {
+      attachTo: scrollContainer,
+      props: {
+        tipos: [{ id: 2, nombre: "Aire", tiposEquipoQueLoUsan: [] }],
+        selected: null,
+        isDuplicate: () => false,
+      },
+    });
+    wrapper.get(".multiselect").element.getBoundingClientRect = () =>
+      ({ top: 260 } as DOMRect);
+
+    await wrapper.get("input").trigger("focus");
+    await flushPromises();
+
+    expect(
+      wrapper.findComponent({ name: "vue-multiselect" }).props("openDirection"),
+    ).toBe("below");
+    expect(scrollContainer.scrollTop).toBe(172);
+    wrapper.unmount();
+    scrollContainer.remove();
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: matchMediaOriginal,
+    });
   });
 });
