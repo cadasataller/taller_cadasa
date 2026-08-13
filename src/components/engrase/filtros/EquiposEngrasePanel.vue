@@ -24,6 +24,7 @@ const emit = defineEmits<{
   filterTipo: [number | null];
   filterModelo: [string];
   clearTipoModelo: [];
+  crearEquipo: [];
 }>();
 const featureAccessStore = useFeatureAccessStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
@@ -126,6 +127,7 @@ function cerrarChips() {
         class="flex cursor-pointer items-center rounded bg-main/10 p-1 text-main transition-colors hover:bg-main/20"
         aria-label="Agregar equipo"
         title="Agregar equipo"
+        @click="emit('crearEquipo')"
       >
         <Plus class="h-4 w-4" aria-hidden="true" />
       </button>

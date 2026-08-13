@@ -8,13 +8,14 @@ import type {
 } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.types";
 const props = defineProps<{
   tipos: TipoEquipoAuxiliar[];
-  selected: TipoEquipoDraftReference;
+  selected: TipoEquipoDraftReference | null;
   invalid?: boolean;
   isDuplicate: (nombre: string) => boolean;
 }>();
 const emit = defineEmits<{
   select: [TipoEquipoDraftReference];
   create: [string];
+  blur: [];
 }>();
 
 type Option = {
@@ -38,7 +39,7 @@ const options = computed<Option[]>(() => [
     },
     pendingCreation: false,
   })),
-  ...(props.selected.estado === "nuevo"
+  ...(props.selected?.estado === "nuevo"
     ? [
         {
           key: props.selected.tempId,
@@ -53,8 +54,8 @@ const model = computed<Option | null>({
   get: () =>
     options.value.find(
       (option) =>
-        option.value.estado === props.selected.estado &&
-        option.value.nombre === props.selected.nombre,
+        option.value.estado === props.selected?.estado &&
+        option.value.nombre === props.selected?.nombre,
     ) ?? null,
   set: (option) => {
     if (option) emit("select", option.value);
@@ -76,7 +77,7 @@ function crearTipo(nombre: string): void {
 }
 </script>
 <template>
-  <div class="grid gap-1.5">
+  <div class="grid content-start gap-1.5">
     <label class="text-xs font-semibold text-gray-700">Tipo de equipo</label>
     <VueMultiselect
       v-model="model"
@@ -94,6 +95,7 @@ function crearTipo(nombre: string): void {
       no-result="Sin resultados"
       :class="{ 'equipo-tipo-multiselect': true, 'multiselect-invalid': invalid }"
       @tag="crearTipo"
+      @close="emit('blur')"
     >
       <template #option="{ option, search }">
         <div
@@ -132,7 +134,7 @@ function crearTipo(nombre: string): void {
       Selecciona un tipo de equipo.
     </p>
     <p
-      v-if="selected.estado === 'nuevo'"
+      v-if="selected?.estado === 'nuevo'"
       class="inline-flex items-center gap-1 text-xs text-warning"
     >
       <Plus class="h-3.5 w-3.5" aria-hidden="true" />

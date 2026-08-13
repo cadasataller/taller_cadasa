@@ -4,9 +4,6 @@ import { useEquipoEngraseEdicionStore } from "@/stores/dbequipos/engrase/edicion
 import { equipoEngraseEdicionService } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.service";
 import { equipoEngraseImagenService } from "@/stores/dbequipos/engrase/edicion/equipoEngraseImagen.service";
 import {
-  IMAGEN_EQUIPO_MAX_BYTES,
-  IMAGEN_EQUIPO_MAX_SIDE,
-  IMAGEN_EQUIPO_WEBP_QUALITY,
   crearRutaImagenEquipo,
 } from "@/stores/dbequipos/engrase/edicion/equipoEngraseImagen.types";
 import type {
@@ -15,53 +12,7 @@ import type {
   OperacionImagenUi,
 } from "@/stores/dbequipos/engrase/edicion/equipoEngraseImagen.types";
 import type { EquipoImagenPersistida } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.types";
-
-const prepararWebp = async (archivo: File): Promise<ImagenEquipoPreparada> => {
-  if (!archivo.type.startsWith("image/"))
-    throw new Error("Selecciona un archivo de imagen válido.");
-  if (archivo.size > IMAGEN_EQUIPO_MAX_BYTES)
-    throw new Error("La imagen no puede superar 5 MB.");
-  const origen = URL.createObjectURL(archivo);
-  try {
-    const imagen = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const elemento = new Image();
-      elemento.onload = () => resolve(elemento);
-      elemento.onerror = () =>
-        reject(new Error("No se pudo leer la imagen seleccionada."));
-      elemento.src = origen;
-    });
-    const escala = Math.min(
-      1,
-      IMAGEN_EQUIPO_MAX_SIDE /
-        Math.max(imagen.naturalWidth, imagen.naturalHeight),
-    );
-    const ancho = Math.max(1, Math.round(imagen.naturalWidth * escala));
-    const alto = Math.max(1, Math.round(imagen.naturalHeight * escala));
-    const canvas = document.createElement("canvas");
-    canvas.width = ancho;
-    canvas.height = alto;
-    const contexto = canvas.getContext("2d");
-    if (!contexto) throw new Error("No se pudo preparar la imagen.");
-    contexto.drawImage(imagen, 0, 0, ancho, alto);
-    const blob = await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob(
-        (resultado) =>
-          resultado
-            ? resolve(resultado)
-            : reject(new Error("No se pudo convertir la imagen a WebP.")),
-        "image/webp",
-        IMAGEN_EQUIPO_WEBP_QUALITY,
-      ),
-    );
-    const file = new File([blob], "imagen-equipo.webp", {
-      type: "image/webp",
-      lastModified: Date.now(),
-    });
-    return { file, previewUrl: URL.createObjectURL(file) };
-  } finally {
-    URL.revokeObjectURL(origen);
-  }
-};
+import { prepararImagenEquipoWebp } from "@/stores/dbequipos/engrase/imagen/equipoEngraseImagen.processing";
 
 export function useEquipoImagenManager() {
   const store = useEquipoEngraseEdicionStore();
@@ -125,7 +76,7 @@ export function useEquipoImagenManager() {
   async function seleccionarArchivo(archivo: File): Promise<void> {
     limpiarPreview();
     try {
-      preparada.value = await prepararWebp(archivo);
+      preparada.value = await prepararImagenEquipoWebp(archivo);
       cambiarEstado({ kind: "idle" });
     } catch (error) {
       cambiarEstado({

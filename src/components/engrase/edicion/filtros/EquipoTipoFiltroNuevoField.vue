@@ -2,6 +2,7 @@
 import { computed, shallowRef } from "vue";
 import VueMultiselect from "vue-multiselect";
 import { Info, Plus, Truck } from "lucide-vue-next";
+import { useEquipoOverlayMultiselect } from "@/composables/engrase/useEquipoOverlayMultiselect";
 import { crearTempId } from "@/stores/dbequipos/engrase/edicion/equipoEngraseEdicion.tempIds";
 import type {
   TipoFiltroAuxiliar,
@@ -12,6 +13,8 @@ const props = defineProps<{
   tipos: TipoFiltroAuxiliar[];
   selected: TipoFiltroDraftReference | null;
   disabledTypeIds?: number[];
+  assignedTypeCodes?: Record<number, string>;
+  searchedCode?: string;
   suggestedTypeIds?: number[];
   suggestedTypeNames?: string[];
   isDuplicate: (nombre: string) => boolean;
@@ -26,16 +29,25 @@ type Option = {
   label: string;
   value: TipoFiltroDraftReference;
   suggested: boolean;
+  assignedToSearchedCode: boolean;
   $isDisabled: boolean;
 };
-
 const temporal = shallowRef<TipoFiltroDraftReference[]>([]);
+const { multiselect, acomodarOpcionesEnOverlay } =
+  useEquipoOverlayMultiselect();
 const normalizar = (valor: string): string => valor.trim().replace(/\s+/g, " ");
 const clave = (valor: string): string =>
   normalizar(valor)
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLocaleLowerCase();
+const codigoNormalizado = (valor: string): string =>
+  valor.trim().replace(/\s+/g, " ").toUpperCase();
+const estaAsignadoAlCodigoBuscado = (tipoId: number): boolean =>
+  props.disabledTypeIds?.includes(tipoId) === true &&
+  codigoNormalizado(props.assignedTypeCodes?.[tipoId] ?? "") ===
+    codigoNormalizado(props.searchedCode ?? "") &&
+  Boolean(codigoNormalizado(props.searchedCode ?? ""));
 const options = computed<Option[]>(() => [
   ...props.tipos.map((tipo) => ({
     key: `tipo_${tipo.id}`,
@@ -46,11 +58,13 @@ const options = computed<Option[]>(() => [
       tempId: null,
       nombre: tipo.nombre,
     },
-    suggested:
+    suggested: !estaAsignadoAlCodigoBuscado(tipo.id) && (
       props.suggestedTypeIds?.includes(tipo.id) === true ||
       props.suggestedTypeNames?.some(
         (nombre) => clave(nombre) === clave(tipo.nombre),
-      ) === true,
+      ) === true
+    ),
+    assignedToSearchedCode: estaAsignadoAlCodigoBuscado(tipo.id),
     $isDisabled: props.disabledTypeIds?.includes(tipo.id) ?? false,
   })),
   ...temporal.value.map((tipo) => ({
@@ -58,6 +72,7 @@ const options = computed<Option[]>(() => [
     label: tipo.nombre,
     value: tipo,
     suggested: false,
+    assignedToSearchedCode: false,
     $isDisabled: false,
   })),
 ]);
@@ -111,17 +126,20 @@ function crearTipo(nombre: string): void {
   <div class="grid gap-1.5">
     <label class="text-xs font-semibold text-gray-700">Tipo de filtro</label>
     <VueMultiselect
+      ref="multiselect"
       v-model="model"
       :options="options"
       track-by="key"
       label="label"
       :searchable="true"
+      open-direction="below"
       :taggable="true"
       tag-placeholder="Crear tipo nuevo"
       select-label="Seleccionar"
       selected-label="Seleccionado"
       no-options="No hay tipos disponibles"
       no-result="Sin resultados"
+      @open="acomodarOpcionesEnOverlay"
       @tag="crearTipo"
     >
       <template #option="{ option }">
@@ -131,6 +149,10 @@ function crearTipo(nombre: string): void {
         </div>
         <div v-else class="flex items-center justify-between gap-2">
           <span>{{ option.label }}</span>
+          <span
+            v-if="option.assignedToSearchedCode"
+            class="rounded bg-info-bg px-1.5 py-0.5 text-xs font-semibold leading-none text-info"
+          >Asignado a este código</span>
           <span
             v-if="option.suggested"
             class="rounded bg-info-bg px-1 py-0.5 text-xs font-semibold leading-none text-info"

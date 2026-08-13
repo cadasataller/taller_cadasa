@@ -30,6 +30,7 @@ const props = defineProps<{
   occupiedTypeIds: number[];
   occupiedFilterIds: number[];
   occupiedFilterCodes: string[];
+  assignedTypeCodes: Record<number, string>;
   draftSuggestions: SugerenciaBorrador[];
   search: (codigo: string) => Promise<ResultadoBusquedaFiltroOriginal>;
   addError?: string | null;
@@ -73,11 +74,11 @@ const sugerenciasVisibles = computed(() => {
   const consulta = clave(resultado.value.codigoBuscado || codigo.value);
   const desdeRpc = resultado.value.sugerencias.map((sugerencia) => ({
     ...sugerencia,
-    enBorrador: sugerenciaYaAgregada(sugerencia),
+    enUso: sugerenciaYaAgregada(sugerencia),
   }));
   const desdeBorrador = props.draftSuggestions
     .filter((sugerencia) => clave(sugerencia.codigo).includes(consulta))
-    .map((sugerencia) => ({ ...sugerencia, enBorrador: true }));
+    .map((sugerencia) => ({ ...sugerencia, enUso: true }));
   return [...desdeRpc, ...desdeBorrador].filter(
     (sugerencia, indice, lista) =>
       lista.findIndex(
@@ -92,6 +93,13 @@ const tipoConContexto = computed(() =>
 );
 const puedeAgregar = computed(() =>
   Boolean(resultado.value?.encontrado && tipo.value && cantidad.value > 0),
+);
+const codigoEnUso = computed(() =>
+  props.occupiedFilterCodes.some(
+    (codigoOcupado) => clave(codigoOcupado) === clave(resultado.value?.encontrado
+      ? resultado.value.filtro.codigo
+      : codigo.value),
+  ),
 );
 const seRestaurara = computed(() =>
   Boolean(
@@ -224,19 +232,27 @@ function agregar(): void {
               </p>
             </div>
           </div>
-          <span
-            class="inline-flex shrink-0 items-center gap-1 rounded bg-success-bg px-2 py-1 text-xs font-semibold text-success"
-            ><CheckCircle2 class="h-3.5 w-3.5" aria-hidden="true" />{{
-              resultado.filtro.estaEnListaCompras
-                ? "EN LISTA DE COMPRAS"
-                : "FUERA DE LISTA"
-            }}</span
-          >
+          <div class="flex shrink-0 flex-col items-end gap-1">
+            <span
+              v-if="codigoEnUso"
+              class="rounded bg-info-bg px-2 py-1 text-xs font-semibold text-info"
+            >EN USO</span>
+            <span
+              class="inline-flex items-center gap-1 rounded bg-success-bg px-2 py-1 text-xs font-semibold text-success"
+              ><CheckCircle2 class="h-3.5 w-3.5" aria-hidden="true" />{{
+                resultado.filtro.estaEnListaCompras
+                  ? "EN LISTA DE COMPRAS"
+                  : "FUERA DE LISTA"
+              }}</span
+            >
+          </div>
         </header>
         <EquipoTipoFiltroNuevoField
           :tipos="tipos"
           :selected="tipo"
           :disabled-type-ids="occupiedTypeIds"
+          :assigned-type-codes="assignedTypeCodes"
+          :searched-code="resultado.filtro.codigo"
           :suggested-type-ids="sugeridos"
           :suggested-type-names="nombresSugeridos"
           :is-duplicate="esTipoDuplicado"
@@ -330,19 +346,16 @@ function agregar(): void {
           v-for="sugerencia in sugerenciasVisibles"
           :key="sugerencia.id ?? `borrador_${sugerencia.codigo}`"
           type="button"
-          :disabled="loading || sugerencia.enBorrador"
-          class="flex min-h-10 items-center justify-between rounded-md border border-warning/30 bg-white px-3 text-left text-sm hover:border-main disabled:cursor-not-allowed disabled:opacity-50"
-          :class="
-            sugerencia.enBorrador ? 'cursor-not-allowed' : 'cursor-pointer'
-          "
+          :disabled="loading"
+          class="flex min-h-10 cursor-pointer items-center justify-between rounded-md border border-warning/30 bg-white px-3 text-left text-sm hover:border-main disabled:cursor-not-allowed disabled:opacity-50"
           @click="buscarPorCodigo(sugerencia.codigo)"
         >
           <span class="font-mono font-semibold text-main">{{
             sugerencia.codigo
           }}</span
           ><span class="text-xs text-gray-600">{{
-            sugerencia.enBorrador
-              ? "Ya agregado al equipo"
+            sugerencia.enUso
+              ? "En uso"
               : sugerencia.estaEnListaCompras
                 ? "En lista de compras"
                 : "Fuera de lista"

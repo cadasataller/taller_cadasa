@@ -1,6 +1,20 @@
 import type { EquipoEngraseListItem } from "../filtrosEngrase.types";
+import type {
+  CatalogoDraftReference,
+  CatalogoExistenteReference,
+  CatalogoIdNombre,
+  CatalogoTemporalReference,
+  EquipoEstado,
+} from "../shared/equipoEngraseDraft.types";
 
-export type EquipoEstado = "activo" | "descartado";
+export type {
+  CatalogoDraftReference,
+  CatalogoExistenteReference,
+  CatalogoIdNombre,
+  CatalogoTemporalReference,
+  EquipoEstado,
+} from "../shared/equipoEngraseDraft.types";
+
 export type EntidadDraftEstado = "existente" | "nuevo";
 export type OperacionDraft =
   | "existente"
@@ -8,10 +22,6 @@ export type OperacionDraft =
   | "actualizado"
   | "pendiente_eliminacion";
 
-export interface CatalogoIdNombre {
-  id: number;
-  nombre: string;
-}
 export interface EquipoEdicionDatos {
   id: number;
   codigo: string;
@@ -38,19 +48,8 @@ export interface EquipoImagenPersistida {
   tieneImagenMain: boolean;
   imagenActualizadaEn: string | null;
 }
-export interface CatalogoTemporalReference {
-  estado: "nuevo";
-  id: null;
-  tempId: string;
-  nombre: string;
-}
-export interface CatalogoExistenteReference extends CatalogoIdNombre {
-  estado: "existente";
-  tempId: null;
-}
 export type CatalogoAceiteDraftReference =
-  | CatalogoExistenteReference
-  | CatalogoTemporalReference;
+  CatalogoDraftReference;
 export interface EquipoAceiteDraft extends EquipoEdicionAceite {
   draftId: string;
   estadoOperacion: OperacionDraft;

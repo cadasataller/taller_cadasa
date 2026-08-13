@@ -32,7 +32,7 @@ const draftBase = (snapshot = snapshotBase()): EquipoEdicionDraft => ({
 describe("payload diferencial de edición", () => {
   it.each([
     ["código", (draft: EquipoEdicionDraft) => { draft.equipo.codigo = "410003"; }, { codigo_nuevo: "410003" }],
-    ["subtipo normalizado", (draft: EquipoEdicionDraft) => { draft.equipo.subtipo = "  Bus   urbano "; }, { subtipo: "Bus urbano" }],
+    ["subtipo normalizado", (draft: EquipoEdicionDraft) => { draft.equipo.subtipo = "  Bus   urbano "; }, { subtipo: "BUS URBANO" }],
     ["estado", (draft: EquipoEdicionDraft) => { draft.equipo.estado = "descartado"; }, { estado: "descartado" }],
   ])("envía sólo %s", (_nombre, cambiar, esperado) => {
     const original = snapshotBase();

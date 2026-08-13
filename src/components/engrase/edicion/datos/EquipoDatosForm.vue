@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import EquipoEtapasField from "./EquipoEtapasField.vue";
+import EquipoModeloField from "./EquipoModeloField.vue";
 import EquipoTipoField from "./EquipoTipoField.vue";
+import type { EquipoModeloOption } from "@/stores/dbequipos/engrase/edicion/equipoEngraseModelos";
 import type {
   AuxiliaresEdicionEquipo,
   EquipoEdicionDraft,
@@ -11,6 +13,7 @@ import type {
 const props = defineProps<{
   draft: EquipoEdicionDraft;
   auxiliares: AuxiliaresEdicionEquipo;
+  modelOptions: EquipoModeloOption[];
   isDuplicateTipoEquipo: (nombre: string) => boolean;
 }>();
 const emit = defineEmits<{
@@ -27,10 +30,6 @@ const subtipoInvalido = computed(() => !props.draft.equipo.subtipo.trim());
 const codigo = computed({
   get: () => props.draft.equipo.codigo,
   set: (valor: string) => emit("updateCodigo", valor),
-});
-const subtipo = computed({
-  get: () => props.draft.equipo.subtipo,
-  set: (valor: string) => emit("updateSubtipo", valor),
 });
 </script>
 <template>
@@ -79,25 +78,13 @@ const subtipo = computed({
           />
         </div>
         <div class="grid gap-2.5 md:grid-cols-2 xl:gap-3">
-          <div class="grid content-start gap-1.5">
-            <label
-              for="equipo-subtipo"
-              class="text-xs font-semibold text-gray-700"
-            >
-              Modelo / subtipo
-              <span class="text-danger" aria-hidden="true">*</span>
-            </label>
-            <input
-              id="equipo-subtipo"
-              v-model="subtipo"
-              type="text"
-              class="min-h-10 rounded-md border border-gray-300 px-2.5 text-xs outline-none focus:border-main focus:ring-2 focus:ring-main/20 sm:min-h-9 sm:text-sm"
-              :class="subtipoInvalido ? 'border-danger' : ''"
-            />
-            <p v-if="subtipoInvalido" class="text-xs text-danger" role="alert">
-              El modelo o subtipo es obligatorio.
-            </p>
-          </div>
+          <EquipoModeloField
+            class="[&_.multiselect]:!min-h-9 [&_.multiselect]:!text-xs [&_.multiselect__input]:!mb-0 [&_.multiselect__input]:!text-xs [&_.multiselect__select]:!h-9 [&_.multiselect__single]:!mb-0 [&_.multiselect__single]:!text-xs [&_.multiselect__tags]:!min-h-9 [&_.multiselect__tags]:!px-2.5 [&_.multiselect__tags]:!py-1"
+            :model-value="draft.equipo.subtipo"
+            :options="modelOptions"
+            :invalid="subtipoInvalido"
+            @update:model-value="emit('updateSubtipo', $event)"
+          />
           <EquipoEtapasField
             class="[&_.multiselect]:!min-h-9 [&_.multiselect]:!text-xs [&_.multiselect__input]:!mb-0 [&_.multiselect__input]:!text-xs [&_.multiselect__select]:!h-9 [&_.multiselect__single]:!mb-0 [&_.multiselect__single]:!text-xs [&_.multiselect__tags]:!min-h-9 [&_.multiselect__tags]:!px-2.5 [&_.multiselect__tags]:!py-1"
             :etapas="auxiliares.etapas"

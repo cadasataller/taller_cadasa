@@ -8,7 +8,7 @@ const props = defineProps<{
   placeholder: string;
   invalid?: boolean;
 }>();
-const emit = defineEmits<{ "update:modelValue": [string[]] }>();
+const emit = defineEmits<{ "update:modelValue": [string[]]; close: [] }>();
 const selected = computed({
   get: (): EquipoMultiselectOption[] =>
     props.options.filter((option) => props.modelValue.includes(option.key)),
@@ -38,5 +38,6 @@ const selected = computed({
     no-options="No hay opciones"
     no-result="Sin resultados"
     :class="{ 'multiselect-invalid': invalid }"
+    @close="emit('close')"
   />
 </template>

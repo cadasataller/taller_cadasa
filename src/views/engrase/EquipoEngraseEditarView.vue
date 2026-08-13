@@ -47,6 +47,17 @@ const filtroEditado = computed(() => editor.draft.value?.filtros.find((filtro) =
 const tiposOcupados = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.draftId !== filtroEditadoId.value).map((filtro) => filtro.tipoFiltro.id) ?? []);
 const filtrosOcupadosId = computed(() => editor.draft.value?.filtros.flatMap((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion" && filtro.filtroReferencia.estado === "existente" ? [filtro.filtroReferencia.id] : []) ?? []);
 const filtrosOcupadosCodigo = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").map((filtro) => filtro.filtroReferencia.codigo) ?? []);
+const codigosPorTipoOcupado = computed<Record<number, string>>(() =>
+  Object.fromEntries(
+    editor.draft.value?.filtros.flatMap((filtro) =>
+      filtro.estadoOperacion !== "pendiente_eliminacion" &&
+      filtro.draftId !== filtroEditadoId.value &&
+      filtro.tipoFiltroReferencia.estado === "existente"
+        ? [[filtro.tipoFiltroReferencia.id, filtro.filtroReferencia.codigo] as const]
+        : [],
+    ) ?? [],
+  ),
+);
 const sugerenciasBorrador = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").map((filtro) => ({ id: filtro.filtroReferencia.estado === "existente" ? filtro.filtroReferencia.id : null, codigo: filtro.filtroReferencia.codigo, estaEnListaCompras: filtro.filtroReferencia.estaEnListaCompras })) ?? []);
 const nombresTiposActivos = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion !== "pendiente_eliminacion").map((filtro) => filtro.tipoFiltroReferencia.nombre) ?? []);
 const filtrosPendientesClave = computed(() => editor.draft.value?.filtros.filter((filtro) => filtro.estadoOperacion === "pendiente_eliminacion").map((filtro) => `${filtro.filtro.id}:${filtro.tipoFiltro.id}`) ?? []);
@@ -158,6 +169,7 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
             v-if="editor.auxiliares.value"
             :draft="editor.draft.value"
             :auxiliares="editor.auxiliares.value"
+            :model-options="editor.modelOptions.value"
             :is-duplicate-tipo-equipo="editor.esTipoEquipoDuplicado"
             @update-codigo="editor.actualizarCodigo"
             @select-tipo-equipo="editor.seleccionarTipoEquipo"
@@ -239,6 +251,7 @@ function confirmarAceite(sistema: CatalogoAceiteDraftReference, aceite: Catalogo
           :occupied-type-ids="tiposOcupados"
           :occupied-filter-ids="filtrosOcupadosId"
           :occupied-filter-codes="filtrosOcupadosCodigo"
+          :assigned-type-codes="codigosPorTipoOcupado"
           :draft-suggestions="sugerenciasBorrador"
           :active-type-names="nombresTiposActivos"
           :pending-filter-type-keys="filtrosPendientesClave"

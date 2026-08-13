@@ -19,6 +19,7 @@ const props = defineProps<{
   occupiedTypeIds: number[];
   occupiedFilterIds: number[];
   occupiedFilterCodes: string[];
+  assignedTypeCodes: Record<number, string>;
   draftSuggestions: {
     id: number | null;
     codigo: string;
@@ -134,7 +135,10 @@ onBeforeUnmount(() => {
             <X class="h-4 w-4" />
           </button>
         </header>
-        <div class="flex-1 overflow-y-auto p-4">
+        <div
+          class="flex-1 overflow-y-auto p-4"
+          data-equipo-overlay-scroll
+        >
           <EquipoFiltroNuevoForm
             v-if="creacion"
             mode="nuevo"
@@ -155,6 +159,7 @@ onBeforeUnmount(() => {
             :occupied-type-ids="occupiedTypeIds"
             :occupied-filter-ids="occupiedFilterIds"
             :occupied-filter-codes="occupiedFilterCodes"
+            :assigned-type-codes="assignedTypeCodes"
             :draft-suggestions="draftSuggestions"
             :search="search"
             :add-error="addError"

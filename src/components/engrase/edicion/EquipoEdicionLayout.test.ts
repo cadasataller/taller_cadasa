@@ -64,12 +64,14 @@ describe("cabecera y datos del editor", () => {
       props: {
         draft,
         auxiliares,
+        modelOptions: [],
         isDuplicateTipoEquipo: () => false,
       },
       slots: { imagen: '<div data-test="imagen-integrada" />' },
       global: {
         stubs: {
           EquipoTipoField: FieldStub,
+          EquipoModeloField: FieldStub,
           EquipoEtapasField: FieldStub,
         },
       },

@@ -69,7 +69,7 @@ function seleccionar(event: Event): void {
         type="button"
         :disabled="processing"
         class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-second-deep px-3 text-sm font-semibold text-main hover:bg-second disabled:cursor-not-allowed disabled:opacity-50"
-        :class="processing ? 'cursor-not-allowed' : 'cursor-pointer'"
+        :class="processing ? 'cursor-wait' : 'cursor-pointer'"
         @click="galleryInput?.click()"
       >
         <FolderOpen class="h-4 w-4" />Galería
@@ -78,7 +78,7 @@ function seleccionar(event: Event): void {
         type="button"
         :disabled="processing"
         class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-second-deep px-3 text-sm font-semibold text-main hover:bg-second disabled:cursor-not-allowed disabled:opacity-50"
-        :class="processing ? 'cursor-not-allowed' : 'cursor-pointer'"
+        :class="processing ? 'cursor-wait' : 'cursor-pointer'"
         @click="cameraInput?.click()"
       >
         <Camera class="h-4 w-4" />Tomar foto
