@@ -111,6 +111,83 @@ export type FiltroCreacionReference =
 
 export type TipoFiltroCreacionReference = CatalogoDraftReference;
 
+export interface AgregarFiltroExistenteCreacionInput {
+  filtro: FiltroExistenteCreacionReference;
+  tipoFiltro: TipoFiltroCreacionReference;
+  cantidad: number;
+}
+
+export interface AgregarFiltroTemporalCreacionInput {
+  filtro: FiltroCreacionReference;
+  tipoFiltro: TipoFiltroCreacionReference;
+  cantidad: number;
+}
+
+export interface EditarFiltroCreacionInput {
+  draftId: string;
+  tipoFiltro: TipoFiltroCreacionReference;
+  cantidad: number;
+}
+
+export type ResultadoMutacionFiltroCreacion =
+  | { ok: true; draftId: string }
+  | {
+      ok: false;
+      codigo:
+        | "EQUIPO_YA_CREADO"
+        | "TIPO_FILTRO_DUPLICADO"
+        | "CANTIDAD_FILTRO_INVALIDA"
+        | "FILTRO_INVALIDO"
+        | "FILTRO_MINIMO_REQUERIDO"
+        | "FILTRO_NO_ENCONTRADO";
+      mensaje: string;
+    };
+
+export type CrearEquipoFiltroEditorState =
+  | { kind: "closed" }
+  | {
+      kind: "search";
+      query: string;
+      result: ResultadoBusquedaFiltroOriginal | null;
+      loading: boolean;
+      error: string | null;
+      dirty: boolean;
+    }
+  | { kind: "create"; codigoInicial: string; dirty: boolean }
+  | { kind: "edit"; draftId: string; dirty: boolean };
+
+export interface EstadoCodigoFiltroEnBorrador {
+  codigo: string;
+  asignado: boolean;
+  cantidadAsignaciones: number;
+  tiposAsignados: Array<{ clave: string; nombre: string }>;
+}
+
+export interface OpcionTipoFiltroCreacion {
+  referencia: TipoFiltroCreacionReference;
+  asignado: boolean;
+  disabled: boolean;
+  badge: "Asignado" | null;
+}
+
+export interface TipoFiltroBusquedaCreacion {
+  tipoFiltro: CatalogoIdNombre;
+  tiposEquipoQueLoUsan: string[];
+  sugeridoPorCodigo: boolean;
+  asignadoEnBorrador: boolean;
+  disabled: boolean;
+  badge: "Asignado" | null;
+}
+
+export interface SugerenciaCodigoFiltroCreacion {
+  origen: "rpc" | "borrador";
+  id: number | null;
+  codigo: string;
+  estaEnListaCompras: boolean;
+  asignado: boolean;
+  cantidadAsignaciones: number;
+}
+
 export interface CrearEquipoDatosDraft {
   codigo: string;
   tipoEquipo: TipoEquipoCreacionReference | null;
@@ -130,6 +207,48 @@ export interface CrearEquipoAceiteDraft {
   draftId: string;
   sistema: CatalogoDraftReference;
   aceite: CatalogoDraftReference;
+}
+
+export type CrearEquipoAceiteEditorState =
+  | { kind: "closed" }
+  | { kind: "add"; dirty: boolean; error: string | null }
+  | { kind: "edit"; draftId: string; dirty: boolean; error: string | null };
+
+export interface AgregarAceiteCreacionInput {
+  sistema: CatalogoDraftReference;
+  aceite: CatalogoDraftReference;
+}
+
+export interface EditarAceiteCreacionInput extends AgregarAceiteCreacionInput {
+  draftId: string;
+}
+
+export type ResultadoMutacionAceiteCreacion =
+  | { ok: true; draftId: string }
+  | {
+      ok: false;
+      codigo:
+        | "EQUIPO_YA_CREADO"
+        | "ASOCIACION_ACEITE_NO_ENCONTRADA"
+        | "SISTEMA_ACEITE_INVALIDO"
+        | "ACEITE_INVALIDO"
+        | "SISTEMA_ACEITE_DUPLICADO";
+      mensaje: string;
+    };
+
+export interface OpcionSistemaAceiteCreacion {
+  referencia: CatalogoDraftReference;
+  asignado: boolean;
+  disabled: boolean;
+  badge: "Asignado" | null;
+}
+
+export interface ResumenAceiteCreacion {
+  draftId: string;
+  sistema: string;
+  aceite: string;
+  sistemaNuevo: boolean;
+  aceiteNuevo: boolean;
 }
 
 export type ValidacionCodigoEquipoCreacion =
