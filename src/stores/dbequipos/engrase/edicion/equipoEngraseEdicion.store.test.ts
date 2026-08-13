@@ -145,6 +145,40 @@ describe("store de edición de equipo", () => {
     expect(store.draft.filtros).toHaveLength(2);
     expect(filtroNuevo.estadoOperacion).toBe("nuevo");
   });
+  it("permite reutilizar un código existente con un tipo libre", async () => {
+    obtenerEquipo.mockResolvedValue({
+      ...equipo,
+      filtros: [{
+        id: 9,
+        equipoId: 6,
+        tipoFiltro: { id: 1, nombre: "Aceite" },
+        filtro: { id: 8, codigo: "B7577", estaEnListaCompras: true },
+        cantidad: 1,
+        cantidadEquivalencias: 0,
+      }],
+    });
+    obtenerAuxiliares.mockResolvedValue({
+      ...auxiliares,
+      tiposFiltro: [
+        { id: 1, nombre: "Aceite", tiposEquipoQueLoUsan: [] },
+        { id: 2, nombre: "Hidráulico", tiposEquipoQueLoUsan: [] },
+      ],
+    });
+    const store = useEquipoEngraseEdicionStore();
+    await store.cargar("410002");
+
+    expect(store.agregarFiltroExistente({
+      filtro: { id: 8, codigo: "B7577", estaEnListaCompras: true },
+      tipoFiltro: { id: 2, nombre: "Hidráulico" },
+      cantidad: 1,
+    })).toBe(true);
+    expect(store.draft?.filtros).toHaveLength(2);
+    expect(store.agregarFiltroExistente({
+      filtro: { id: 10, codigo: "HF-100", estaEnListaCompras: true },
+      tipoFiltro: { id: 2, nombre: "Hidráulico" },
+      cantidad: 1,
+    })).toBe(false);
+  });
   it("incorpora referencias nuevas al borrador sin escribir en el catálogo", async () => {
     obtenerEquipo.mockResolvedValue(equipo);
     obtenerAuxiliares.mockResolvedValue({ ...auxiliares, tiposFiltro: [{ id: 2, nombre: "Aire", tiposEquipoQueLoUsan: [] }] });

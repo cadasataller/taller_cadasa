@@ -12,6 +12,8 @@ const props = defineProps<{
   tipos: TipoFiltroAuxiliar[];
   selected: TipoFiltroDraftReference | null;
   disabledTypeIds?: number[];
+  assignedTypeCodes?: Record<number, string>;
+  searchedCode?: string;
   suggestedTypeIds?: number[];
   suggestedTypeNames?: string[];
   isDuplicate: (nombre: string) => boolean;
@@ -26,6 +28,7 @@ type Option = {
   label: string;
   value: TipoFiltroDraftReference;
   suggested: boolean;
+  assignedToSearchedCode: boolean;
   $isDisabled: boolean;
 };
 
@@ -36,6 +39,13 @@ const clave = (valor: string): string =>
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLocaleLowerCase();
+const codigoNormalizado = (valor: string): string =>
+  valor.trim().replace(/\s+/g, " ").toUpperCase();
+const estaAsignadoAlCodigoBuscado = (tipoId: number): boolean =>
+  props.disabledTypeIds?.includes(tipoId) === true &&
+  codigoNormalizado(props.assignedTypeCodes?.[tipoId] ?? "") ===
+    codigoNormalizado(props.searchedCode ?? "") &&
+  Boolean(codigoNormalizado(props.searchedCode ?? ""));
 const options = computed<Option[]>(() => [
   ...props.tipos.map((tipo) => ({
     key: `tipo_${tipo.id}`,
@@ -46,11 +56,13 @@ const options = computed<Option[]>(() => [
       tempId: null,
       nombre: tipo.nombre,
     },
-    suggested:
+    suggested: !estaAsignadoAlCodigoBuscado(tipo.id) && (
       props.suggestedTypeIds?.includes(tipo.id) === true ||
       props.suggestedTypeNames?.some(
         (nombre) => clave(nombre) === clave(tipo.nombre),
-      ) === true,
+      ) === true
+    ),
+    assignedToSearchedCode: estaAsignadoAlCodigoBuscado(tipo.id),
     $isDisabled: props.disabledTypeIds?.includes(tipo.id) ?? false,
   })),
   ...temporal.value.map((tipo) => ({
@@ -58,6 +70,7 @@ const options = computed<Option[]>(() => [
     label: tipo.nombre,
     value: tipo,
     suggested: false,
+    assignedToSearchedCode: false,
     $isDisabled: false,
   })),
 ]);
@@ -131,6 +144,10 @@ function crearTipo(nombre: string): void {
         </div>
         <div v-else class="flex items-center justify-between gap-2">
           <span>{{ option.label }}</span>
+          <span
+            v-if="option.assignedToSearchedCode"
+            class="rounded bg-info-bg px-1.5 py-0.5 text-xs font-semibold leading-none text-info"
+          >Asignado a este código</span>
           <span
             v-if="option.suggested"
             class="rounded bg-info-bg px-1 py-0.5 text-xs font-semibold leading-none text-info"

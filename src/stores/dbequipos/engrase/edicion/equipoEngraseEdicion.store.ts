@@ -308,7 +308,7 @@ export const useEquipoEngraseEdicionStore = defineStore(
         asignacionPendiente.estadoAntesDeEliminar = null;
         return true;
       }
-      if (draft.value.filtros.some((item) => item.estadoOperacion !== "pendiente_eliminacion" && (item.filtro.id === entrada.filtro.id || item.tipoFiltro.id === entrada.tipoFiltro.id))) return false;
+      if (draft.value.filtros.some((item) => item.estadoOperacion !== "pendiente_eliminacion" && item.tipoFiltro.id === entrada.tipoFiltro.id)) return false;
       draft.value.filtros.push({ id: 0, equipoId: draft.value.equipo.id, tipoFiltro: { ...entrada.tipoFiltro }, filtro: { ...entrada.filtro }, cantidad: entrada.cantidad, cantidadEquivalencias: entrada.cantidadEquivalencias ?? 0, draftId: crearTempId("equipo_filtro"), estadoOperacion: "nuevo", estadoAntesDeEliminar: null, filtroReferencia: { estado: "existente", id: entrada.filtro.id, tempId: null, codigo: entrada.filtro.codigo, estaEnListaCompras: entrada.filtro.estaEnListaCompras }, tipoFiltroReferencia: { estado: "existente", id: entrada.tipoFiltro.id, tempId: null, nombre: entrada.tipoFiltro.nombre } });
       return true;
     }

@@ -40,4 +40,33 @@ describe("EquipoTipoFiltroNuevoField", () => {
 
     expect(wrapper.text()).toContain("Sugerido");
   });
+
+  it("distingue el tipo asignado al código buscado de otro tipo ocupado", async () => {
+    const wrapper = mount(EquipoTipoFiltroNuevoField, {
+      props: {
+        tipos: [
+          { id: 1, nombre: "Aceite", tiposEquipoQueLoUsan: [] },
+          { id: 2, nombre: "Aire", tiposEquipoQueLoUsan: [] },
+          { id: 3, nombre: "Hidráulico", tiposEquipoQueLoUsan: [] },
+        ],
+        selected: null,
+        disabledTypeIds: [1, 2],
+        assignedTypeCodes: { 1: "B7577", 2: "AF-100" },
+        searchedCode: "b7577",
+        suggestedTypeIds: [1, 2, 3],
+        isDuplicate: () => false,
+      },
+    });
+
+    await wrapper.get("input").trigger("focus");
+
+    const options = wrapper.findAll(".multiselect__option");
+    expect(options[0]?.text()).toContain("Asignado a este código");
+    expect(options[0]?.text()).not.toContain("Sugerido");
+    expect(options[0]?.classes()).toContain("multiselect__option--disabled");
+    expect(options[1]?.text()).not.toContain("Asignado a este código");
+    expect(options[1]?.text()).toContain("Sugerido");
+    expect(options[1]?.classes()).toContain("multiselect__option--disabled");
+    expect(options[2]?.classes()).not.toContain("multiselect__option--disabled");
+  });
 });

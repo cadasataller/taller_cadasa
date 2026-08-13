@@ -19,6 +19,7 @@ const props = defineProps<{
   occupiedTypeIds: number[];
   occupiedFilterIds: number[];
   occupiedFilterCodes: string[];
+  assignedTypeCodes: Record<number, string>;
   draftSuggestions: {
     id: number | null;
     codigo: string;
@@ -155,6 +156,7 @@ onBeforeUnmount(() => {
             :occupied-type-ids="occupiedTypeIds"
             :occupied-filter-ids="occupiedFilterIds"
             :occupied-filter-codes="occupiedFilterCodes"
+            :assigned-type-codes="assignedTypeCodes"
             :draft-suggestions="draftSuggestions"
             :search="search"
             :add-error="addError"
