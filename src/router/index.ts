@@ -154,6 +154,15 @@ const router = createRouter({
           ],
         },
         {
+          path: 'engrase/filtros/equipos/crear',
+          name: 'EquipoEngraseCrear',
+          component: () => import('@/views/engrase/EquipoEngraseCrearView.vue'),
+          meta: {
+            requiredFeatures: ['module_engrase', 'ver_filtros_engrase', 'editar_filtros_engrase'],
+            layout: 'fullscreen',
+          },
+        },
+        {
           path: 'engrase/filtros/equipos/:codigo/editar',
           name: 'EquipoEngraseEditar',
           component: () => import('@/views/engrase/EquipoEngraseEditarView.vue'),
