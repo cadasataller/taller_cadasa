@@ -55,6 +55,7 @@ import type {
   CrearEquipoFiltroEditorState,
   CrearEquipoAceiteEditorState,
   CrearEquipoError,
+  CrearEquipoFinalizacionState,
   CrearEquipoOverlayState,
   CrearEquipoPaso,
   CrearEquipoSubmitState,
@@ -62,6 +63,8 @@ import type {
   CrearEquipoValidationIssue,
   CrearEquipoValidationResult,
   EquipoEstado,
+  ImagenEquipoCreadoResultado,
+  ResultadoFinalizarCreacion,
   EditarFiltroCreacionInput,
   EditarAceiteCreacionInput,
   FiltroNuevoCreacionReference,
@@ -111,6 +114,7 @@ export const useEquipoEngraseCreacionStore = defineStore(
     const errorInicial = shallowRef<CrearEquipoError | null>(null);
     const validationErrors = ref<CrearEquipoValidationIssue[]>([]);
     const submitState = shallowRef<CrearEquipoSubmitState>({ kind: "idle" });
+    const finalizacionState = shallowRef<CrearEquipoFinalizacionState>({ kind: "pending" });
     const activeOverlay = shallowRef<CrearEquipoOverlayState | null>(null);
     const filtroEditor = shallowRef<CrearEquipoFiltroEditorState>({ kind: "closed" });
     const cierreEditorFiltroPendiente = shallowRef(false);
@@ -601,6 +605,41 @@ export const useEquipoEngraseCreacionStore = defineStore(
       solicitudBusquedaFiltro += 1;
       filtroEditor.value = { kind: "closed" };
       aceiteEditor.value = { kind: "closed" };
+      finalizacionState.value = { kind: "pending" };
+    }
+
+    function actualizarImagenEquipoCreado(imagen: ImagenEquipoCreadoResultado): boolean {
+      const equipo = draft.value.equipoCreado;
+      if (!equipo || pasoActual.value !== 5) return false;
+      draft.value.equipoCreado = {
+        ...equipo,
+        main_storage_path: imagen.mainStoragePath,
+        tiene_imagen_main: imagen.tieneImagenMain,
+        imagen_actualizada_en: imagen.imagenActualizadaEn,
+        etapas: equipo.etapas.map((etapa) => ({ ...etapa })),
+      };
+      finalizacionState.value = { kind: "image_saved" };
+      return true;
+    }
+
+    function finalizarCreacion(): ResultadoFinalizarCreacion {
+      const equipo = draft.value.equipoCreado;
+      if (!equipo || pasoActual.value !== 5) {
+        return { ok: false, codigo: "FINALIZACION_NO_DISPONIBLE", mensaje: "El equipo aún no está listo para finalizar." };
+      }
+      if (finalizacionState.value.kind !== "image_saved" && finalizacionState.value.kind !== "image_skipped") {
+        return { ok: false, codigo: "DECISION_IMAGEN_PENDIENTE", mensaje: "Guarda u omite la imagen antes de finalizar." };
+      }
+      finalizacionState.value = { kind: "finished" };
+      return { ok: true, equipo: copiarEquipoLista(equipo) };
+    }
+
+    function omitirImagen(): ResultadoFinalizarCreacion {
+      if (!draft.value.equipoCreado || pasoActual.value !== 5) {
+        return { ok: false, codigo: "IMAGEN_NO_DISPONIBLE", mensaje: "La imagen sólo puede omitirse después de crear el equipo." };
+      }
+      finalizacionState.value = { kind: "image_skipped" };
+      return finalizarCreacion();
     }
 
     async function crearEquipo(): Promise<ResultadoCrearEquipoSubmit> {
@@ -670,13 +709,14 @@ export const useEquipoEngraseCreacionStore = defineStore(
     }
 
     function reiniciarBorrador(): void {
-      if (isInteractionLocked.value) return;
+      if (isCreating.value || (isCreated.value && finalizacionState.value.kind !== "finished")) return;
       solicitudValidacion += 1;
       draft.value = crearEquipoDraftInicial();
       pasoActual.value = 1;
       mayorPasoCompletado.value = 0;
       validationErrors.value = [];
       submitState.value = { kind: "idle" };
+      finalizacionState.value = { kind: "pending" };
       activeOverlay.value = null;
       salidaSolicitada.value = false;
       solicitudBusquedaFiltro += 1;
@@ -705,7 +745,7 @@ export const useEquipoEngraseCreacionStore = defineStore(
     }
 
     function resetCompleto(): void {
-      if (isInteractionLocked.value) return;
+      if (isCreating.value || (isCreated.value && finalizacionState.value.kind !== "finished")) return;
       reiniciarBorrador();
       solicitudCarga += 1;
       cargaPendiente = null;
@@ -723,6 +763,7 @@ export const useEquipoEngraseCreacionStore = defineStore(
       errorInicial,
       validationErrors,
       submitState,
+      finalizacionState,
       activeOverlay,
       filtroEditor,
       cierreEditorFiltroPendiente,
@@ -814,6 +855,9 @@ export const useEquipoEngraseCreacionStore = defineStore(
       descartarEditorAceite,
       registrarEquipoCreado,
       crearEquipo,
+      actualizarImagenEquipoCreado,
+      omitirImagen,
+      finalizarCreacion,
       limpiarErrores,
       limpiarErroresDeCampo,
       establecerErrores,

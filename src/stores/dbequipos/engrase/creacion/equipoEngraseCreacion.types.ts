@@ -67,6 +67,53 @@ export type ResultadoCrearEquipoSubmit =
   | { kind: "already_created" }
   | { kind: "error"; error: CrearEquipoError };
 
+export interface ImagenEquipoCreadoResultado {
+  mainStoragePath: string;
+  tieneImagenMain: true;
+  imagenActualizadaEn: string | null;
+}
+
+export interface AgregarImagenEquipoCreadoInput {
+  codigoEquipo: string;
+  storagePath: `${string}.webp`;
+  descripcion: string | null;
+}
+
+export interface AgregarImagenEquipoCreadoRespuesta {
+  codigo: string;
+  equipoId: number;
+  operacion: "agregar";
+  imagen: ImagenEquipoCreadoResultado;
+  storagePathAnterior: string | null;
+}
+
+export type CrearEquipoImagenState =
+  | { kind: "idle" }
+  | { kind: "preparing" }
+  | { kind: "ready" }
+  | { kind: "uploading"; path: string }
+  | { kind: "registering"; path: string }
+  | { kind: "success"; path: string }
+  | { kind: "cleanup_pending"; path: string; message: string }
+  | { kind: "error"; message: string };
+
+export type CrearEquipoFinalizacionState =
+  | { kind: "pending" }
+  | { kind: "image_saved" }
+  | { kind: "image_skipped" }
+  | { kind: "finished" };
+
+export type ResultadoGuardarImagenCreacion =
+  | { kind: "success"; imagen: ImagenEquipoCreadoResultado }
+  | { kind: "invalid" }
+  | { kind: "busy" }
+  | { kind: "error"; message: string }
+  | { kind: "cleanup_pending"; path: string };
+
+export type ResultadoFinalizarCreacion =
+  | { ok: true; equipo: EquipoEngraseListItem }
+  | { ok: false; codigo: string; mensaje: string };
+
 export type CrearEquipoPaso = 1 | 2 | 3 | 4 | 5;
 
 export const CREAR_EQUIPO_PASOS = [
