@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseRastreoTareas } from "@/lib/supabase";
 import {
   mapSeguimientoTracker,
   mapTareaSeguimientoDetail,
@@ -40,7 +40,7 @@ export const tareasSeguimientoService = {
   async loadWorkspace(
     filters: TareasSeguimientoFilters,
   ): Promise<TareaSeguimientoWorkspaceData> {
-    const { data, error } = await supabase.rpc(
+    const { data, error } = await supabaseRastreoTareas.rpc(
       "listar_tareas_rastreo_v2",
       toListParams(filters),
     );
@@ -61,9 +61,12 @@ export const tareasSeguimientoService = {
   },
 
   async loadDetail(taskId: string): Promise<TareaSeguimientoDetail> {
-    const { data, error } = await supabase.rpc("obtener_tarea_detalle_v2", {
-      p_tarea_id: taskId,
-    });
+    const { data, error } = await supabaseRastreoTareas.rpc(
+      "obtener_tarea_detalle_v2",
+      {
+        p_tarea_id: taskId,
+      },
+    );
     if (error) throw error;
     return mapTareaSeguimientoDetail(data as TareaRastreoDetalleDto);
   },

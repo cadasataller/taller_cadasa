@@ -22,6 +22,10 @@ documentacion/rastreo_tarea/mockup-rastreo-body-desktop.html
 
 El panel derecho es la superficie de lectura contextual de la tarea seleccionada.
 
+## Conexión de datos
+
+El detalle debe invocar `obtener_tarea_detalle_v2` mediante `supabaseRastreoTareas`. Ninguna sección del panel puede usar el cliente Supabase principal para reconstruir datos de rastreo.
+
 Su única fuente de detalle es `obtener_tarea_detalle_v2(p_tarea_id)`. Debe consumir sus secciones `tarea`, `asignacion`, `estado`, `tiempo`, `visitas`, `ruta` y `permisos`, incluidas la línea y zonas GeoJSON; no reconstruye el detalle mediante consultas a tablas.
 
 En fase 1:

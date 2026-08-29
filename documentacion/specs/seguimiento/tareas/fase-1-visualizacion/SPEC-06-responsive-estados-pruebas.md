@@ -4,6 +4,10 @@
 
 Componer la fase 1 completa y fijar comportamiento responsive, estados visuales y criterios mínimos de prueba.
 
+## Conexión de rastreo
+
+Las pruebas e integraciones de fase 1 deben usar o mockear `supabaseRastreoTareas`: `listar_tareas_rastreo_v2`, `obtener_tarea_detalle_v2` y la Edge Function `maps-key` cuando se inicialice Google Maps. No deben usar el cliente Supabase principal para esas operaciones.
+
 Las pruebas de carga, vacío, error y retry deben mockear `listar_tareas_rastreo_v2` y `obtener_tarea_detalle_v2`. No deben simular lecturas directas de tablas como contrato del workspace.
 
 ## Dependencias

@@ -1,0 +1,57 @@
+<script setup lang="ts">
+import type {
+  SeguimientoMapTool,
+  SeguimientoMapToolState,
+} from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
+defineProps<{ tools: SeguimientoMapToolState[]; disabled: boolean }>();
+const emit = defineEmits<{
+  reset: [];
+  toggle: [tool: SeguimientoMapTool];
+  focusSelected: [];
+}>();
+const labels: Record<SeguimientoMapTool, string> = {
+  tasks: "Tareas",
+  trackers: "Trackers",
+  zones: "Zonas",
+  route: "Ruta",
+};
+</script>
+<template>
+  <nav
+    class="grid gap-1 rounded-lg border border-gray-200 bg-white/95 p-1 shadow-md backdrop-blur"
+    aria-label="Herramientas del mapa"
+  >
+    <button
+      class="grid size-9 place-items-center rounded-md text-lg font-extrabold text-main transition hover:bg-second disabled:cursor-not-allowed disabled:opacity-45"
+      :disabled="disabled"
+      title="Restablecer vista"
+      type="button"
+      @click="emit('reset')"
+    >
+      ⌖</button
+    ><button
+      class="grid size-9 place-items-center rounded-md text-lg font-extrabold text-main transition hover:bg-second disabled:cursor-not-allowed disabled:opacity-45"
+      :disabled="disabled"
+      title="Enfocar tarea seleccionada"
+      type="button"
+      @click="emit('focusSelected')"
+    >
+      ◎</button
+    ><span class="my-1 border-t border-gray-200" aria-hidden="true"></span
+    ><button
+      v-for="item in tools"
+      :key="item.tool"
+      :aria-pressed="item.enabled"
+      :class="
+        item.enabled ? 'bg-main/10 text-main' : 'text-gray-600 hover:bg-second'
+      "
+      class="grid size-9 place-items-center rounded-md font-extrabold transition disabled:cursor-not-allowed disabled:opacity-45"
+      :disabled="disabled"
+      :title="`${item.enabled ? 'Ocultar' : 'Mostrar'} ${labels[item.tool]}`"
+      type="button"
+      @click="emit('toggle', item.tool)"
+    >
+      {{ labels[item.tool].slice(0, 1) }}
+    </button>
+  </nav>
+</template>

@@ -1,28 +1,37 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
-import { storeToRefs } from 'pinia';
-import { useRouter, useRoute } from 'vue-router';
-import { supabase, supabaseRatings, supabaseCompras, supabaseEquipos } from '@/lib/supabase';
-import { useFeatureAccessStore } from '@/stores/db_mantenimiento/app_feature_access/featureAccess.store';
-import { useFiltrosCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/filtrosCatalogo.store';
-import { useAceitesCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/aceitesCatalogo.store';
-import { useSistemasCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/sistemasCatalogo.store';
-import { useDashboardHeaderNav } from '@/composables/useDashboardHeaderNav';
-import { useCatalogoEngrasePermissions } from '@/composables/engrase/catalogo/useCatalogoEngrasePermissions';
-import { SEGUIMIENTO_FEATURES } from '@/seguimiento/shared/seguimiento.permissions';
-import { 
-  BarChart3, 
-  Wrench, 
-  Calendar, 
-  LogOut, 
-  Menu, 
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import { storeToRefs } from "pinia";
+import { useRouter, useRoute } from "vue-router";
+import {
+  supabase,
+  supabaseRatings,
+  supabaseCompras,
+  supabaseEquipos,
+  supabaseRastreoTareas,
+} from "@/lib/supabase";
+import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
+import { useFiltrosCatalogoStore } from "@/stores/dbequipos/engrase/catalogo/filtrosCatalogo.store";
+import { useAceitesCatalogoStore } from "@/stores/dbequipos/engrase/catalogo/aceitesCatalogo.store";
+import { useSistemasCatalogoStore } from "@/stores/dbequipos/engrase/catalogo/sistemasCatalogo.store";
+import { useDashboardHeaderNav } from "@/composables/useDashboardHeaderNav";
+import { useCatalogoEngrasePermissions } from "@/composables/engrase/catalogo/useCatalogoEngrasePermissions";
+import { SEGUIMIENTO_FEATURES } from "@/seguimiento/shared/seguimiento.permissions";
+import {
+  BarChart3,
+  Wrench,
+  Calendar,
+  LogOut,
+  Menu,
   Plus,
   LayoutDashboard,
   ShoppingCart,
   ShieldCheck,
-  Book // Agregado el icono para Catálogo
-  ,Droplets, ChevronDown, X, MapPinned
-} from 'lucide-vue-next';
+  Book, // Agregado el icono para Catálogo
+  Droplets,
+  ChevronDown,
+  X,
+  MapPinned,
+} from "lucide-vue-next";
 
 const router = useRouter();
 const route = useRoute();
@@ -33,103 +42,189 @@ const sistemasCatalogoStore = useSistemasCatalogoStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
 const isSidebarOpen = ref(true);
 const isPreparingSolicitudCompraCreate = ref(false);
-const { dashboardHeaderNavState, selectDashboardHeaderSlide } = useDashboardHeaderNav();
+const { dashboardHeaderNavState, selectDashboardHeaderSlide } =
+  useDashboardHeaderNav();
 
-const userProfile = ref<{ nombre?: string; role?: string; area?: string } | null>(null);
-const userEmail = ref('');
-const MODULE_DASHBOARD_FEATURE = 'module_dashboard';
-const MODULE_CALIFICACIONES_FEATURE = 'module_calificaciones';
-const MODULE_REPARACIONES_FEATURE = 'module_reparaciones';
-const MODULE_MANTENIMIENTO_FEATURE = 'module_mantenimiento';
-const MODULE_COMPRAS_FEATURE = 'module_compras';
-const PANEL_ADMIN_FEATURE = 'panel_admin';
-const MODULE_CATALOG_FEATURE = 'module_catalog';
-const CREATE_SOLICITUD_FEATURE = 'crear_solicitud_compra';
-const MODULE_ENGRASE_FEATURE = 'module_engrase';
-const VIEW_FILTROS_ENGRASE_FEATURE = 'ver_filtros_engrase';
+const userProfile = ref<{
+  nombre?: string;
+  role?: string;
+  area?: string;
+} | null>(null);
+const userEmail = ref("");
+const MODULE_DASHBOARD_FEATURE = "module_dashboard";
+const MODULE_CALIFICACIONES_FEATURE = "module_calificaciones";
+const MODULE_REPARACIONES_FEATURE = "module_reparaciones";
+const MODULE_MANTENIMIENTO_FEATURE = "module_mantenimiento";
+const MODULE_COMPRAS_FEATURE = "module_compras";
+const PANEL_ADMIN_FEATURE = "panel_admin";
+const MODULE_CATALOG_FEATURE = "module_catalog";
+const CREATE_SOLICITUD_FEATURE = "crear_solicitud_compra";
+const MODULE_ENGRASE_FEATURE = "module_engrase";
+const VIEW_FILTROS_ENGRASE_FEATURE = "ver_filtros_engrase";
 const engraseDesktopOpen = ref(false);
 const mobileEngraseOpen = ref(false);
 const seguimientoDesktopOpen = ref(false);
 const mobileSeguimientoOpen = ref(false);
 
 const allMenuItems = [
-  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, requiredFeature: MODULE_DASHBOARD_FEATURE },
-  { name: 'Calificaciones', path: '/calificaciones', icon: BarChart3, requiredFeature: MODULE_CALIFICACIONES_FEATURE },
-  { name: 'Reparaciones', path: '/reparaciones', icon: Wrench, requiredFeature: MODULE_REPARACIONES_FEATURE },
-  { name: 'Mantenimiento', path: '/mantenimiento', icon: Calendar, requiredFeature: MODULE_MANTENIMIENTO_FEATURE },
-  { name: 'Compras', path: '/compras', icon: ShoppingCart, requiredFeature: MODULE_COMPRAS_FEATURE },
-  { name: 'Catálogo', path: '/catalogo', icon: Book, requiredFeature: MODULE_CATALOG_FEATURE },
-  { name: 'Panel Admin', path: '/panel-admin', icon: ShieldCheck, requiredFeature: PANEL_ADMIN_FEATURE },
+  {
+    name: "Dashboard",
+    path: "/dashboard",
+    icon: LayoutDashboard,
+    requiredFeature: MODULE_DASHBOARD_FEATURE,
+  },
+  {
+    name: "Calificaciones",
+    path: "/calificaciones",
+    icon: BarChart3,
+    requiredFeature: MODULE_CALIFICACIONES_FEATURE,
+  },
+  {
+    name: "Reparaciones",
+    path: "/reparaciones",
+    icon: Wrench,
+    requiredFeature: MODULE_REPARACIONES_FEATURE,
+  },
+  {
+    name: "Mantenimiento",
+    path: "/mantenimiento",
+    icon: Calendar,
+    requiredFeature: MODULE_MANTENIMIENTO_FEATURE,
+  },
+  {
+    name: "Compras",
+    path: "/compras",
+    icon: ShoppingCart,
+    requiredFeature: MODULE_COMPRAS_FEATURE,
+  },
+  {
+    name: "Catálogo",
+    path: "/catalogo",
+    icon: Book,
+    requiredFeature: MODULE_CATALOG_FEATURE,
+  },
+  {
+    name: "Panel Admin",
+    path: "/panel-admin",
+    icon: ShieldCheck,
+    requiredFeature: PANEL_ADMIN_FEATURE,
+  },
 ];
 
-const canSeeEngrase = computed(() => isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(MODULE_ENGRASE_FEATURE));
-const canSeeFiltrosEngrase = computed(() => canSeeEngrase.value && featureAccessStore.tieneFuncionalidad(VIEW_FILTROS_ENGRASE_FEATURE));
+const canSeeEngrase = computed(
+  () =>
+    isFeatureAccessLoaded.value &&
+    featureAccessStore.tieneFuncionalidad(MODULE_ENGRASE_FEATURE),
+);
+const canSeeFiltrosEngrase = computed(
+  () =>
+    canSeeEngrase.value &&
+    featureAccessStore.tieneFuncionalidad(VIEW_FILTROS_ENGRASE_FEATURE),
+);
 const { canViewCatalog } = useCatalogoEngrasePermissions();
-const canSeeCatalogoEngrase = computed(() =>
-  canSeeEngrase.value && canViewCatalog.value
+const canSeeCatalogoEngrase = computed(
+  () => canSeeEngrase.value && canViewCatalog.value,
 );
-const canSeeSeguimiento = computed(() =>
-  isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(SEGUIMIENTO_FEATURES.module)
+const canSeeSeguimiento = computed(
+  () =>
+    isFeatureAccessLoaded.value &&
+    featureAccessStore.tieneFuncionalidad(SEGUIMIENTO_FEATURES.module),
 );
-const canSeeSeguimientoTareas = computed(() =>
-  canSeeSeguimiento.value && featureAccessStore.tieneFuncionalidad(SEGUIMIENTO_FEATURES.viewTasks)
+const canSeeSeguimientoTareas = computed(
+  () =>
+    canSeeSeguimiento.value &&
+    featureAccessStore.tieneFuncionalidad(SEGUIMIENTO_FEATURES.viewTasks),
 );
-const isSeguimientoRoute = computed(() => route.path.startsWith('/seguimiento'));
-const isEngraseRoute = computed(() => route.path.startsWith('/engrase'));
-const isCatalogoEngraseRoute = computed(() =>
-  route.path.startsWith('/engrase/catalogo')
-  || route.path.startsWith('/engrase/filtros/catalogo')
+const isSeguimientoRoute = computed(() =>
+  route.path.startsWith("/seguimiento"),
 );
-const isFiltrosEngraseRoute = computed(() =>
-  route.path.startsWith('/engrase/filtros') && !isCatalogoEngraseRoute.value
+const isEngraseRoute = computed(() => route.path.startsWith("/engrase"));
+const isCatalogoEngraseRoute = computed(
+  () =>
+    route.path.startsWith("/engrase/catalogo") ||
+    route.path.startsWith("/engrase/filtros/catalogo"),
 );
-watch(isEngraseRoute, (active) => { if (active) engraseDesktopOpen.value = true; }, { immediate: true });
-watch(isSeguimientoRoute, (active) => { if (active) seguimientoDesktopOpen.value = true; }, { immediate: true });
+const isFiltrosEngraseRoute = computed(
+  () =>
+    route.path.startsWith("/engrase/filtros") && !isCatalogoEngraseRoute.value,
+);
+watch(
+  isEngraseRoute,
+  (active) => {
+    if (active) engraseDesktopOpen.value = true;
+  },
+  { immediate: true },
+);
+watch(
+  isSeguimientoRoute,
+  (active) => {
+    if (active) seguimientoDesktopOpen.value = true;
+  },
+  { immediate: true },
+);
 
-const menuItems = computed(() => allMenuItems.filter((item) =>
-  isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(item.requiredFeature)
-));
+const menuItems = computed(() =>
+  allMenuItems.filter(
+    (item) =>
+      isFeatureAccessLoaded.value &&
+      featureAccessStore.tieneFuncionalidad(item.requiredFeature),
+  ),
+);
 
 const viewTitle = computed(() => {
-  if (route.path.startsWith('/compras')) return 'COMPRAS';
-  if (route.path.startsWith('/panel-admin')) return 'PANEL ADMINISTRADOR';
-  if (route.path.startsWith('/catalogo')) return 'CATÁLOGO';
-  if (route.path.startsWith('/engrase')) return 'ENGRASE';
-  if (route.path.startsWith('/seguimiento')) return 'SEGUIMIENTO';
-  return menuItems.value.find(i => isActive(i.path))?.name || 'Dashboard';
+  if (route.path.startsWith("/compras")) return "COMPRAS";
+  if (route.path.startsWith("/panel-admin")) return "PANEL ADMINISTRADOR";
+  if (route.path.startsWith("/catalogo")) return "CATÁLOGO";
+  if (route.path.startsWith("/engrase")) return "ENGRASE";
+  if (route.path.startsWith("/seguimiento")) return "SEGUIMIENTO";
+  return menuItems.value.find((i) => isActive(i.path))?.name || "Dashboard";
 });
 
-const isSolicitudCompraCreateRoute = computed(() => route.name === 'SolicitudCompraCrear');
-const isDashboardRoute = computed(() => route.path.startsWith('/dashboard'));
-const showDashboardHeaderNav = computed(() => isDashboardRoute.value && dashboardHeaderNavState.isVisible);
-const mobileTopBarSpacerClass = computed(() => showDashboardHeaderNav.value ? 'h-[124px]' : 'h-[68px]');
-const hideDefaultLayout = computed(() =>
-  isPreparingSolicitudCompraCreate.value
-  || route.matched.some((record) => record.meta.layout === 'fullscreen')
+const isSolicitudCompraCreateRoute = computed(
+  () => route.name === "SolicitudCompraCrear",
 );
-const isComprasFabLoading = computed(() =>
-  route.path.startsWith('/compras')
-  && isPreparingSolicitudCompraCreate.value
-  && !isSolicitudCompraCreateRoute.value
+const isDashboardRoute = computed(() => route.path.startsWith("/dashboard"));
+const showDashboardHeaderNav = computed(
+  () => isDashboardRoute.value && dashboardHeaderNavState.isVisible,
 );
-const canCreateSolicitudCompra = computed(() =>
-  isFeatureAccessLoaded.value
-  && featureAccessStore.tieneFuncionalidad(CREATE_SOLICITUD_FEATURE)
+const mobileTopBarSpacerClass = computed(() =>
+  showDashboardHeaderNav.value ? "h-[124px]" : "h-[68px]",
+);
+const hideDefaultLayout = computed(
+  () =>
+    isPreparingSolicitudCompraCreate.value ||
+    route.matched.some((record) => record.meta.layout === "fullscreen"),
+);
+const isComprasFabLoading = computed(
+  () =>
+    route.path.startsWith("/compras") &&
+    isPreparingSolicitudCompraCreate.value &&
+    !isSolicitudCompraCreateRoute.value,
+);
+const canCreateSolicitudCompra = computed(
+  () =>
+    isFeatureAccessLoaded.value &&
+    featureAccessStore.tieneFuncionalidad(CREATE_SOLICITUD_FEATURE),
 );
 const canShowMobileFab = computed(() => {
-  if (route.path === '/dashboard') {
+  if (route.path === "/dashboard") {
     return false;
   }
 
-  if (route.path.startsWith('/compras')) {
+  if (route.path.startsWith("/compras")) {
     return canCreateSolicitudCompra.value;
   }
 
-  return ['ALL', 'EVALUADOR'].includes(userProfile.value?.area?.toUpperCase() || '');
+  return ["ALL", "EVALUADOR"].includes(
+    userProfile.value?.area?.toUpperCase() || "",
+  );
 });
 
 const handlePrepareSolicitudCompraCreate = (): void => {
-  if (!route.path.startsWith('/compras') || route.name === 'SolicitudCompraCrear') {
+  if (
+    !route.path.startsWith("/compras") ||
+    route.name === "SolicitudCompraCrear"
+  ) {
     return;
   }
 
@@ -141,58 +236,71 @@ const handleCancelSolicitudCompraCreate = (): void => {
 };
 
 const mobileFabVisibilityClass = computed(() => {
-  if (route.path.startsWith('/compras')) {
+  if (route.path.startsWith("/compras")) {
     return isSolicitudCompraCreateRoute.value
-      ? '-translate-x-6 opacity-0 pointer-events-none'
-      : 'translate-x-0 opacity-100';
+      ? "-translate-x-6 opacity-0 pointer-events-none"
+      : "translate-x-0 opacity-100";
   }
 
   return hideDefaultLayout.value
-    ? '-translate-x-6 opacity-0 pointer-events-none'
-    : 'translate-x-0 opacity-100';
+    ? "-translate-x-6 opacity-0 pointer-events-none"
+    : "translate-x-0 opacity-100";
 });
 
 watch(
   () => route.name,
   (name) => {
-    if (name === 'SolicitudCompraCrear') {
+    if (name === "SolicitudCompraCrear") {
       isPreparingSolicitudCompraCreate.value = false;
       return;
     }
 
-    if (name === 'Compras') {
+    if (name === "Compras") {
       isPreparingSolicitudCompraCreate.value = false;
     }
-  }
+  },
 );
 
 onMounted(async () => {
-  window.addEventListener('prepare-open-solicitud-compra', handlePrepareSolicitudCompraCreate);
-  window.addEventListener('cancel-open-solicitud-compra', handleCancelSolicitudCompraCreate);
+  window.addEventListener(
+    "prepare-open-solicitud-compra",
+    handlePrepareSolicitudCompraCreate,
+  );
+  window.addEventListener(
+    "cancel-open-solicitud-compra",
+    handleCancelSolicitudCompraCreate,
+  );
 
   featureAccessStore.cargarFuncionalidadesPermitidas().catch((error) => {
-    console.error('Error cargando funcionalidades permitidas:', error);
+    console.error("Error cargando funcionalidades permitidas:", error);
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (user) {
-    userEmail.value = user.email || '';
+    userEmail.value = user.email || "";
     const { data } = await supabase
-      .from('PROFILE')
-      .select('*')
-      .eq('email', user.email)
+      .from("PROFILE")
+      .select("*")
+      .eq("email", user.email)
       .maybeSingle();
 
     if (data) {
       userProfile.value = data;
     }
   }
-
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('prepare-open-solicitud-compra', handlePrepareSolicitudCompraCreate);
-  window.removeEventListener('cancel-open-solicitud-compra', handleCancelSolicitudCompraCreate);
+  window.removeEventListener(
+    "prepare-open-solicitud-compra",
+    handlePrepareSolicitudCompraCreate,
+  );
+  window.removeEventListener(
+    "cancel-open-solicitud-compra",
+    handleCancelSolicitudCompraCreate,
+  );
 });
 
 const logout = async () => {
@@ -200,30 +308,35 @@ const logout = async () => {
     supabase.auth.signOut(),
     supabaseRatings.auth.signOut(),
     supabaseCompras.auth.signOut(),
-    supabaseEquipos.auth.signOut()
+    supabaseEquipos.auth.signOut(),
+    supabaseRastreoTareas.auth.signOut(),
   ]);
   filtrosCatalogoStore.reset();
   aceitesCatalogoStore.reset();
   sistemasCatalogoStore.reset();
   featureAccessStore.reset();
-  router.push('/login');
+  router.push("/login");
 };
 
 const triggerNew = () => {
-  if (route.path.startsWith('/compras')) {
-    if (!canCreateSolicitudCompra.value || isPreparingSolicitudCompraCreate.value) {
+  if (route.path.startsWith("/compras")) {
+    if (
+      !canCreateSolicitudCompra.value ||
+      isPreparingSolicitudCompraCreate.value
+    ) {
       return;
     }
 
     isPreparingSolicitudCompraCreate.value = true;
-    window.dispatchEvent(new CustomEvent('open-new-solicitud-compra'));
+    window.dispatchEvent(new CustomEvent("open-new-solicitud-compra"));
     return;
   } else {
-    window.dispatchEvent(new CustomEvent('open-new-record'));
+    window.dispatchEvent(new CustomEvent("open-new-record"));
   }
 };
 
-const isActive = (path: string) => route.path === path || route.path.startsWith(path + '/');
+const isActive = (path: string) =>
+  route.path === path || route.path.startsWith(path + "/");
 </script>
 
 <template>
@@ -236,45 +349,111 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
       :class="{ '-ml-64': !isSidebarOpen }"
     >
       <div class="mb-10">
-        <h1 class="font-display text-2xl text-accent tracking-widest">CADASA</h1>
-        <p class="text-[10px] text-second-deep tracking-[0.2em] uppercase">Gestión Operativa</p>
+        <h1 class="font-display text-2xl text-accent tracking-widest">
+          CADASA
+        </h1>
+        <p class="text-[10px] text-second-deep tracking-[0.2em] uppercase">
+          Gestión Operativa
+        </p>
       </div>
 
       <nav class="flex-1 space-y-2">
-        <router-link 
-          v-for="item in menuItems" 
-          :key="item.path" 
+        <router-link
+          v-for="item in menuItems"
+          :key="item.path"
           :to="item.path"
           class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group"
           :class="[
-            isActive(item.path) 
-              ? 'bg-main text-accent' 
-              : 'text-gray-400 hover:bg-main hover:text-white'
+            isActive(item.path)
+              ? 'bg-main text-accent'
+              : 'text-gray-400 hover:bg-main hover:text-white',
           ]"
         >
           <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
           <span class="font-medium text-sm">{{ item.name }}</span>
         </router-link>
         <div v-if="canSeeEngrase" class="space-y-1">
-          <button type="button" class="flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all" :class="isEngraseRoute ? 'bg-main text-accent' : 'text-gray-400 hover:bg-main hover:text-white'" @click="engraseDesktopOpen = !engraseDesktopOpen" :aria-expanded="engraseDesktopOpen">
-            <Droplets class="w-5 h-5 flex-shrink-0" /><span class="font-medium text-sm flex-1 text-left">Engrase</span><ChevronDown class="w-4 h-4 transition-transform" :class="{ 'rotate-180': engraseDesktopOpen }" />
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all"
+            :class="
+              isEngraseRoute
+                ? 'bg-main text-accent'
+                : 'text-gray-400 hover:bg-main hover:text-white'
+            "
+            @click="engraseDesktopOpen = !engraseDesktopOpen"
+            :aria-expanded="engraseDesktopOpen"
+          >
+            <Droplets class="w-5 h-5 flex-shrink-0" /><span
+              class="font-medium text-sm flex-1 text-left"
+              >Engrase</span
+            ><ChevronDown
+              class="w-4 h-4 transition-transform"
+              :class="{ 'rotate-180': engraseDesktopOpen }"
+            />
           </button>
           <div v-if="engraseDesktopOpen" class="ml-5 space-y-1">
-            <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isFiltrosEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'">Filtros</router-link>
-            <router-link v-if="canSeeCatalogoEngrase" to="/engrase/catalogo" class="flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isCatalogoEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'">Catálogo</router-link>
+            <router-link
+              v-if="canSeeFiltrosEngrase"
+              to="/engrase/filtros"
+              class="flex items-center rounded-lg px-4 py-2.5 text-sm"
+              :class="
+                isFiltrosEngraseRoute
+                  ? 'bg-white/10 text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              "
+              >Filtros</router-link
+            >
+            <router-link
+              v-if="canSeeCatalogoEngrase"
+              to="/engrase/catalogo"
+              class="flex items-center rounded-lg px-4 py-2.5 text-sm"
+              :class="
+                isCatalogoEngraseRoute
+                  ? 'bg-white/10 text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              "
+              >Catálogo</router-link
+            >
           </div>
         </div>
         <div v-if="canSeeSeguimiento" class="space-y-1">
-          <button type="button" class="flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all" :class="isSeguimientoRoute ? 'bg-main text-accent' : 'text-gray-400 hover:bg-main hover:text-white'" @click="seguimientoDesktopOpen = !seguimientoDesktopOpen" :aria-expanded="seguimientoDesktopOpen">
-            <MapPinned class="w-5 h-5 flex-shrink-0" /><span class="font-medium text-sm flex-1 text-left">Seguimiento</span><ChevronDown class="w-4 h-4 transition-transform" :class="{ 'rotate-180': seguimientoDesktopOpen }" />
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all"
+            :class="
+              isSeguimientoRoute
+                ? 'bg-main text-accent'
+                : 'text-gray-400 hover:bg-main hover:text-white'
+            "
+            @click="seguimientoDesktopOpen = !seguimientoDesktopOpen"
+            :aria-expanded="seguimientoDesktopOpen"
+          >
+            <MapPinned class="w-5 h-5 flex-shrink-0" /><span
+              class="font-medium text-sm flex-1 text-left"
+              >Seguimiento</span
+            ><ChevronDown
+              class="w-4 h-4 transition-transform"
+              :class="{ 'rotate-180': seguimientoDesktopOpen }"
+            />
           </button>
           <div v-if="seguimientoDesktopOpen" class="ml-5 space-y-1">
-            <router-link v-if="canSeeSeguimientoTareas" to="/seguimiento/tareas" class="flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isSeguimientoRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'">Tareas</router-link>
+            <router-link
+              v-if="canSeeSeguimientoTareas"
+              to="/seguimiento/tareas"
+              class="flex items-center rounded-lg px-4 py-2.5 text-sm"
+              :class="
+                isSeguimientoRoute
+                  ? 'bg-white/10 text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+              "
+              >Tareas</router-link
+            >
           </div>
         </div>
       </nav>
 
-      <button 
+      <button
         @click="logout"
         class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-danger hover:text-white transition-all mt-auto"
       >
@@ -284,32 +463,49 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col min-w-0 bg-second overflow-hidden relative">
+    <main
+      class="flex-1 flex flex-col min-w-0 bg-second overflow-hidden relative"
+    >
       <!-- Top Header (Desktop) -->
       <header
         v-if="!hideDefaultLayout"
         class="hidden md:flex items-center gap-6 px-8 h-16 bg-white border-b border-gray-200 shadow-md relative z-10 transition-all duration-300"
       >
         <div class="flex items-center gap-4 min-w-0">
-          <button @click="isSidebarOpen = !isSidebarOpen" class="p-2 hover:bg-gray-50 rounded-lg text-gray-400">
+          <button
+            @click="isSidebarOpen = !isSidebarOpen"
+            class="p-2 hover:bg-gray-50 rounded-lg text-gray-400"
+          >
             <Menu class="w-5 h-5" />
           </button>
           <div class="flex items-center gap-2">
-            <span class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Módulo / </span>
+            <span
+              class="text-[10px] text-gray-400 uppercase tracking-widest font-bold"
+              >Módulo /
+            </span>
             <h2 class="font-bold text-sm text-gray-700 uppercase tracking-wide">
               {{ viewTitle }}
             </h2>
           </div>
         </div>
 
-        <div v-if="showDashboardHeaderNav" class="flex-1 min-w-0 flex justify-center">
-          <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shadow-inner border border-gray-200/20 overflow-x-auto hide-scrollbar max-w-full">
+        <div
+          v-if="showDashboardHeaderNav"
+          class="flex-1 min-w-0 flex justify-center"
+        >
+          <div
+            class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shadow-inner border border-gray-200/20 overflow-x-auto hide-scrollbar max-w-full"
+          >
             <button
               v-for="(slide, index) in dashboardHeaderNavState.slides"
               :key="slide.id"
               @click="selectDashboardHeaderSlide(index)"
               class="px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center text-center whitespace-nowrap"
-              :class="index === dashboardHeaderNavState.currentSlideIndex ? 'bg-white text-main shadow-md' : 'text-gray-400 hover:text-gray-600'"
+              :class="
+                index === dashboardHeaderNavState.currentSlideIndex
+                  ? 'bg-white text-main shadow-md'
+                  : 'text-gray-400 hover:text-gray-600'
+              "
             >
               {{ slide.label }}
             </button>
@@ -317,16 +513,30 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
         </div>
 
         <div v-else class="flex-1"></div>
-        
+
         <div class="flex items-center gap-6">
           <div class="h-8 w-px bg-gray-100 italic"></div>
-          <div class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-100" @click="router.push('/perfil')">
+          <div
+            class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-100"
+            @click="router.push('/perfil')"
+          >
             <div class="text-right">
-              <p class="text-[10px] font-bold text-gray-700 uppercase tracking-tight">{{ userProfile?.nombre || userEmail.split('@')[0] }}</p>
-              <p class="text-[9px] text-gray-400 uppercase font-medium">{{ userProfile?.role || 'Configurar Perfil' }} <span v-if="userProfile?.area">• {{ userProfile.area }}</span></p>
+              <p
+                class="text-[10px] font-bold text-gray-700 uppercase tracking-tight"
+              >
+                {{ userProfile?.nombre || userEmail.split("@")[0] }}
+              </p>
+              <p class="text-[9px] text-gray-400 uppercase font-medium">
+                {{ userProfile?.role || "Configurar Perfil" }}
+                <span v-if="userProfile?.area">• {{ userProfile.area }}</span>
+              </p>
             </div>
-            <div class="w-9 h-9 rounded-full bg-accent flex items-center justify-center font-bold text-xs text-main-dark">
-              {{ (userProfile?.nombre || userEmail).substring(0,2).toUpperCase() }}
+            <div
+              class="w-9 h-9 rounded-full bg-accent flex items-center justify-center font-bold text-xs text-main-dark"
+            >
+              {{
+                (userProfile?.nombre || userEmail).substring(0, 2).toUpperCase()
+              }}
             </div>
           </div>
         </div>
@@ -339,27 +549,49 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
       >
         <div class="flex items-center justify-between px-6 py-4">
           <div class="flex items-center gap-2 min-w-0">
-            <h1 class="font-display text-xl text-main tracking-widest leading-none">CADASA</h1>
-            <span v-if="route.path !== '/dashboard'" class="text-[14px] font-bold text-gray-700 leading-none pl-2 border-l border-gray-300 uppercase truncate">{{ viewTitle }}</span>
+            <h1
+              class="font-display text-xl text-main tracking-widest leading-none"
+            >
+              CADASA
+            </h1>
+            <span
+              v-if="route.path !== '/dashboard'"
+              class="text-[14px] font-bold text-gray-700 leading-none pl-2 border-l border-gray-300 uppercase truncate"
+              >{{ viewTitle }}</span
+            >
           </div>
           <div class="flex items-center gap-4">
-            <button @click="logout" class="text-gray-400 hover:text-danger transition-colors p-2">
+            <button
+              @click="logout"
+              class="text-gray-400 hover:text-danger transition-colors p-2"
+            >
               <LogOut class="w-5 h-5" />
             </button>
-            <div class="w-8 h-8 rounded-full bg-accent-light flex items-center justify-center font-display text-xs text-main cursor-pointer" @click="router.push('/perfil')">
-              {{ (userProfile?.nombre || userEmail).substring(0,2).toUpperCase() }}
+            <div
+              class="w-8 h-8 rounded-full bg-accent-light flex items-center justify-center font-display text-xs text-main cursor-pointer"
+              @click="router.push('/perfil')"
+            >
+              {{
+                (userProfile?.nombre || userEmail).substring(0, 2).toUpperCase()
+              }}
             </div>
           </div>
         </div>
 
         <div v-if="showDashboardHeaderNav" class="px-4 pb-3">
-          <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shadow-inner border border-gray-200/20 overflow-x-auto hide-scrollbar">
+          <div
+            class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shadow-inner border border-gray-200/20 overflow-x-auto hide-scrollbar"
+          >
             <button
               v-for="(slide, index) in dashboardHeaderNavState.slides"
               :key="slide.id"
               @click="selectDashboardHeaderSlide(index)"
               class="px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center text-center whitespace-nowrap flex-shrink-0"
-              :class="index === dashboardHeaderNavState.currentSlideIndex ? 'bg-white text-main shadow-md' : 'text-gray-400 hover:text-gray-600'"
+              :class="
+                index === dashboardHeaderNavState.currentSlideIndex
+                  ? 'bg-white text-main shadow-md'
+                  : 'text-gray-400 hover:text-gray-600'
+              "
             >
               {{ slide.label }}
             </button>
@@ -368,58 +600,161 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
       </div>
 
       <!-- Mobile Spacer for Top Bar -->
-      <div v-if="!hideDefaultLayout" :class="mobileTopBarSpacerClass" class="md:hidden flex-shrink-0 w-full"></div>
+      <div
+        v-if="!hideDefaultLayout"
+        :class="mobileTopBarSpacerClass"
+        class="md:hidden flex-shrink-0 w-full"
+      ></div>
 
       <!-- Content Area -->
       <div id="app-main-content-area" class="flex-1 overflow-y-auto w-full">
         <router-view v-slot="{ Component, route: childRoute }">
           <transition name="fade" mode="out-in">
-            <component :is="Component" :key="childRoute.matched[1]?.path ?? childRoute.path" />
+            <component
+              :is="Component"
+              :key="childRoute.matched[1]?.path ?? childRoute.path"
+            />
           </transition>
         </router-view>
       </div>
 
       <!-- Mobile Bottom Nav - SCROLLABLE -->
-      <nav 
+      <nav
         v-if="!hideDefaultLayout"
-        id="mobile-bottom-nav" 
+        id="mobile-bottom-nav"
         class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-2 flex items-center justify-around gap-2 overflow-x-auto z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] rounded-t-3xl hide-scrollbar transition-all duration-300"
       >
-        <router-link 
-          v-for="item in menuItems" 
-          :key="item.path" 
+        <router-link
+          v-for="item in menuItems"
+          :key="item.path"
           :to="item.path"
           class="flex flex-col items-center gap-1 p-2 transition-all flex-shrink-0 min-w-[56px]"
           :class="[isActive(item.path) ? 'text-main' : 'text-gray-300']"
         >
           <component :is="item.icon" class="w-6 h-6 shrink-0" />
-          <span class="text-[10px] font-medium whitespace-nowrap">{{ item.name }}</span>
+          <span class="text-[10px] font-medium whitespace-nowrap">{{
+            item.name
+          }}</span>
         </router-link>
-        <div v-if="canSeeEngrase" class="flex flex-col items-center gap-1 flex-shrink-0 min-w-[56px]">
-          <button type="button" class="flex flex-col items-center gap-1 p-2" :class="isEngraseRoute ? 'text-main' : 'text-gray-300'" @click="mobileEngraseOpen = !mobileEngraseOpen" :aria-expanded="mobileEngraseOpen"><Droplets class="w-6 h-6" /><span class="text-[10px] font-medium">Engrase</span></button>
+        <div
+          v-if="canSeeEngrase"
+          class="flex flex-col items-center gap-1 flex-shrink-0 min-w-[56px]"
+        >
+          <button
+            type="button"
+            class="flex flex-col items-center gap-1 p-2"
+            :class="isEngraseRoute ? 'text-main' : 'text-gray-300'"
+            @click="mobileEngraseOpen = !mobileEngraseOpen"
+            :aria-expanded="mobileEngraseOpen"
+          >
+            <Droplets class="w-6 h-6" /><span class="text-[10px] font-medium"
+              >Engrase</span
+            >
+          </button>
         </div>
-        <div v-if="canSeeSeguimiento" class="flex flex-col items-center gap-1 flex-shrink-0 min-w-[56px]">
-          <button type="button" class="flex flex-col items-center gap-1 p-2" :class="isSeguimientoRoute ? 'text-main' : 'text-gray-300'" @click="mobileSeguimientoOpen = !mobileSeguimientoOpen" :aria-expanded="mobileSeguimientoOpen"><MapPinned class="w-6 h-6" /><span class="text-[10px] font-medium">Seguimiento</span></button>
+        <div
+          v-if="canSeeSeguimiento"
+          class="flex flex-col items-center gap-1 flex-shrink-0 min-w-[56px]"
+        >
+          <button
+            type="button"
+            class="flex flex-col items-center gap-1 p-2"
+            :class="isSeguimientoRoute ? 'text-main' : 'text-gray-300'"
+            @click="mobileSeguimientoOpen = !mobileSeguimientoOpen"
+            :aria-expanded="mobileSeguimientoOpen"
+          >
+            <MapPinned class="w-6 h-6" /><span class="text-[10px] font-medium"
+              >Seguimiento</span
+            >
+          </button>
         </div>
       </nav>
-      <div v-if="!hideDefaultLayout && mobileEngraseOpen && canSeeEngrase" class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl">
-        <div class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"><span>Engrase</span><button type="button" class="p-2" @click="mobileEngraseOpen = false" aria-label="Cerrar subpestañas"><X class="w-5 h-5" /></button></div>
+      <div
+        v-if="!hideDefaultLayout && mobileEngraseOpen && canSeeEngrase"
+        class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl"
+      >
+        <div
+          class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"
+        >
+          <span>Engrase</span
+          ><button
+            type="button"
+            class="p-2"
+            @click="mobileEngraseOpen = false"
+            aria-label="Cerrar subpestañas"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
         <div class="space-y-2">
-          <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="block w-full rounded-xl px-4 py-3 text-sm font-semibold" :class="isFiltrosEngraseRoute ? 'bg-main/10 text-main' : 'bg-gray-50 text-gray-600'" @click="mobileEngraseOpen = false">Filtros</router-link>
-          <router-link v-if="canSeeCatalogoEngrase" to="/engrase/catalogo" class="block w-full rounded-xl px-4 py-3 text-sm font-semibold" :class="isCatalogoEngraseRoute ? 'bg-main/10 text-main' : 'bg-gray-50 text-gray-600'" @click="mobileEngraseOpen = false">Catálogo</router-link>
+          <router-link
+            v-if="canSeeFiltrosEngrase"
+            to="/engrase/filtros"
+            class="block w-full rounded-xl px-4 py-3 text-sm font-semibold"
+            :class="
+              isFiltrosEngraseRoute
+                ? 'bg-main/10 text-main'
+                : 'bg-gray-50 text-gray-600'
+            "
+            @click="mobileEngraseOpen = false"
+            >Filtros</router-link
+          >
+          <router-link
+            v-if="canSeeCatalogoEngrase"
+            to="/engrase/catalogo"
+            class="block w-full rounded-xl px-4 py-3 text-sm font-semibold"
+            :class="
+              isCatalogoEngraseRoute
+                ? 'bg-main/10 text-main'
+                : 'bg-gray-50 text-gray-600'
+            "
+            @click="mobileEngraseOpen = false"
+            >Catálogo</router-link
+          >
         </div>
       </div>
-      <div v-if="!hideDefaultLayout && mobileSeguimientoOpen && canSeeSeguimiento" class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl">
-        <div class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"><span>Seguimiento</span><button type="button" class="p-2" @click="mobileSeguimientoOpen = false" aria-label="Cerrar subpestañas"><X class="w-5 h-5" /></button></div>
-        <div class="space-y-2"><router-link v-if="canSeeSeguimientoTareas" to="/seguimiento/tareas" class="block w-full rounded-xl px-4 py-3 text-sm font-semibold" :class="isSeguimientoRoute ? 'bg-main/10 text-main' : 'bg-gray-50 text-gray-600'" @click="mobileSeguimientoOpen = false">Tareas</router-link></div>
+      <div
+        v-if="!hideDefaultLayout && mobileSeguimientoOpen && canSeeSeguimiento"
+        class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl"
+      >
+        <div
+          class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"
+        >
+          <span>Seguimiento</span
+          ><button
+            type="button"
+            class="p-2"
+            @click="mobileSeguimientoOpen = false"
+            aria-label="Cerrar subpestañas"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+        <div class="space-y-2">
+          <router-link
+            v-if="canSeeSeguimientoTareas"
+            to="/seguimiento/tareas"
+            class="block w-full rounded-xl px-4 py-3 text-sm font-semibold"
+            :class="
+              isSeguimientoRoute
+                ? 'bg-main/10 text-main'
+                : 'bg-gray-50 text-gray-600'
+            "
+            @click="mobileSeguimientoOpen = false"
+            >Tareas</router-link
+          >
+        </div>
       </div>
 
       <!-- FAB Mobile -->
-      <button 
+      <button
         v-if="!hideDefaultLayout && canShowMobileFab"
-        @click="triggerNew" 
+        @click="triggerNew"
         class="lg:hidden fixed bottom-20 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-gray-900 shadow-lg transition-all duration-300 active:scale-90"
-        :class="[mobileFabVisibilityClass, isComprasFabLoading ? 'cursor-wait' : 'cursor-pointer']"
+        :class="[
+          mobileFabVisibilityClass,
+          isComprasFabLoading ? 'cursor-wait' : 'cursor-pointer',
+        ]"
         :disabled="isComprasFabLoading"
         :aria-busy="isComprasFabLoading"
       >
@@ -446,8 +781,8 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
 
 /* Ocultar barra de desplazamiento manteniendo funcionalidad */
 .hide-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */

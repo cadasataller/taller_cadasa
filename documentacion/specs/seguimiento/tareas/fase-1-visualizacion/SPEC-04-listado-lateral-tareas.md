@@ -23,6 +23,10 @@ documentacion/rastreo_tarea/mockup-rastreo-body-desktop.html
 
 El panel lateral izquierdo es el punto principal de exploración y selección de tareas.
 
+## Conexión de datos
+
+Toda lectura asociada a rastreo debe usar `supabaseRastreoTareas`. El listado proviene exclusivamente de la RPC `listar_tareas_rastreo_v2`; no debe usar el cliente `supabase` principal ni consultar tablas directamente.
+
 La colección proviene de `listar_tareas_rastreo_v2`; el panel no solicita detalle, trackers o estados desde tablas. Al seleccionar, emite el `tarea_id` al store para solicitar `obtener_tarea_detalle_v2`.
 
 Debe permitir:
