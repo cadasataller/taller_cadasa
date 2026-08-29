@@ -2,21 +2,126 @@ import type {
   SeguimientoCoordinates,
   SeguimientoTaskStatus,
   SeguimientoTaskType,
-} from '@/seguimiento/shared/seguimiento.types';
-import type { SeguimientoTracker } from '@/seguimiento/shared/trackers/tracker.types';
+} from "@/seguimiento/shared/seguimiento.types";
+import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
 
-export type SeguimientoTaskPanelMode = 'closed' | 'view';
-export type SeguimientoMapStatus = 'idle' | 'ready' | 'error';
-export type SeguimientoMapTool = 'tasks' | 'trackers' | 'zones' | 'route';
+export type SeguimientoTaskPanelMode = "closed" | "view";
+export type SeguimientoMapStatus = "idle" | "ready" | "error";
+export type SeguimientoMapTool = "tasks" | "trackers" | "zones" | "route";
+export type TareaRastreoTipoCodigo = "finca" | "zona" | "duda_automatica";
+export type TareaRastreoEstadoOperativoCodigo =
+  | "sin_iniciar"
+  | "en_ruta"
+  | "en_ubicacion"
+  | "visitada";
 
 export interface TareasSeguimientoFilters {
   scheduledDate: string | null;
   areaId: string | null;
   assignedUserId: string | null;
-  trackerId: number | null;
+  sourceId: number | null;
   types: SeguimientoTaskType[];
   statuses: SeguimientoTaskStatus[];
   search: string;
+}
+
+export interface ListarTareasRastreoV2Params {
+  p_area_id: string | null;
+  p_fecha: string | null;
+  p_usuario_asignado_id: string | null;
+  p_source_id: number | null;
+  p_estado_operativo_codigo: TareaRastreoEstadoOperativoCodigo | null;
+  p_incluir_canceladas: boolean;
+}
+
+/** DTO tabular de public.listar_tareas_rastreo_v2. */
+export interface TareaRastreoListadoDto {
+  id: string;
+  version: number;
+  area_id: string;
+  fecha_programada: string;
+  indicaciones: string | null;
+  tipo_tarea: TareaRastreoTipoCodigo;
+  ubicacion_id: string | null;
+  usuario_asignado_id: string | null;
+  source_id: number | null;
+  tracker_id: number | null;
+  tracker_label: string | null;
+  prioridad_id: number | null;
+  estado_tarea_codigo: string;
+  estado_operativo_codigo: TareaRastreoEstadoOperativoCodigo | null;
+  tiempo_estimado_minutos: number | null;
+  cantidad_visitas: number;
+  segundos_totales: number;
+  segundos_visita_actual: number;
+  visita_abierta: boolean;
+  entrada_actual_en: string | null;
+  primera_entrada_en: string | null;
+  ultima_salida_en: string | null;
+  orden_ruta: number | null;
+  punto_latitud: number | null;
+  punto_longitud: number | null;
+  cancelada_en: string | null;
+  eliminado_en: string | null;
+  actualizado_en: string;
+}
+
+export interface SeguimientoLineGeometry {
+  type: "MultiLineString";
+  coordinates: number[][][];
+}
+export interface SeguimientoZoneGeometry {
+  type: "MultiPolygon";
+  coordinates: number[][][][];
+}
+
+/** DTO JSON de public.obtener_tarea_detalle_v2. */
+export interface TareaRastreoDetalleDto {
+  tarea: {
+    id: string;
+    version: number;
+    area_id: string;
+    fecha_programada: string;
+    indicaciones: string | null;
+    tipo_tarea: TareaRastreoTipoCodigo;
+    ubicacion_id: string | null;
+    prioridad_id: number | null;
+    tiempo_estimado_minutos: number | null;
+    orden_ruta: number | null;
+    punto_latitud: number | null;
+    punto_longitud: number | null;
+    linea_control_geojson: SeguimientoLineGeometry | null;
+    zonas_control_geojson: SeguimientoZoneGeometry[];
+    actualizado_en: string;
+  };
+  asignacion: {
+    usuario_asignado_id: string | null;
+    source_id: number | null;
+    tracker_id: number | null;
+    tracker_label: string | null;
+    acompanante_nombre: string | null;
+  };
+  estado: {
+    tarea_codigo: string;
+    operativo_codigo: TareaRastreoEstadoOperativoCodigo | null;
+    operativo_nombre: string | null;
+  };
+  tiempo: {
+    cantidad_visitas: number;
+    segundos_totales: number;
+    visita_abierta: boolean;
+  };
+  visitas: Array<{ id: string; entrada_en: string; salida_en: string | null }>;
+  ruta: { id: string | null; estado_calculo: string | null };
+  permisos: {
+    puede_editar: boolean;
+    puede_editar_punto: boolean;
+    puede_editar_geometria_control: boolean;
+    puede_reordenar: boolean;
+    geometria_bloqueada: boolean;
+    puede_cancelar: boolean;
+    puede_eliminar: boolean;
+  };
 }
 
 export interface TareaSeguimientoListItem {
@@ -31,34 +136,23 @@ export interface TareaSeguimientoListItem {
   priorityId: number | null;
   estimatedMinutes: number | null;
   trackerId: number | null;
+  sourceId: number | null;
   trackerLabel: string | null;
   routePoint: SeguimientoCoordinates | null;
   routeOrder: number | null;
 }
 
-export interface SeguimientoLineGeometry {
-  type: 'MultiLineString';
-  coordinates: number[][][];
-}
-
-export interface SeguimientoZoneGeometry {
-  type: 'MultiPolygon';
-  coordinates: number[][][][];
-}
-
 export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
   controlLine: SeguimientoLineGeometry | null;
-  controlZone: SeguimientoZoneGeometry | null;
+  controlZones: SeguimientoZoneGeometry[];
   operationalStatusLabel: string | null;
-  updatedAt: string | null;
+  updatedAt: string;
 }
 
 export interface TareaSeguimientoWorkspaceData {
   tasks: TareaSeguimientoListItem[];
   trackers: SeguimientoTracker[];
-  trackerError: string | null;
 }
-
 export interface SeguimientoMapToolState {
   tool: SeguimientoMapTool;
   enabled: boolean;

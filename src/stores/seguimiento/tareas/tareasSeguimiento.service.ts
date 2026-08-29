@@ -1,42 +1,70 @@
-import { supabase } from '@/lib/supabase';
-import { mapSeguimientoTracker, mapTareaSeguimientoDetail, mapTareaSeguimientoListItem } from './tareasSeguimiento.mappers';
-import type { TareaSeguimientoDetail, TareaSeguimientoListItem, TareasSeguimientoFilters, TareaSeguimientoWorkspaceData } from './tareasSeguimiento.types';
+import { supabase } from "@/lib/supabase";
+import {
+  mapSeguimientoTracker,
+  mapTareaSeguimientoDetail,
+  mapTareaSeguimientoListItem,
+} from "./tareasSeguimiento.mappers";
+import type {
+  ListarTareasRastreoV2Params,
+  TareaRastreoDetalleDto,
+  TareaRastreoListadoDto,
+  TareaSeguimientoDetail,
+  TareasSeguimientoFilters,
+  TareaSeguimientoWorkspaceData,
+} from "./tareasSeguimiento.types";
 
-type RemoteRecord = Record<string, unknown>;
+const operationalStatusByUiStatus = {
+  pendiente: "sin_iniciar",
+  en_ruta: "en_ruta",
+  activa: "en_ubicacion",
+  visitada: "visitada",
+} as const;
 
-const TASK_COLUMNS = 'id, area_id, usuario_asignado_id, ubicacion_id, fecha_programada, indicaciones, prioridad_id, tiempo_estimado_minutos, tracker_id, tracker_label_snapshot, punto_enrutado, orden_ruta, actualizado_en, tipo_tarea:tipos_tarea(codigo), estado_operativo:estados_operativos_tarea(codigo,nombre), estado_tarea:estados_tarea(codigo,nombre)';
-const TRACKER_COLUMNS = 'source_id, tracker_id, tracker_label_snapshot, posicion, capturada_en, tarea_actual_id, movement_status';
-
-function applyTaskFilters(query: any, filters: TareasSeguimientoFilters): any {
-  if (filters.scheduledDate) query = query.eq('fecha_programada', filters.scheduledDate);
-  if (filters.areaId) query = query.eq('area_id', filters.areaId);
-  if (filters.assignedUserId) query = query.eq('usuario_asignado_id', filters.assignedUserId);
-  if (filters.trackerId !== null) query = query.eq('tracker_id', filters.trackerId);
-  return query.is('eliminado_en', null).order('fecha_programada').order('orden_ruta');
-}
+const toListParams = (
+  filters: TareasSeguimientoFilters,
+): ListarTareasRastreoV2Params => ({
+  p_area_id: filters.areaId,
+  p_fecha: filters.scheduledDate,
+  p_usuario_asignado_id: filters.assignedUserId,
+  p_source_id: filters.sourceId,
+  p_estado_operativo_codigo:
+    filters.statuses.length === 1
+      ? (operationalStatusByUiStatus[
+          filters.statuses[0] as keyof typeof operationalStatusByUiStatus
+        ] ?? null)
+      : null,
+  p_incluir_canceladas: filters.statuses.includes("cancelada"),
+});
 
 export const tareasSeguimientoService = {
-  async loadWorkspace(filters: TareasSeguimientoFilters): Promise<TareaSeguimientoWorkspaceData> {
-    const tasksQuery = applyTaskFilters(supabase.from('tareas').select(TASK_COLUMNS), filters);
-    const trackersQuery = supabase.from('ubicaciones_actuales_tracker').select(TRACKER_COLUMNS);
-    const [{ data: taskRows, error: tasksError }, { data: trackerRows, error: trackersError }] = await Promise.all([
-      tasksQuery, trackersQuery,
-    ]);
-    if (tasksError) throw tasksError;
+  async loadWorkspace(
+    filters: TareasSeguimientoFilters,
+  ): Promise<TareaSeguimientoWorkspaceData> {
+    const { data, error } = await supabase.rpc(
+      "listar_tareas_rastreo_v2",
+      toListParams(filters),
+    );
+    if (error) throw error;
+    const rows = (data ?? []) as TareaRastreoListadoDto[];
+    const trackersBySource = new Map<
+      number,
+      TareaSeguimientoWorkspaceData["trackers"][number]
+    >();
+    for (const row of rows) {
+      const tracker = mapSeguimientoTracker(row);
+      if (tracker) trackersBySource.set(tracker.sourceId, tracker);
+    }
     return {
-      tasks: (taskRows as RemoteRecord[] ?? []).map(mapTareaSeguimientoListItem),
-      trackers: trackersError ? [] : (trackerRows as RemoteRecord[] ?? []).map(mapSeguimientoTracker),
-      trackerError: trackersError?.message ?? null,
+      tasks: rows.map(mapTareaSeguimientoListItem),
+      trackers: [...trackersBySource.values()],
     };
   },
 
   async loadDetail(taskId: string): Promise<TareaSeguimientoDetail> {
-    const { data, error } = await supabase.from('tareas')
-      .select(`${TASK_COLUMNS}, linea_control`)
-      .eq('id', taskId)
-      .is('eliminado_en', null)
-      .single();
+    const { data, error } = await supabase.rpc("obtener_tarea_detalle_v2", {
+      p_tarea_id: taskId,
+    });
     if (error) throw error;
-    return mapTareaSeguimientoDetail(data as RemoteRecord);
+    return mapTareaSeguimientoDetail(data as TareaRastreoDetalleDto);
   },
 };

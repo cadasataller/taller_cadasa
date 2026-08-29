@@ -1,94 +1,103 @@
-import type { SeguimientoCoordinates, SeguimientoTaskType } from '@/seguimiento/shared/seguimiento.types';
-import type { SeguimientoTracker, TrackerOperationalStatus } from '@/seguimiento/shared/trackers/tracker.types';
-import { isSeguimientoTaskType, toSeguimientoTaskStatus } from './tareasSeguimiento.helpers';
-import type { TareaSeguimientoDetail, TareaSeguimientoListItem } from './tareasSeguimiento.types';
+import type {
+  SeguimientoTaskStatus,
+  SeguimientoTaskType,
+} from "@/seguimiento/shared/seguimiento.types";
+import type {
+  SeguimientoTracker,
+  TrackerOperationalStatus,
+} from "@/seguimiento/shared/trackers/tracker.types";
+import type {
+  TareaRastreoDetalleDto,
+  TareaRastreoListadoDto,
+  TareaSeguimientoDetail,
+  TareaSeguimientoListItem,
+} from "./tareasSeguimiento.types";
 
-type RemoteRecord = Record<string, unknown>;
+const mapTaskType = (
+  type: TareaRastreoListadoDto["tipo_tarea"],
+): SeguimientoTaskType => (type === "duda_automatica" ? "duda" : type);
 
-const asRecord = (value: unknown): RemoteRecord | null =>
-  typeof value === 'object' && value !== null ? value as RemoteRecord : null;
+const mapTaskStatus = (
+  operationalStatus: TareaRastreoListadoDto["estado_operativo_codigo"],
+  administrativeStatus: string,
+): SeguimientoTaskStatus => {
+  if (administrativeStatus === "cancelada") return "cancelada";
+  if (operationalStatus === "en_ruta") return "en_ruta";
+  if (operationalStatus === "en_ubicacion") return "activa";
+  if (operationalStatus === "visitada") return "visitada";
+  return "pendiente";
+};
 
-const asString = (value: unknown): string | null => typeof value === 'string' ? value : null;
-const asNumber = (value: unknown): number | null => typeof value === 'number' && Number.isFinite(value) ? value : null;
+const mapRoutePoint = (latitude: number | null, longitude: number | null) =>
+  latitude === null || longitude === null ? null : { latitude, longitude };
 
-function mapCoordinates(value: unknown): SeguimientoCoordinates | null {
-  if (typeof value === 'string') {
-    const match = /^POINT\\s*\\(\\s*([-+\\d.]+)\\s+([-+\\d.]+)\\s*\\)$/i.exec(value);
-    if (match) return { longitude: Number(match[1]), latitude: Number(match[2]) };
-  }
-  const point = asRecord(value);
-  if (!point) return null;
-  const coordinates = Array.isArray(point.coordinates) ? point.coordinates : null;
-  if (coordinates?.length !== 2) return null;
-  const [longitude, latitude] = coordinates;
-  return typeof latitude === 'number' && typeof longitude === 'number'
-    ? { latitude, longitude }
-    : null;
-}
-
-function mapTaskType(row: RemoteRecord): SeguimientoTaskType {
-  const type = row.tipo_tarea;
-  if (isSeguimientoTaskType(type)) return type;
-  const typeRecord = asRecord(type);
-  const code = typeRecord?.codigo ?? typeRecord?.nombre;
-  return isSeguimientoTaskType(code) ? code : 'finca';
-}
-
-export function mapTareaSeguimientoListItem(row: RemoteRecord): TareaSeguimientoListItem {
-  const operationalStatus = asRecord(row.estado_operativo);
-  const administrativeStatus = asRecord(row.estado_tarea);
+export function mapTareaSeguimientoListItem(
+  row: TareaRastreoListadoDto,
+): TareaSeguimientoListItem {
   return {
-    id: String(row.id),
-    type: mapTaskType(row),
-    status: toSeguimientoTaskStatus(
-      operationalStatus?.codigo ?? administrativeStatus?.codigo ?? row.estado_operativo_codigo ?? row.estado_tarea_codigo,
-    ),
-    areaId: String(row.area_id ?? ''),
-    assignedUserId: asString(row.usuario_asignado_id),
-    locationId: asString(row.ubicacion_id),
-    scheduledDate: asString(row.fecha_programada) ?? '',
-    instructions: asString(row.indicaciones),
-    priorityId: asNumber(row.prioridad_id),
-    estimatedMinutes: asNumber(row.tiempo_estimado_minutos),
-    trackerId: asNumber(row.tracker_id),
-    trackerLabel: asString(row.tracker_label_snapshot),
-    routePoint: mapCoordinates(row.punto_enrutado),
-    routeOrder: asNumber(row.orden_ruta),
+    id: row.id,
+    type: mapTaskType(row.tipo_tarea),
+    status: mapTaskStatus(row.estado_operativo_codigo, row.estado_tarea_codigo),
+    areaId: row.area_id,
+    assignedUserId: row.usuario_asignado_id,
+    locationId: row.ubicacion_id,
+    scheduledDate: row.fecha_programada,
+    instructions: row.indicaciones,
+    priorityId: row.prioridad_id,
+    estimatedMinutes: row.tiempo_estimado_minutos,
+    trackerId: row.tracker_id,
+    sourceId: row.source_id,
+    trackerLabel: row.tracker_label,
+    routePoint: mapRoutePoint(row.punto_latitud, row.punto_longitud),
+    routeOrder: row.orden_ruta,
   };
 }
 
-export function mapTareaSeguimientoDetail(row: RemoteRecord): TareaSeguimientoDetail {
-  const task = mapTareaSeguimientoListItem(row);
-  const operationalStatus = asRecord(row.estado_operativo);
-  const administrativeStatus = asRecord(row.estado_tarea);
-  const line = asRecord(row.linea_control);
-  const zone = asRecord(row.zona_control ?? row.limite);
+export function mapTareaSeguimientoDetail(
+  response: TareaRastreoDetalleDto,
+): TareaSeguimientoDetail {
+  const { tarea, asignacion, estado } = response;
   return {
-    ...task,
-    controlLine: line?.type === 'MultiLineString' && Array.isArray(line.coordinates)
-      ? line as unknown as TareaSeguimientoDetail['controlLine'] : null,
-    controlZone: zone?.type === 'MultiPolygon' && Array.isArray(zone.coordinates)
-      ? zone as unknown as TareaSeguimientoDetail['controlZone'] : null,
-    operationalStatusLabel: asString(
-      operationalStatus?.nombre ?? administrativeStatus?.nombre ?? row.estado_operativo_nombre ?? row.estado_tarea_nombre,
-    ),
-    updatedAt: asString(row.actualizado_en),
+    id: tarea.id,
+    type: mapTaskType(tarea.tipo_tarea),
+    status: mapTaskStatus(estado.operativo_codigo, estado.tarea_codigo),
+    areaId: tarea.area_id,
+    assignedUserId: asignacion.usuario_asignado_id,
+    locationId: tarea.ubicacion_id,
+    scheduledDate: tarea.fecha_programada,
+    instructions: tarea.indicaciones,
+    priorityId: tarea.prioridad_id,
+    estimatedMinutes: tarea.tiempo_estimado_minutos,
+    trackerId: asignacion.tracker_id,
+    sourceId: asignacion.source_id,
+    trackerLabel: asignacion.tracker_label,
+    routePoint: mapRoutePoint(tarea.punto_latitud, tarea.punto_longitud),
+    routeOrder: tarea.orden_ruta,
+    controlLine: tarea.linea_control_geojson,
+    controlZones: tarea.zonas_control_geojson,
+    operationalStatusLabel: estado.operativo_nombre,
+    updatedAt: tarea.actualizado_en,
   };
 }
 
-export function mapSeguimientoTracker(row: RemoteRecord): SeguimientoTracker {
-  const movement = asString(row.movement_status);
-  const status: TrackerOperationalStatus = row.tarea_actual_id
-    ? 'at_task'
-    : movement === 'stopped' ? 'stopped'
-    : row.posicion ? 'available' : 'without_data';
+export function mapSeguimientoTracker(
+  row: TareaRastreoListadoDto,
+): SeguimientoTracker | null {
+  if (row.tracker_id === null || row.source_id === null) return null;
+  const status: TrackerOperationalStatus =
+    row.estado_operativo_codigo === "en_ubicacion"
+      ? "at_task"
+      : row.estado_operativo_codigo === "en_ruta"
+        ? "en_route"
+        : "available";
   return {
-    id: Number(row.tracker_id),
-    sourceId: Number(row.source_id),
-    label: asString(row.tracker_label_snapshot) ?? `Tracker ${String(row.tracker_id)}`,
-    position: mapCoordinates(row.posicion),
-    capturedAt: asString(row.capturada_en),
+    id: row.tracker_id,
+    sourceId: row.source_id,
+    label: row.tracker_label ?? `Tracker ${row.tracker_id}`,
+    position: null,
+    capturedAt: null,
     status,
-    currentTaskId: asString(row.tarea_actual_id),
+    currentTaskId:
+      row.estado_operativo_codigo === "en_ubicacion" ? row.id : null,
   };
 }
