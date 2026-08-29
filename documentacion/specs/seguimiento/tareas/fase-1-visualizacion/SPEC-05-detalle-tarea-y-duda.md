@@ -22,6 +22,8 @@ documentacion/rastreo_tarea/mockup-rastreo-body-desktop.html
 
 El panel derecho es la superficie de lectura contextual de la tarea seleccionada.
 
+Su única fuente de detalle es `obtener_tarea_detalle_v2(p_tarea_id)`. Debe consumir sus secciones `tarea`, `asignacion`, `estado`, `tiempo`, `visitas`, `ruta` y `permisos`, incluidas la línea y zonas GeoJSON; no reconstruye el detalle mediante consultas a tablas.
+
 En fase 1:
 
 - abre en modo `view`;

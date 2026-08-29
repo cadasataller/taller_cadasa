@@ -125,6 +125,17 @@ geometry helper layer
 
 No todo debe vivir en un único service de “seguimiento”.
 
+## Regla de acceso a datos
+
+Vue debe consumir RPCs de negocio y no sustituirlas con consultas directas a tablas internas del dominio. Para `tareas`, la frontera mínima es:
+
+```txt
+listar_tareas_rastreo_v2      -> listado, filtros, puntos simples y resumen operativo
+obtener_tarea_detalle_v2      -> detalle, asignación, permisos y geometrías GeoJSON
+```
+
+Las tablas `tareas`, `ubicaciones_actuales_tracker`, visitas, rutas y estados siguen siendo la fuente de verdad del backend, pero no son el contrato de consulta del frontend. Realtime puede actualizar el estado local después de una carga RPC, sin convertirse en una consulta ad hoc de tablas.
+
 ## Impacto en las fases funcionales
 
 Fase 1:

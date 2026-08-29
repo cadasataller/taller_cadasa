@@ -4,6 +4,8 @@
 
 Definir la composición general de la pantalla `seguimiento/tareas` en fase 1, incluyendo el reparto entre mapa, panel izquierdo, panel derecho y capas flotantes.
 
+El shell recibe estado del composable/store; no ejecuta consultas. Ese estado proviene de `listar_tareas_rastreo_v2` para listado y mapa, y de `obtener_tarea_detalle_v2` al abrir el panel derecho.
+
 ## Dependencias
 
 Implementar después de:

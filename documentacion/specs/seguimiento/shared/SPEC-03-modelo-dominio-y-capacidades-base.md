@@ -176,6 +176,21 @@ Los specs de `tareas` deben separar claramente:
 
 No conviene modelar `duda` como un caso incidental dentro de una card normal sin reglas propias.
 
+## Contrato de lectura del dominio
+
+La representación de lectura se obtiene mediante RPCs de negocio, no mediante joins o serialización PostGIS resueltos en el cliente:
+
+```txt
+listar_tareas_rastreo_v2
+  -> colección ligera: cards, filtros, puntos simples, tracker y permanencia
+
+obtener_tarea_detalle_v2
+  -> entidad hidratada: punto, línea GeoJSON, zonas GeoJSON, asignación, estado,
+     tiempo, visitas, ruta y permisos por tarea
+```
+
+El código de base documentado para la duda automática es `duda_automatica`; la UI puede presentarlo como `duda`, pero el mapper debe hacer esa traducción de forma explícita.
+
 ## No hacer
 
 - No tratar `duda` como tarea editable estándar.

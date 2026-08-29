@@ -89,6 +89,8 @@ tareas/
 - `Dudas` no debe mezclarse como simple badge visual; debe modelarse como variante funcional con capacidades restringidas.
 - No acoplar las fases de visualización, creación y actualización en un solo spec gigante.
 - No asumir que toda interacción del mockup entra en la primera entrega.
+- Vue debe consumir los RPC de negocio documentados en `rastreo_tarea/rpcs_funciones_bd.md` para leer o mutar tareas. No debe consultar tablas internas de tareas, tracking, visitas, rutas o estados como sustituto de esos contratos.
+- Las suscripciones Realtime pueden reflejar cambios autorizados, pero no reemplazan la carga inicial ni el detalle obtenidos mediante RPC.
 
 ## Resultado esperado de esta carpeta
 

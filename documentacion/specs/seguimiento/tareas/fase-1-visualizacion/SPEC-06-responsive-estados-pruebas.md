@@ -4,6 +4,8 @@
 
 Componer la fase 1 completa y fijar comportamiento responsive, estados visuales y criterios mínimos de prueba.
 
+Las pruebas de carga, vacío, error y retry deben mockear `listar_tareas_rastreo_v2` y `obtener_tarea_detalle_v2`. No deben simular lecturas directas de tablas como contrato del workspace.
+
 ## Dependencias
 
 Implementar después de:

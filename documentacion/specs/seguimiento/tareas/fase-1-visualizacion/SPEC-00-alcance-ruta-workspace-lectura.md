@@ -98,6 +98,8 @@ view
 - El mapa no es decorativo; participa de la lectura operativa.
 - La toolbar superior opera sobre el workspace completo.
 - La ruta debe usar permisos del módulo `seguimiento`.
+- La carga del workspace usa `listar_tareas_rastreo_v2` y el detalle usa `obtener_tarea_detalle_v2`.
+- La fase 1 no consulta directamente tablas internas de tareas, trackers, visitas, rutas o estados.
 
 ## Archivos previstos
 

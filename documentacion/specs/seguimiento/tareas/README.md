@@ -79,6 +79,8 @@ Las fases posteriores deben reutilizar la misma base y ampliar capacidades sin r
 - El listado lateral y el detalle no deben duplicar queries ni contratos.
 - `Duda` debe mostrarse con capacidades y semántica propias.
 - La UI no debe exponer acciones sin permiso aunque el fallback temporal devuelva acceso al usuario de prueba.
+- La lectura inicial usa `listar_tareas_rastreo_v2`; el detalle usa `obtener_tarea_detalle_v2`. La UI, composables y stores no consultan directamente `tareas`, `ubicaciones_actuales_tracker`, visitas, rutas ni tablas de estado.
+- Los DTO remotos deben modelar la respuesta de cada RPC. Las geometrías de detalle se consumen como GeoJSON devuelto por `obtener_tarea_detalle_v2`, sin inferir serializaciones PostGIS desde el cliente.
 
 ## Orden de trabajo recomendado
 

@@ -43,7 +43,7 @@ Types:
 Service:
 
 - resuelve consultas remotas;
-- encapsula RPCs, vistas o lecturas de tablas;
+- encapsula exclusivamente los RPC de negocio de tareas definidos en la documentación;
 - no contiene estado visual.
 
 Store:
@@ -75,16 +75,37 @@ trackers visibles
 herramientas flotantes del mapa
 ```
 
+## Contratos RPC obligatorios de fase 1
+
+El service debe usar estas RPCs, sin consultas directas a tablas internas:
+
+```ts
+listar_tareas_rastreo_v2({
+  p_area_id,
+  p_fecha,
+  p_usuario_asignado_id,
+  p_source_id,
+  p_estado_operativo_codigo,
+  p_incluir_canceladas,
+})
+
+obtener_tarea_detalle_v2({ p_tarea_id })
+```
+
+`listar_tareas_rastreo_v2` es la fuente del listado, filtros, puntos simples, tracker visible y resumen de permanencia. No devuelve líneas, zonas ni redes pesadas.
+
+`obtener_tarea_detalle_v2` es la fuente del panel derecho y devuelve `tarea`, `asignacion`, `estado`, `tiempo`, `visitas`, `ruta` y `permisos`; las geometrías de línea y zonas llegan como GeoJSON.
+
+Los types remotos deben representar esos dos contratos y los mappers deben convertirlos al modelo de UI. No se permite utilizar `Record<string, unknown>` ni inferir WKT/PostGIS dentro del cliente para suplir un contrato que ya devuelve la RPC.
+
 ## Consultas mínimas de fase 1
 
 La fase 1 necesita al menos resolver conceptualmente:
 
-1. colección de tareas visibles en el rango o contexto actual;
-2. detalle de tarea seleccionada;
-3. información visible de tracker y ubicación actual;
-4. metadatos necesarios para render de mapa y estado operativo.
-
-No se obliga todavía a elegir una única RPC final, pero sí a documentar una frontera estable de servicio.
+1. colección de tareas visibles mediante `listar_tareas_rastreo_v2`;
+2. detalle de tarea seleccionada mediante `obtener_tarea_detalle_v2`;
+3. tracker, punto y estado operativo incluidos por el RPC de listado;
+4. geometrías y metadatos ampliados incluidos por el RPC de detalle.
 
 ## Regla de carga
 
@@ -121,6 +142,7 @@ Los nombres finales pueden ajustarse, pero la separación no debe perderse.
 ## No hacer
 
 - No consultar Supabase directamente desde componentes.
+- No usar `.from(...)` para leer tablas del dominio de tareas desde el service de fase 1.
 - No repartir estado equivalente entre view, composable y store.
 - No crear un service único gigante que mezcle mapa, tareas y permisos sin frontera interna.
 - No diseñar el store de lectura con supuestos de creación o edición como comportamiento activo.

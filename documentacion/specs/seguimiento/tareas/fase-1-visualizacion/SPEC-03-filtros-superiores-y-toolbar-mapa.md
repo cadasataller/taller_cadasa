@@ -4,6 +4,8 @@
 
 Definir la barra superior flotante del workspace y las herramientas básicas del mapa en la fase de visualización.
 
+Los filtros que cambian el contexto remoto se traducen a los parámetros de `listar_tareas_rastreo_v2`. Los filtros puramente visuales operan sobre el resultado ya cargado. Ningún control consulta tablas directamente.
+
 ## Dependencias
 
 Implementar después de:
