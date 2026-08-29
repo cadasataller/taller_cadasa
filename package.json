@@ -47,6 +47,7 @@
     "@vue/test-utils": "^2.4.11",
     "autoprefixer": "10.4.21",
     "jsdom": "^29.1.1",
+    "prettier": "^3.9.6",
     "tailwindcss": "4.1.14",
     "tsx": "4.21.0",
     "typescript": "5.8.2",
