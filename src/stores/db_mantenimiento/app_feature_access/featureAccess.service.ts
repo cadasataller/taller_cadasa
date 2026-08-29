@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { applySeguimientoDevelopmentFallback } from './seguimientoFeatureAccessFallback';
 import type { ObtenerFuncionalidadesPermitidasResponse } from './featureAccess.types';
 
 const normalizarFuncionalidadesPermitidas = (
@@ -19,6 +20,9 @@ export const featureAccessService = {
       throw new Error(error.message || 'No se pudieron obtener las funcionalidades permitidas');
     }
 
-    return normalizarFuncionalidadesPermitidas(data);
+    const features = normalizarFuncionalidadesPermitidas(data);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    return applySeguimientoDevelopmentFallback(features, user?.email);
   }
 };

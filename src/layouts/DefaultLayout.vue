@@ -9,6 +9,7 @@ import { useAceitesCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/ace
 import { useSistemasCatalogoStore } from '@/stores/dbequipos/engrase/catalogo/sistemasCatalogo.store';
 import { useDashboardHeaderNav } from '@/composables/useDashboardHeaderNav';
 import { useCatalogoEngrasePermissions } from '@/composables/engrase/catalogo/useCatalogoEngrasePermissions';
+import { SEGUIMIENTO_FEATURES } from '@/seguimiento/shared/seguimiento.permissions';
 import { 
   BarChart3, 
   Wrench, 
@@ -20,7 +21,7 @@ import {
   ShoppingCart,
   ShieldCheck,
   Book // Agregado el icono para Catálogo
-  ,Droplets, ChevronDown, X
+  ,Droplets, ChevronDown, X, MapPinned
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -48,6 +49,8 @@ const MODULE_ENGRASE_FEATURE = 'module_engrase';
 const VIEW_FILTROS_ENGRASE_FEATURE = 'ver_filtros_engrase';
 const engraseDesktopOpen = ref(false);
 const mobileEngraseOpen = ref(false);
+const seguimientoDesktopOpen = ref(false);
+const mobileSeguimientoOpen = ref(false);
 
 const allMenuItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, requiredFeature: MODULE_DASHBOARD_FEATURE },
@@ -65,6 +68,13 @@ const { canViewCatalog } = useCatalogoEngrasePermissions();
 const canSeeCatalogoEngrase = computed(() =>
   canSeeEngrase.value && canViewCatalog.value
 );
+const canSeeSeguimiento = computed(() =>
+  isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(SEGUIMIENTO_FEATURES.module)
+);
+const canSeeSeguimientoTareas = computed(() =>
+  canSeeSeguimiento.value && featureAccessStore.tieneFuncionalidad(SEGUIMIENTO_FEATURES.viewTasks)
+);
+const isSeguimientoRoute = computed(() => route.path.startsWith('/seguimiento'));
 const isEngraseRoute = computed(() => route.path.startsWith('/engrase'));
 const isCatalogoEngraseRoute = computed(() =>
   route.path.startsWith('/engrase/catalogo')
@@ -74,6 +84,7 @@ const isFiltrosEngraseRoute = computed(() =>
   route.path.startsWith('/engrase/filtros') && !isCatalogoEngraseRoute.value
 );
 watch(isEngraseRoute, (active) => { if (active) engraseDesktopOpen.value = true; }, { immediate: true });
+watch(isSeguimientoRoute, (active) => { if (active) seguimientoDesktopOpen.value = true; }, { immediate: true });
 
 const menuItems = computed(() => allMenuItems.filter((item) =>
   isFeatureAccessLoaded.value && featureAccessStore.tieneFuncionalidad(item.requiredFeature)
@@ -84,6 +95,7 @@ const viewTitle = computed(() => {
   if (route.path.startsWith('/panel-admin')) return 'PANEL ADMINISTRADOR';
   if (route.path.startsWith('/catalogo')) return 'CATÁLOGO';
   if (route.path.startsWith('/engrase')) return 'ENGRASE';
+  if (route.path.startsWith('/seguimiento')) return 'SEGUIMIENTO';
   return menuItems.value.find(i => isActive(i.path))?.name || 'Dashboard';
 });
 
@@ -193,6 +205,7 @@ const logout = async () => {
   filtrosCatalogoStore.reset();
   aceitesCatalogoStore.reset();
   sistemasCatalogoStore.reset();
+  featureAccessStore.reset();
   router.push('/login');
 };
 
@@ -249,6 +262,14 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
           <div v-if="engraseDesktopOpen" class="ml-5 space-y-1">
             <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isFiltrosEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'">Filtros</router-link>
             <router-link v-if="canSeeCatalogoEngrase" to="/engrase/catalogo" class="flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isCatalogoEngraseRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'">Catálogo</router-link>
+          </div>
+        </div>
+        <div v-if="canSeeSeguimiento" class="space-y-1">
+          <button type="button" class="flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all" :class="isSeguimientoRoute ? 'bg-main text-accent' : 'text-gray-400 hover:bg-main hover:text-white'" @click="seguimientoDesktopOpen = !seguimientoDesktopOpen" :aria-expanded="seguimientoDesktopOpen">
+            <MapPinned class="w-5 h-5 flex-shrink-0" /><span class="font-medium text-sm flex-1 text-left">Seguimiento</span><ChevronDown class="w-4 h-4 transition-transform" :class="{ 'rotate-180': seguimientoDesktopOpen }" />
+          </button>
+          <div v-if="seguimientoDesktopOpen" class="ml-5 space-y-1">
+            <router-link v-if="canSeeSeguimientoTareas" to="/seguimiento/tareas" class="flex items-center rounded-lg px-4 py-2.5 text-sm" :class="isSeguimientoRoute ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'">Tareas</router-link>
           </div>
         </div>
       </nav>
@@ -377,6 +398,9 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
         <div v-if="canSeeEngrase" class="flex flex-col items-center gap-1 flex-shrink-0 min-w-[56px]">
           <button type="button" class="flex flex-col items-center gap-1 p-2" :class="isEngraseRoute ? 'text-main' : 'text-gray-300'" @click="mobileEngraseOpen = !mobileEngraseOpen" :aria-expanded="mobileEngraseOpen"><Droplets class="w-6 h-6" /><span class="text-[10px] font-medium">Engrase</span></button>
         </div>
+        <div v-if="canSeeSeguimiento" class="flex flex-col items-center gap-1 flex-shrink-0 min-w-[56px]">
+          <button type="button" class="flex flex-col items-center gap-1 p-2" :class="isSeguimientoRoute ? 'text-main' : 'text-gray-300'" @click="mobileSeguimientoOpen = !mobileSeguimientoOpen" :aria-expanded="mobileSeguimientoOpen"><MapPinned class="w-6 h-6" /><span class="text-[10px] font-medium">Seguimiento</span></button>
+        </div>
       </nav>
       <div v-if="!hideDefaultLayout && mobileEngraseOpen && canSeeEngrase" class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl">
         <div class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"><span>Engrase</span><button type="button" class="p-2" @click="mobileEngraseOpen = false" aria-label="Cerrar subpestañas"><X class="w-5 h-5" /></button></div>
@@ -384,6 +408,10 @@ const isActive = (path: string) => route.path === path || route.path.startsWith(
           <router-link v-if="canSeeFiltrosEngrase" to="/engrase/filtros" class="block w-full rounded-xl px-4 py-3 text-sm font-semibold" :class="isFiltrosEngraseRoute ? 'bg-main/10 text-main' : 'bg-gray-50 text-gray-600'" @click="mobileEngraseOpen = false">Filtros</router-link>
           <router-link v-if="canSeeCatalogoEngrase" to="/engrase/catalogo" class="block w-full rounded-xl px-4 py-3 text-sm font-semibold" :class="isCatalogoEngraseRoute ? 'bg-main/10 text-main' : 'bg-gray-50 text-gray-600'" @click="mobileEngraseOpen = false">Catálogo</router-link>
         </div>
+      </div>
+      <div v-if="!hideDefaultLayout && mobileSeguimientoOpen && canSeeSeguimiento" class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl">
+        <div class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"><span>Seguimiento</span><button type="button" class="p-2" @click="mobileSeguimientoOpen = false" aria-label="Cerrar subpestañas"><X class="w-5 h-5" /></button></div>
+        <div class="space-y-2"><router-link v-if="canSeeSeguimientoTareas" to="/seguimiento/tareas" class="block w-full rounded-xl px-4 py-3 text-sm font-semibold" :class="isSeguimientoRoute ? 'bg-main/10 text-main' : 'bg-gray-50 text-gray-600'" @click="mobileSeguimientoOpen = false">Tareas</router-link></div>
       </div>
 
       <!-- FAB Mobile -->

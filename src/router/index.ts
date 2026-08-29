@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory, type RouteLocationNormalized } from 'vue-router';
 import { supabase } from '@/lib/supabase';
 import { useFeatureAccessStore } from '@/stores/db_mantenimiento/app_feature_access/featureAccess.store';
+import { SEGUIMIENTO_TASK_ROUTE_FEATURES } from '@/seguimiento/shared/seguimiento.permissions';
 
 const EmptyRouteComponent = { template: '<div></div>' };
 
@@ -11,6 +12,7 @@ const moduleHomeRoutes = [
   { path: '/mantenimiento', requiredFeatures: ['module_mantenimiento'] },
   { path: '/compras', requiredFeatures: ['module_compras'] },
   { path: '/catalogo', requiredFeatures: ['module_catalog'] },
+  { path: '/seguimiento/tareas', requiredFeatures: SEGUIMIENTO_TASK_ROUTE_FEATURES },
   {
     path: '/engrase/filtros',
     requiredFeatures: ['module_engrase', 'ver_filtros_engrase'],
@@ -92,6 +94,12 @@ const router = createRouter({
               },
             },
           ],
+        },
+        {
+          path: 'seguimiento/tareas',
+          name: 'SeguimientoTareas',
+          component: () => import('@/views/seguimiento/SeguimientoTareasView.vue'),
+          meta: { requiredFeatures: SEGUIMIENTO_TASK_ROUTE_FEATURES },
         },
         {
           path: 'catalogo',
