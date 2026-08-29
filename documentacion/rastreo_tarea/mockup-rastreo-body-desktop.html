@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup — Rastreo integrado a Gestión Operativa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<!--
+  MOCKUP DEL BODY DEL MÓDULO DE RASTREO
+  ======================================
+  Este archivo NO incluye navbar ni sidebar del ERP.
+
+  Está pensado como referencia para una implementación real con:
+  - Vue 3
+  - TypeScript
+  - Tailwind CSS
+  - Google Maps / Maps JS como capa real del mapa
+
+  La maqueta reutiliza la estructura visual de:
+  - panel-tareas.html
+  - panel-creacion-finca-zona.html
+  - panel-visualizacion-finca-zona.html
+
+  Separación sugerida en Vue:
+  TrackingWorkspace.vue
+  ├─ TrackingMap.vue
+  ├─ TrackingFilters.vue
+  ├─ TaskListPanel.vue
+  │  └─ TaskCard.vue
+  ├─ TaskViewPanel.vue
+  └─ TaskFormPanel.vue
+     ├─ TaskTypeSelector.vue
+     ├─ TaskAssignmentSection.vue
+     ├─ TaskDetailsSection.vue
+     ├─ TaskGeometrySection.vue
+     ├─ DurationStepper.vue
+     └─ TaskRoutePosition.vue
+
+  Estado conceptual del componente padre:
+  const selectedTaskId = ref<string | null>(null)
+  const rightPanelMode = ref<'none' | 'view' | 'create' | 'edit'>('none')
+  const taskFormType = ref<'finca' | 'zona'>('finca')
+
+  El mapa de esta maqueta es solamente decorativo. En producción, la capa .mock-map
+  sería reemplazada por el componente de Google Maps, manteniendo las capas flotantes.
+
+  LAYOUT DEFINITIVO DEL MOCKUP:
+  - listado pegado a left/top/bottom;
+  - filtros pegados al top, sin márgenes;
+  - panel contextual pegado a right/top/bottom;
+  - al abrir view/create/edit, los filtros reducen su ancho;
+  - no se usa botón burger dentro del mapa.
+-->
+
+<style>
+:root {
+  --main:#004643;
+  --main-light:#006B65;
+  --main-dark:#002E2C;
+  --main-muted:#004643CC;
+
+  --second:#F0EDE5;
+  --second-dark:#E2DDD3;
+  --second-deep:#C9C3B4;
+
+  --accent:#D4A853;
+  --accent-light:#E8C47A;
+  --accent-dark:#B8892F;
+
+  --success:#2D8A4E;
+  --success-bg:#E8F5ED;
+  --warning:#C97B2F;
+  --warning-bg:#FDF3E3;
+  --danger:#C0392B;
+  --danger-bg:#FDECEA;
+  --info:#1A6B9A;
+  --info-bg:#E3F0FA;
+
+  --white:#FFFFFF;
+  --g50:#F8F7F4;
+  --g100:#EFEDE7;
+  --g200:#D8D4CA;
+  --g300:#B8B3A7;
+  --g400:#8F8A7F;
+  --g500:#6B6660;
+  --g600:#4A4640;
+  --g700:#2E2B26;
+  --g900:#1A1917;
+
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 12px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.07);
+  --shadow-lg:0 10px 30px rgba(0,0,0,.12),0 4px 12px rgba(0,0,0,.08);
+  --radius-md:8px;
+  --radius-lg:14px;
+  --radius-xl:22px;
+}
+
+* { box-sizing:border-box; }
+html, body { margin:0; min-height:100%; }
+body {
+  font-family:"DM Sans","Segoe UI",sans-serif;
+  color:var(--g900);
+  background:var(--g50);
+}
+button,input,select,textarea { font:inherit; }
+button { -webkit-tap-highlight-color:transparent; }
+
+/*
+  BODY DEL MÓDULO.
+  En tu ERP real puedes reemplazar height:100dvh por algo como:
+  height: calc(100dvh - var(--app-navbar-height));
+  y dejar que el layout padre descuente el sidebar existente.
+*/
+.tracking-body {
+  position:relative;
+  width:100%;
+  height:100dvh;
+  min-height:680px;
+  overflow:hidden;
+  background:#9ba789;
+}
+
+/* ================================================================
+   MAPA SIMULADO
+   En producción: sustituir por <GoogleMap /> conservando position:absolute; inset:0.
+   ================================================================ */
+.mock-map {
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 76% 24%, rgba(65,113,70,.9) 0 8%, transparent 9%),
+    linear-gradient(18deg, transparent 0 18%, rgba(76,98,64,.78) 18.5% 20.5%, transparent 21% 44%, rgba(64,88,58,.72) 44.5% 47%, transparent 47.5%),
+    linear-gradient(104deg, rgba(177,155,109,.62) 0 15%, rgba(122,144,89,.74) 15% 29%, rgba(190,163,112,.67) 29% 43%, rgba(86,123,78,.82) 43% 58%, rgba(174,151,106,.66) 58% 75%, rgba(95,129,82,.8) 75% 100%);
+}
+
+.mock-map::before,
+.mock-map::after {
+  content:"";
+  position:absolute;
+  inset:-12%;
+  pointer-events:none;
+}
+.mock-map::before {
+  opacity:.76;
+  background:
+    repeating-linear-gradient(8deg, transparent 0 54px, rgba(246,229,187,.18) 55px 58px),
+    repeating-linear-gradient(96deg, transparent 0 92px, rgba(48,79,47,.22) 94px 98px);
+  transform:rotate(-3deg);
+}
+.mock-map::after {
+  opacity:.9;
+  background:
+    linear-gradient(126deg, transparent 0 33%, rgba(244,235,213,.8) 33.2% 33.7%, transparent 34% 100%),
+    linear-gradient(25deg, transparent 0 61%, rgba(236,225,197,.68) 61.2% 61.7%, transparent 62% 100%),
+    linear-gradient(79deg, transparent 0 48%, rgba(239,225,193,.55) 48.2% 48.6%, transparent 48.8% 100%);
+}
+
+.map-vignette {
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  box-shadow:inset 0 0 120px rgba(0,46,44,.12);
+}
+
+/* Simulación de ruta */
+.route-line {
+  position:absolute;
+  left:42%;
+  top:38%;
+  width:35%;
+  height:2px;
+  border-radius:999px;
+  background:var(--main);
+  box-shadow:0 0 0 2px rgba(255,255,255,.75);
+  transform:rotate(-13deg);
+  transform-origin:left center;
+  opacity:.9;
+}
+.route-line::after {
+  content:"";
+  position:absolute;
+  right:-1px;
+  top:-3px;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--main);
+}
+
+.map-marker {
+  position:absolute;
+  width:30px;
+  height:30px;
+  border:3px solid rgba(255,255,255,.95);
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  box-shadow:0 3px 10px rgba(0,0,0,.2);
+  font-size:10px;
+  font-weight:800;
+  z-index:2;
+}
+.map-marker--task { background:var(--accent); color:var(--main-dark); }
+.map-marker--active { background:var(--success); color:white; }
+.map-marker--zone { background:var(--info); color:white; border-radius:9px; }
+.map-marker--doubt { background:var(--warning); color:white; font-family:"Bebas Neue",sans-serif; font-size:18px; }
+.map-marker--tracker {
+  width:38px;
+  height:38px;
+  background:var(--main);
+  color:white;
+  border-width:4px;
+}
+.marker-1 { left:54%; top:49%; }
+.marker-2 { left:69%; top:31%; }
+.marker-3 { left:76%; top:58%; }
+.marker-4 { left:43%; top:69%; }
+.marker-tracker { left:60%; top:44%; }
+
+.mock-zone {
+  position:absolute;
+  left:74%;
+  top:54%;
+  width:96px;
+  height:70px;
+  border:2px solid rgba(26,107,154,.88);
+  border-radius:17px 12px 22px 10px;
+  background:rgba(26,107,154,.13);
+  transform:rotate(-8deg);
+}
+.mock-farm-boundary {
+  position:absolute;
+  left:47%;
+  top:33%;
+  width:250px;
+  height:205px;
+  border:2px dashed rgba(0,70,67,.5);
+  border-radius:34% 18% 26% 15%;
+  transform:rotate(6deg);
+}
+
+/* ================================================================
+   CAPAS FLOTANTES
+   ================================================================ */
+.map-ui {
+  position:absolute;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+}
+.map-ui > * { pointer-events:auto; }
+
+/* Filters: fecha + trabajador + tracker + lat/lng */
+.filters-bar {
+  position:absolute;
+  top:14px;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(900px, calc(100% - 420px));
+  min-width:590px;
+  display:grid;
+  grid-template-columns:150px 180px 205px minmax(220px,1fr) 44px;
+  gap:8px;
+  padding:9px;
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:16px;
+  background:rgba(255,255,255,.95);
+  box-shadow:var(--shadow-md);
+  backdrop-filter:blur(10px);
+}
+.filter-field {
+  height:40px;
+  min-width:0;
+  border:1px solid var(--g200);
+  border-radius:9px;
+  background:var(--white);
+  color:var(--g600);
+  padding:0 11px;
+  outline:none;
+  font-size:12px;
+}
+.filter-field:focus { border-color:var(--main-light); box-shadow:0 0 0 3px rgba(0,107,101,.08); }
+.filter-field--mono { font-family:"JetBrains Mono",monospace; font-size:11px; }
+.filter-go {
+  border:0;
+  border-radius:9px;
+  background:var(--main);
+  color:white;
+  font-size:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+.filter-go:hover { background:var(--main-light); }
+
+.map-tools {
+  position:absolute;
+  top:18px;
+  right:16px;
+  display:flex;
+  gap:8px;
+}
+.map-tool {
+  width:38px;
+  height:38px;
+  border:1px solid rgba(216,212,202,.8);
+  border-radius:10px;
+  background:rgba(255,255,255,.94);
+  color:var(--main);
+  box-shadow:var(--shadow-sm);
+  cursor:pointer;
+  font-size:17px;
+}
+.map-tool:hover { background:var(--g50); }
+
+/* ================================================================
+   PANEL DE TAREAS — basado en panel-tareas.html
+   ================================================================ */
+.task-panel {
+  position:absolute;
+  top:84px;
+  left:14px;
+  width:360px;
+  max-height:calc(100% - 100px);
+  border:1px solid rgba(216,212,202,.88);
+  border-radius:18px;
+  background:rgba(255,255,255,.97);
+  box-shadow:var(--shadow-lg);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+.task-panel__header { padding:15px 15px 12px; border-bottom:1px solid var(--g100); }
+.task-panel__title-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.task-panel__title { margin:0; font-size:19px; font-weight:700; letter-spacing:-.02em; }
+.task-panel__count {
+  display:inline-grid;
+  place-items:center;
+  min-width:28px;
+  height:24px;
+  padding:0 8px;
+  border-radius:999px;
+  background:var(--second);
+  color:var(--g600);
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  font-weight:700;
+}
+.task-panel__helper { margin:5px 0 0; color:var(--g500); font-size:11px; line-height:1.4; }
+.task-panel__controls {
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+  padding:10px 12px;
+  border-bottom:1px solid var(--g100);
+}
+.task-filter {
+  height:34px;
+  min-width:0;
+  border:1px solid var(--g200);
+  border-radius:9px;
+  background:white;
+  padding:0 9px;
+  color:var(--g600);
+  font-size:11px;
+}
+.new-task {
+  height:34px;
+  padding:0 11px;
+  border:1px solid var(--main);
+  border-radius:9px;
+  background:var(--main);
+  color:white;
+  font-size:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+.new-task:hover { background:var(--main-light); }
+.task-panel__body {
+  display:grid;
+  gap:8px;
+  padding:10px;
+  overflow:auto;
+  scrollbar-width:thin;
+  scrollbar-color:var(--g300) transparent;
+}
+
+.task-card {
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) 94px;
+  gap:9px;
+  align-items:start;
+  width:100%;
+  min-height:92px;
+  padding:10px;
+  border:1px solid rgba(216,212,202,.62);
+  border-radius:11px;
+  background:white;
+  text-align:left;
+  cursor:pointer;
+  transition:150ms ease;
+}
+.task-card:hover { border-color:var(--g300); background:var(--g50); }
+.task-card.selected { border-color:var(--main); background:rgba(0,70,67,.045); }
+.task-card--active { border-color:rgba(45,138,78,.34); background:rgba(232,245,237,.34); }
+.task-card--doubt { border-color:rgba(201,123,47,.25); }
+.iconbox {
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:34px;
+  border-radius:9px;
+  background:var(--second);
+  color:var(--main);
+}
+.iconbox svg { width:17px; height:17px; stroke:currentColor; }
+.iconbox--active { color:var(--success); background:var(--success-bg); }
+.iconbox--doubt { background:var(--warning-bg); color:var(--warning); font-family:"Bebas Neue",sans-serif; font-size:23px; }
+.task-card__body { min-width:0; }
+.task-card__title {
+  color:var(--g900);
+  font-size:12px;
+  font-weight:700;
+  line-height:1.25;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+}
+.task-card__place { display:flex; align-items:center; gap:6px; min-width:0; margin-top:4px; color:var(--g500); font-size:10px; }
+.task-type {
+  flex:0 0 auto;
+  padding:2px 5px;
+  border-radius:999px;
+  background:var(--second);
+  color:var(--g500);
+  font-size:8px;
+  font-weight:700;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.task-type--doubt { background:var(--warning-bg); color:var(--warning); }
+.task-card__meta { display:flex; align-items:center; gap:5px; min-width:0; margin-top:6px; color:var(--g500); font-size:9px; }
+.dot { width:3px; height:3px; flex:0 0 auto; border-radius:50%; background:var(--g300); }
+.truncate { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.task-card__estimate-note { margin-top:5px; color:var(--g400); font-size:9px; }
+.task-card__right { min-width:90px; display:flex; justify-content:flex-end; }
+.state-time { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:4px; max-width:94px; text-align:right; }
+.badge {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:4px 7px;
+  border-radius:999px;
+  font-size:9px;
+  font-weight:800;
+  line-height:1;
+  white-space:nowrap;
+}
+.badge::before { content:""; width:5px; height:5px; border-radius:50%; background:currentColor; }
+.badge--pending { color:var(--g600); background:var(--g100); }
+.badge--route { color:var(--info); background:var(--info-bg); }
+.badge--active { color:var(--success); background:var(--success-bg); }
+.badge--done { color:var(--success); background:var(--success-bg); }
+.badge--review { color:var(--warning); background:var(--warning-bg); }
+.badge--admin { color:var(--g600); background:var(--g100); }
+.state-time__value { color:var(--g700); font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:700; line-height:1; white-space:nowrap; }
+.state-time__value--estimate { color:var(--g500); font-size:9px; }
+.state-time__value--live { color:var(--success); font-size:11px; }
+.state-time__value--doubt { color:var(--warning); font-size:11px; }
+.state-time__label { width:100%; margin-top:-1px; color:var(--g400); font-size:8px; font-weight:600; text-transform:uppercase; letter-spacing:.035em; }
+
+/* ================================================================
+   PANEL DERECHO COMPARTIDO — view/create/edit
+   Mantiene 360px de ancho y estructura homogénea.
+   ================================================================ */
+.side-panel {
+  position:absolute;
+  top:84px;
+  right:14px;
+  width:380px;
+  height:calc(100% - 100px);
+  min-height:540px;
+  display:none;
+  flex-direction:column;
+  overflow:hidden;
+  border:1px solid rgba(216,212,202,.9);
+  border-radius:18px;
+  background:rgba(255,255,255,.985);
+  box-shadow:var(--shadow-lg);
+}
+.side-panel.is-open { display:flex; }
+.side-panel__header {
+  flex:0 0 auto;
+  padding:14px 14px 12px;
+  border-bottom:1px solid var(--g100);
+}
+.header-row { display:flex; align-items:flex-start; gap:10px; }
+.panel-icon {
+  width:34px;
+  height:34px;
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  background:var(--second);
+  color:var(--main);
+}
+.panel-icon svg { width:17px; height:17px; stroke:currentColor; }
+.panel-heading { flex:1; min-width:0; }
+.panel-heading h2 {
+  margin:0;
+  font-size:15px;
+  line-height:1.25;
+  letter-spacing:-.015em;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.panel-heading p { margin:4px 0 0; color:var(--g500); font-size:9px; line-height:1.3; }
+.close-panel {
+  width:28px;
+  height:28px;
+  flex:0 0 auto;
+  border:0;
+  border-radius:999px;
+  background:var(--g100);
+  color:var(--g500);
+  cursor:pointer;
+  font-size:17px;
+}
+.status-strip { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:10px; padding-top:10px; border-top:1px solid var(--g100); }
+.status-group { display:flex; align-items:center; gap:6px; min-width:0; }
+.status-time { color:var(--success); font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:800; white-space:nowrap; }
+.side-panel__scroll {
+  flex:1 1 auto;
+  min-height:0;
+  overflow:auto;
+  padding:10px;
+  background:var(--g50);
+  scrollbar-width:thin;
+  scrollbar-color:var(--g300) transparent;
+}
+.section { margin-bottom:9px; padding:11px; border:1px solid var(--g100); border-radius:12px; background:white; }
+.section:last-child { margin-bottom:0; }
+.section__title { display:flex; align-items:center; gap:7px; margin-bottom:9px; color:var(--main); font-size:11px; font-weight:800; }
+.section__title svg { width:14px; height:14px; stroke:currentColor; }
+
+/* View panel */
+.task-type-readonly { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.type-option { position:relative; min-height:44px; padding:8px 9px; border:1px solid var(--g200); border-radius:10px; background:var(--g50); color:var(--g400); }
+.type-option.active { border-color:var(--main); background:rgba(0,70,67,.055); color:var(--main-dark); box-shadow:inset 3px 0 0 var(--main); }
+.type-option__name { display:block; font-size:10px; font-weight:800; }
+.type-option__hint { display:block; margin-top:2px; color:var(--g400); font-size:8px; }
+.lock-mark { position:absolute; top:7px; right:7px; width:18px; height:18px; display:grid; place-items:center; border-radius:6px; background:var(--g100); color:var(--g500); font-size:10px; }
+.read-list { display:grid; gap:8px; }
+.read-row { display:grid; grid-template-columns:105px minmax(0,1fr); gap:10px; align-items:start; }
+.read-label { color:var(--g400); font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; line-height:1.35; }
+.read-value { min-width:0; color:var(--g700); font-size:10px; font-weight:650; line-height:1.35; }
+.details-grid { display:grid; gap:8px; }
+.instructions { padding:9px; border:1px solid var(--g100); border-radius:9px; background:var(--g50); color:var(--g700); font-size:10px; line-height:1.4; }
+.detail-card { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:39px; padding:8px 9px; border:1px solid var(--g100); border-radius:9px; background:var(--g50); }
+.detail-card__label { color:var(--g400); font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+.detail-card__value { color:var(--g700); font-size:10px; font-weight:800; }
+.detail-card__value--mono { font-family:"JetBrains Mono",monospace; }
+.geo-block { padding:9px; border:1px solid var(--g100); border-radius:10px; background:var(--g50); }
+.geo-block + .geo-block { margin-top:7px; }
+.geo-block__head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.geo-block__identity { min-width:0; }
+.geo-block__title { color:var(--g700); font-size:10px; font-weight:800; }
+.geo-block__value { margin-top:2px; overflow:hidden; color:var(--g500); font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
+.view-map { flex:0 0 auto; border:0; background:transparent; color:var(--main-light); padding:4px; font-size:8px; font-weight:800; cursor:pointer; }
+.route-row { display:flex; align-items:center; gap:9px; min-height:43px; padding:8px; border:1px solid var(--g200); border-radius:9px; background:white; }
+.route-num { width:28px; height:28px; display:grid; place-items:center; border-radius:999px; background:var(--main); color:white; font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:800; }
+.route-text { flex:1; color:var(--g700); font-size:10px; font-weight:800; }
+
+/* Create / Edit panel */
+.label { display:block; margin:8px 0 4px; color:var(--g500); font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.label:first-of-type { margin-top:0; }
+.required { color:var(--danger); }
+.input,.select,.textarea { width:100%; min-height:36px; border:1px solid var(--g200); border-radius:8px; background:white; padding:8px 9px; color:var(--g700); font-size:11px; outline:none; }
+.input:focus,.select:focus,.textarea:focus { border-color:var(--main-light); box-shadow:0 0 0 3px rgba(0,107,101,.08); }
+.textarea { min-height:66px; resize:none; line-height:1.35; }
+.task-type-selector { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.task-type-button { min-height:44px; border:1px solid var(--g200); border-radius:10px; background:white; color:var(--g600); cursor:pointer; text-align:left; padding:8px 9px; transition:150ms ease; }
+.task-type-button:hover:not(:disabled) { border-color:var(--g400); background:var(--g50); }
+.task-type-button[aria-pressed="true"] { border-color:var(--main); background:rgba(0,70,67,.055); box-shadow:inset 3px 0 0 var(--main); color:var(--main-dark); }
+.task-type-button:disabled { cursor:not-allowed; opacity:.72; }
+.task-type-button__name { display:block; font-size:10px; font-weight:800; }
+.task-type-button__hint { display:block; margin-top:2px; color:var(--g400); font-size:8px; line-height:1.2; }
+.companion-note { margin-top:4px; color:var(--g400); font-size:9px; }
+.duration-control { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; min-height:46px; border:1px solid var(--g200); border-radius:10px; overflow:hidden; background:white; }
+.duration-button { border:0; background:var(--g50); color:var(--main); cursor:pointer; font-family:"JetBrains Mono",monospace; font-size:16px; font-weight:800; }
+.duration-button:hover { background:var(--second); }
+.duration-button:first-child { border-right:1px solid var(--g100); }
+.duration-button:last-child { border-left:1px solid var(--g100); }
+.duration-value { display:grid; place-items:center; align-content:center; gap:1px; }
+.duration-value strong { font-family:"JetBrains Mono",monospace; font-size:15px; line-height:1; }
+.duration-value span { color:var(--g400); font-size:8px; font-weight:700; text-transform:uppercase; }
+.duration-helper { margin-top:4px; color:var(--g400); font-size:8px; }
+.geo-actions { display:flex; align-items:center; gap:5px; }
+.status { padding:3px 6px; border-radius:999px; background:var(--success-bg); color:var(--success); font-size:8px; font-weight:800; white-space:nowrap; }
+.mini-btn { height:27px; border:1px solid var(--g200); border-radius:7px; background:white; padding:0 8px; color:var(--main); font-size:9px; font-weight:800; cursor:pointer; }
+.zones-list { display:grid; gap:6px; margin-top:7px; }
+.zone-item { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:7px; min-height:36px; padding:7px 8px; border:1px solid var(--g200); border-radius:8px; background:white; }
+.zone-index { width:20px; height:20px; display:grid; place-items:center; border-radius:6px; background:var(--second); color:var(--main); font-family:"JetBrains Mono",monospace; font-size:8px; font-weight:800; }
+.zone-points__count { color:var(--g700); font-size:9px; font-weight:800; }
+.zone-points__visual { display:flex; align-items:center; gap:3px; margin-top:3px; }
+.point-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); }
+.point-link { width:7px; height:1px; background:var(--g300); }
+.zone-edit { border:0; background:transparent; color:var(--main-light); padding:4px; font-size:8px; font-weight:800; cursor:pointer; }
+.add-zone { width:100%; height:31px; margin-top:7px; border:1px dashed var(--main-light); border-radius:8px; background:#F6FBFA; color:var(--main); font-size:9px; font-weight:800; cursor:pointer; }
+
+.side-panel__footer { flex:0 0 auto; padding:10px; border-top:1px solid var(--g100); background:white; }
+.footer-grid { display:grid; grid-template-columns:1fr 1.35fr; gap:8px; }
+.btn { height:38px; border-radius:8px; border:1px solid var(--main); font-size:11px; font-weight:800; cursor:pointer; }
+.btn--secondary { background:white; color:var(--main); }
+.btn--primary { background:var(--main); color:white; }
+.btn--primary:hover { background:var(--main-light); }
+.view-actions .btn--primary { width:100%; }
+.view-actions__secondary { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:7px; }
+.btn--danger-outline { height:34px; border:1px solid rgba(192,57,43,.28); border-radius:8px; background:white; color:var(--danger); font-size:9px; font-weight:800; cursor:pointer; }
+.btn--danger-fill { height:34px; border:1px solid transparent; border-radius:8px; background:var(--danger-bg); color:var(--danger); font-size:9px; font-weight:800; cursor:pointer; }
+
+/* Status snack */
+.toast {
+  position:absolute;
+  left:50%;
+  bottom:18px;
+  transform:translate(-50%, 18px);
+  opacity:0;
+  pointer-events:none;
+  padding:9px 13px;
+  border-radius:10px;
+  background:var(--main-dark);
+  color:white;
+  box-shadow:var(--shadow-md);
+  font-size:10px;
+  font-weight:700;
+  transition:180ms ease;
+}
+.toast.show { opacity:1; transform:translate(-50%,0); }
+
+/* ================================================================
+   RESPONSIVE DE REFERENCIA
+   En tablet el panel derecho se superpone; en móvil conviene bottom sheet.
+   ================================================================ */
+@media (max-width:1180px) {
+  .filters-bar {
+    left:390px;
+    right:72px;
+    width:auto;
+    min-width:0;
+    transform:none;
+    grid-template-columns:145px 1fr 1fr 1fr 44px;
+  }
+  .side-panel { width:360px; }
+}
+@media (max-width:900px) {
+  .tracking-body { min-height:720px; }
+  .filters-bar {
+    left:14px;
+    right:14px;
+    width:auto;
+    grid-template-columns:1fr 1fr;
+    padding-right:58px;
+  }
+  .filter-go { position:absolute; right:9px; bottom:9px; width:44px; height:40px; }
+  .map-tools { top:18px; right:18px; }
+  .task-panel { top:124px; }
+  .side-panel { top:124px; height:calc(100% - 140px); }
+}
+@media (max-width:760px) {
+  .tracking-body { min-height:780px; }
+  .filters-bar { grid-template-columns:1fr; max-height:230px; overflow:auto; }
+  .task-panel { top:250px; left:10px; width:calc(100% - 20px); max-height:calc(100% - 260px); }
+  .side-panel {
+    inset:auto 8px 8px 8px;
+    top:auto;
+    width:auto;
+    height:min(72dvh, 650px);
+    border-radius:18px;
+  }
+  .task-panel.is-covered { opacity:.35; pointer-events:none; }
+}
+
+/* ================================================================
+   AJUSTE DE LAYOUT — PANELES PEGADOS A LOS BORDES
+   ================================================================
+   Objetivo:
+   - TaskListPanel pegado a left/top/bottom.
+   - TrackingFilters pegado al top y ocupando TODO el espacio horizontal
+     disponible entre el panel izquierdo y el borde/panel derecho.
+   - TaskViewPanel / TaskFormPanel pegados a right/top/bottom.
+   - Al abrir el panel derecho, NO se superpone a los filtros:
+     el workspace agrega .has-side-panel y los filtros se contraen.
+   - No existe botón burger/capas en este mockup.
+
+   En Vue, .has-side-panel puede derivarse de:
+     const hasSidePanel = computed(() => rightPanelMode.value !== 'none')
+*/
+
+@media (min-width: 901px) {
+  .tracking-body {
+    --task-panel-width: 360px;
+    --side-panel-width: 380px;
+    --filters-height: 58px;
+  }
+
+  /* Lista: utiliza todo el alto disponible del body. */
+  .task-panel {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: var(--task-panel-width);
+    max-height: none;
+    border-left: 0;
+    border-top: 0;
+    border-bottom: 0;
+    border-radius: 0 18px 18px 0;
+  }
+
+  /* Filtros: sin margen superior/lateral.
+     El ancho se calcula automáticamente según los paneles visibles. */
+  .filters-bar {
+    top: 0;
+    left: var(--task-panel-width);
+    right: 0;
+    width: auto;
+    min-width: 0;
+    transform: none;
+    grid-template-columns: 150px minmax(150px, .9fr) minmax(180px, 1fr) minmax(220px, 1.25fr) 44px;
+    border-top: 0;
+    border-right: 0;
+    border-radius: 0 0 14px 14px;
+    transition: right 220ms ease;
+  }
+
+  /* Cuando view/create/edit está visible, el filtro termina exactamente
+     donde comienza ese panel. No hay overlay ni espacio perdido. */
+  .tracking-body.has-side-panel .filters-bar {
+    right: var(--side-panel-width);
+  }
+
+  /* Panel contextual: ocupa de top a bottom y queda pegado al borde right. */
+  .side-panel {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--side-panel-width);
+    height: auto;
+    min-height: 0;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 18px 0 0 18px;
+  }
+
+  /* Solo queda la herramienta de reset. Se coloca bajo la barra de filtros.
+     También se desplaza cuando se abre el panel derecho. */
+  .map-tools {
+    top: calc(var(--filters-height) + 10px);
+    right: 12px;
+    transition: right 220ms ease;
+  }
+
+  .tracking-body.has-side-panel .map-tools {
+    right: calc(var(--side-panel-width) + 12px);
+  }
+}
+
+/* En pantallas de 901–1180 px el panel derecho conserva el mismo ancho que
+   utiliza el cálculo de los filtros. Esto evita una separación incorrecta. */
+@media (min-width: 901px) and (max-width: 1180px) {
+  .side-panel {
+    width: var(--side-panel-width);
+  }
+}
+
+
+/* ================================================================
+   AJUSTE FINAL — TODO PEGADO, SIN BORDES REDONDEADOS EXTERNOS
+   ================================================================ */
+
+@media (min-width: 901px) {
+  .task-panel,
+  .filters-bar,
+  .side-panel {
+    border-radius: 0 !important;
+  }
+
+  .task-panel {
+    border-left: 0;
+    border-top: 0;
+    border-bottom: 0;
+  }
+
+  .filters-bar {
+    border-top: 0;
+  }
+
+  .side-panel {
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+  }
+}
+
+/*
+  En móvil/tablet también evitamos bordes redondeados del panel contextual
+  para mantener la idea de superficies completamente pegadas al viewport.
+*/
+@media (max-width: 900px) {
+  .filters-bar,
+  .task-panel,
+  .side-panel {
+    border-radius: 0 !important;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<!-- SOLO BODY DEL MÓDULO. Navbar y sidebar viven fuera de este archivo. -->
+<main class="tracking-body" id="trackingWorkspace">
+  <div class="mock-map" aria-hidden="true">
+    <div class="mock-farm-boundary"></div>
+    <div class="mock-zone"></div>
+    <div class="route-line"></div>
+    <div class="map-marker map-marker--task marker-1">1</div>
+    <div class="map-marker map-marker--task marker-2">2</div>
+    <div class="map-marker map-marker--zone marker-3">Z</div>
+    <div class="map-marker map-marker--doubt marker-4">?</div>
+    <div class="map-marker map-marker--tracker marker-tracker">T</div>
+    <div class="map-vignette"></div>
+  </div>
+
+  <div class="map-ui">
+    <!-- Vue: <TrackingFilters /> -->
+    <section class="filters-bar" aria-label="Filtros del rastreo">
+      <input class="filter-field" id="filterDate" type="date" value="2026-08-26" aria-label="Fecha" />
+      <select class="filter-field" id="filterWorker" aria-label="Trabajador">
+        <option>Pedro Hurtado</option>
+        <option>Felix Arauz</option>
+        <option>Todos los trabajadores</option>
+      </select>
+      <select class="filter-field" id="filterTracker" aria-label="Tracker">
+        <option>SolarGuardX 100</option>
+        <option>TRACTOR 84-95</option>
+        <option>Todos los trackers</option>
+      </select>
+      <input class="filter-field filter-field--mono" id="filterCoordinates" value="8.43008, -82.50821" aria-label="Latitud, longitud" />
+      <button class="filter-go" id="goCoordinates" type="button">Ir</button>
+    </section>
+
+    <div class="map-tools" aria-label="Herramientas de mapa">
+      <button class="map-tool" id="resetMap" type="button" title="Restablecer mapa">↻</button>
+    </div>
+
+    <!-- Vue: <TaskListPanel /> -->
+    <aside class="task-panel" id="taskPanel">
+      <header class="task-panel__header">
+        <div class="task-panel__title-row">
+          <h1 class="task-panel__title">Tareas</h1>
+          <span class="task-panel__count">5</span>
+        </div>
+        <p class="task-panel__helper">Tarea, lugar, responsable, tracker y estado operativo.</p>
+      </header>
+
+      <div class="task-panel__controls">
+        <select class="task-filter" id="taskStatusFilter" aria-label="Filtrar tareas">
+          <option value="all">Todas (5)</option>
+          <option value="pending">Sin iniciar</option>
+          <option value="route">En ruta</option>
+          <option value="active">En ubicación</option>
+          <option value="done">Visitadas</option>
+          <option value="doubt">Dudas</option>
+        </select>
+        <button class="new-task" id="newTaskButton" type="button">＋ Nueva tarea</button>
+      </div>
+
+      <div class="task-panel__body" id="taskList">
+        <button class="task-card" type="button" data-task-id="1" data-state="pending" data-type="finca">
+          <span class="iconbox">
+            <svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>
+          </span>
+          <span class="task-card__body">
+            <span class="task-card__title">DESPACHO DE COMBUSTIBLE Y MANTENIMIENTO</span>
+            <span class="task-card__place"><span class="task-type">Finca</span><span class="truncate">Finca Calle Larga</span></span>
+            <span class="task-card__meta"><span class="truncate">Pedro Hurtado</span><span class="dot"></span><span class="truncate">SolarGuardX 100</span></span>
+          </span>
+          <span class="task-card__right"><span class="state-time"><span class="badge badge--pending">Sin iniciar</span><span class="state-time__value state-time__value--estimate">60 min est.</span></span></span>
+        </button>
+
+        <button class="task-card" type="button" data-task-id="2" data-state="route" data-type="finca">
+          <span class="iconbox">
+            <svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 17.5 8.5 14l3 2.5L19 8"/><path d="M14.5 8H19v4.5"/></svg>
+          </span>
+          <span class="task-card__body">
+            <span class="task-card__title">APLICACIÓN DE HERBICIDA</span>
+            <span class="task-card__place"><span class="task-type">Finca</span><span class="truncate">Finca San José</span></span>
+            <span class="task-card__meta"><span class="truncate">Pedro Hurtado</span><span class="dot"></span><span class="truncate">SolarGuardX 100</span></span>
+          </span>
+          <span class="task-card__right"><span class="state-time"><span class="badge badge--route">En ruta</span><span class="state-time__value state-time__value--estimate">45 min est.</span></span></span>
+        </button>
+
+        <button class="task-card task-card--active" type="button" data-task-id="3" data-state="active" data-type="finca">
+          <span class="iconbox iconbox--active">
+            <svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>
+          </span>
+          <span class="task-card__body">
+            <span class="task-card__title">FERTILIZACIÓN</span>
+            <span class="task-card__place"><span class="task-type">Finca</span><span class="truncate">Finca Lote Norte</span></span>
+            <span class="task-card__meta"><span class="truncate">Pedro Hurtado</span><span class="dot"></span><span class="truncate">SolarGuardX 100</span></span>
+            <span class="task-card__estimate-note">Duración estimada: 60 min</span>
+          </span>
+          <span class="task-card__right"><span class="state-time"><span class="badge badge--active">En ubicación</span><span class="state-time__value state-time__value--live">38 min</span><span class="state-time__label">en tarea</span></span></span>
+        </button>
+
+        <button class="task-card" type="button" data-task-id="4" data-state="done" data-type="zona">
+          <span class="iconbox">
+            <svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4.5 7 9 4.5 15 7l4.5-2.5v12L15 19l-6-2.5L4.5 19V7Z"/><path d="M9 4.5v12M15 7v12"/></svg>
+          </span>
+          <span class="task-card__body">
+            <span class="task-card__title">APLICACIÓN DE INSUMOS</span>
+            <span class="task-card__place"><span class="task-type">Zona</span><span class="truncate">Zona Carga Norte</span></span>
+            <span class="task-card__meta"><span class="truncate">Pedro Hurtado</span><span class="dot"></span><span class="truncate">SolarGuardX 100</span></span>
+          </span>
+          <span class="task-card__right"><span class="state-time"><span class="badge badge--done">Visitada</span><span class="state-time__value">52 min</span><span class="state-time__label">total</span></span></span>
+        </button>
+
+        <button class="task-card task-card--doubt" type="button" data-task-id="5" data-state="doubt" data-type="duda">
+          <span class="iconbox iconbox--doubt">?</span>
+          <span class="task-card__body">
+            <span class="task-card__title">PERMANENCIA NO IDENTIFICADA DETECTADA AUTOMÁTICAMENTE</span>
+            <span class="task-card__place"><span class="task-type task-type--doubt">Duda</span><span class="truncate">Zona automática de permanencia</span></span>
+            <span class="task-card__meta"><span class="truncate">SolarGuardX 100</span><span class="dot"></span><span class="truncate">Sin trabajador asignado</span></span>
+          </span>
+          <span class="task-card__right"><span class="state-time"><span class="badge badge--review">Duda</span><span class="state-time__value state-time__value--doubt">27 min</span><span class="state-time__label">permanencia</span></span></span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ============================================================
+         PANEL VISUALIZACIÓN
+         Vue: <TaskViewPanel v-if="rightPanelMode === 'view'" />
+         ============================================================ -->
+    <aside class="side-panel" id="viewPanel" aria-label="Detalle de tarea">
+      <header class="side-panel__header">
+        <div class="header-row">
+          <div class="panel-icon">
+            <svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>
+          </div>
+          <div class="panel-heading">
+            <h2 id="viewTitle">FERTILIZACIÓN</h2>
+            <p>Detalle operativo de la tarea seleccionada.</p>
+          </div>
+          <button class="close-panel" type="button" data-close-panel aria-label="Cerrar">×</button>
+        </div>
+        <div class="status-strip">
+          <div class="status-group"><span class="badge badge--admin">Asignada</span><span class="badge badge--active" id="viewStatus">En ubicación</span></div>
+          <span class="status-time" id="viewTime">38 min en tarea</span>
+        </div>
+      </header>
+
+      <div class="side-panel__scroll">
+        <section class="section">
+          <div class="section__title"><svg fill="none" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 5h6v6H5zM13 5h6v6h-6zM5 13h6v6H5zM13 13h6v6h-6z"/></svg><span>Tipo de tarea</span></div>
+          <div class="task-type-readonly">
+            <div class="type-option active" id="readonlyFinca"><span class="type-option__name">Finca</span><span class="type-option__hint">Punto + línea de control</span><span class="lock-mark">⌕</span></div>
+            <div class="type-option" id="readonlyZona"><span class="type-option__name">Zona</span><span class="type-option__hint">Punto + una zona</span></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section__title"><svg fill="none" stroke-width="1.8" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0 4 4 0 0 0-8 0Z"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Asignación</span></div>
+          <div class="read-list">
+            <div class="read-row"><span class="read-label">Trabajador</span><span class="read-value" id="viewWorker">Pedro Hurtado</span></div>
+            <div class="read-row"><span class="read-label">Equipo / tracker</span><span class="read-value">TopFlyTech SolarGuardX 100</span></div>
+            <div class="read-row"><span class="read-label">Acompañante</span><span class="read-value">ALEXANDER ARCIA</span></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section__title"><svg fill="none" stroke-width="1.8" viewBox="0 0 24 24"><path d="M7 3v3M17 3v3M4 9h16M5 5h14v15H5z"/></svg><span>Detalles</span></div>
+          <div class="details-grid">
+            <div class="instructions" id="viewDescription">FERTILIZACIÓN</div>
+            <div class="detail-card"><span class="detail-card__label">Fecha</span><span class="detail-card__value">26/08/2026</span></div>
+            <div class="detail-card"><span class="detail-card__label">Duración estimada</span><span class="detail-card__value detail-card__value--mono" id="viewEstimate">60 min</span></div>
+          </div>
+        </section>
+
+        <section class="section" id="viewGeometrySection">
+          <div class="section__title"><svg fill="none" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 17.5 8.5 14l3 2.5L19 8"/><path d="M14.5 8H19v4.5"/></svg><span>Ubicación y geometría</span></div>
+          <div class="geo-block">
+            <div class="geo-block__head"><div class="geo-block__identity"><div class="geo-block__title">Punto de enrutado</div><div class="geo-block__value">8.43008, -82.50821 · ajustado a vía</div></div><button class="view-map" type="button" data-map-focus="point">Ver</button></div>
+          </div>
+          <div class="geo-block" id="viewLineBlock">
+            <div class="geo-block__head"><div class="geo-block__identity"><div class="geo-block__title">Línea de control</div><div class="geo-block__value">2 puntos · línea activa</div></div><button class="view-map" type="button" data-map-focus="line">Ver</button></div>
+          </div>
+          <div class="geo-block" id="viewZoneBlock">
+            <div class="geo-block__head"><div class="geo-block__identity"><div class="geo-block__title">Zonas asociadas</div><div class="geo-block__value">2 polígonos definidos por puntos</div></div><button class="view-map" type="button" data-map-focus="zone">Ver</button></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section__title"><svg fill="none" stroke-width="1.8" viewBox="0 0 24 24"><path d="M6 6h12M6 12h12M6 18h12"/></svg><span>Posición en ruta</span></div>
+          <div class="route-row"><div class="route-num" id="viewOrder">3</div><div class="route-text">Posición de tarea</div></div>
+        </section>
+      </div>
+
+      <footer class="side-panel__footer view-actions">
+        <button class="btn btn--primary" id="editTaskButton" type="button">Editar tarea</button>
+        <div class="view-actions__secondary">
+          <button class="btn--danger-outline" id="cancelTaskButton" type="button">Cancelar tarea</button>
+          <button class="btn--danger-fill" id="deleteTaskButton" type="button">Eliminar</button>
+        </div>
+      </footer>
+    </aside>
+
+    <!-- ============================================================
+         PANEL CREACIÓN / EDICIÓN REUTILIZADO
+         Vue: <TaskFormPanel :mode="rightPanelMode" />
+         ============================================================ -->
+    <aside class="side-panel" id="formPanel" aria-label="Formulario de tarea">
+      <header class="side-panel__header">
+        <div class="header-row">
+          <div class="panel-icon">＋</div>
+          <div class="panel-heading">
+            <h2 id="formTitle">Nueva tarea</h2>
+            <p id="formSubtitle">Define la tarea y su geometría operativa.</p>
+          </div>
+          <button class="close-panel" type="button" data-close-panel aria-label="Cerrar">×</button>
+        </div>
+      </header>
+
+      <div class="side-panel__scroll">
+        <section class="section">
+          <div class="section__title"><svg fill="none" stroke-width="1.8" viewBox="0 0 24 24"><path d="M5 5h6v6H5zM13 5h6v6h-6zM5 13h6v6H5zM13 13h6v6h-6z"/></svg><span>Tipo de tarea</span></div>
+          <div class="task-type-selector" role="group" aria-label="Tipo de tarea">
+            <button class="task-type-button" id="typeFarm" type="button" aria-pressed="true"><span class="task-type-button__name">Finca</span><span class="task-type-button__hint">Punto + línea de control</span></button>
+            <button class="task-type-button" id="typeZone" type="button" aria-pressed="false"><span class="task-type-button__name">Zona</span><span class="task-type-button__hint">Punto + una zona</span></button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section__title"><svg fill="none" stroke-width="1.8" viewBox="0 0 24 24"><path d="M8 7a4 4 0 1 0 8 0 4 4 0 0 0-8 0Z"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Asignación</span></div>
+          <label class="label">Trabajador <span class="required">*</span></label>
+          <select class="select" id="formWorker"><option>Pedro Hurtado</option><option>Felix Arauz</option></select>
+          <label class="label">Equipo / tracker <span class="required">*</span></label>
+          <select class="select"><option>TopFlyTech SolarGuardX 100</option><option>TRACTOR 84-95</option></select>
+          <label class="label">Acompañante</label>
+          <select class="select"><option>Sin acompañante</option><option selected>ALEXANDER ARCIA</option></select>
+          <div class="companion-note">Selección desde acompañantes disponibles.</div>
+        </section>
+
+        <section class="section">
+          <div class="section__title"><svg fill="none" stroke-width="1.8" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Detalles</span></div>
+          <label class="label">Descripción de la tarea <span class="required">*</span></label>
+          <textarea class="textarea" id="formDescription">DESPACHO DE COMBUSTIBLE Y MANTENIMIENTO</textarea>
+          <label class="label">Fecha <span class="required">*</span></label>
+          <input class="input" type="date" value="2026-08-26" />
+          <label class="label">Duración <span class="required">*</span></label>
+          <div class="duration-control" data-duration="60">
+            <button class="duration-button" id="durationMinus" type="button">−</button>
+            <div class="duration-value"><strong><span id="durationValue">60</span> min</strong><span>estimados</span></div>
+            <button class="duration-button" id="durationPlus" type="button">+</button>
+          </div>
+          <div class="duration-helper">Intervalos de 15 minutos.</div>
+        </section>
+
+        <section class="section">
+          <div class="section__title"><svg fill="none" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"/><circle cx="12" cy="10" r="2"/></svg><span>Ubicación y geometría</span></div>
+
+          <div class="geo-block">
+            <div class="geo-block__head">
+              <div class="geo-block__identity"><div class="geo-block__title">Punto de enrutado</div><div class="geo-block__value">8.43008, -82.50821 · ajustado a vía</div></div>
+              <div class="geo-actions"><span class="status">LISTO</span><button class="mini-btn" type="button" data-map-focus="point">Cambiar</button></div>
+            </div>
+          </div>
+
+          <div class="geo-block" id="formLineBlock">
+            <div class="geo-block__head">
+              <div class="geo-block__identity"><div class="geo-block__title">Línea de control</div><div class="geo-block__value">Definida desde el punto de enrutado</div></div>
+              <div class="geo-actions"><span class="status">LISTO</span><button class="mini-btn" type="button" data-map-focus="line">Editar</button></div>
+            </div>
+          </div>
+
+          <div class="geo-block" id="formZoneBlock">
+            <div class="geo-block__head"><div class="geo-block__identity"><div class="geo-block__title" id="zonesTitle">Zonas</div><div class="geo-block__value" id="zonesHelper">Polígonos definidos únicamente por sus puntos.</div></div></div>
+            <div class="zones-list" id="zonesList">
+              <div class="zone-item"><span class="zone-index">1</span><div><div class="zone-points__count">4 puntos</div><div class="zone-points__visual"><span class="point-dot"></span><span class="point-link"></span><span class="point-dot"></span><span class="point-link"></span><span class="point-dot"></span><span class="point-link"></span><span class="point-dot"></span></div></div><button class="zone-edit" type="button" data-map-focus="zone">Editar</button></div>
+            </div>
+            <button class="add-zone" id="addZoneButton" type="button">＋ Agregar zona</button>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section__title"><svg fill="none" stroke-width="1.8" viewBox="0 0 24 24"><path d="M8 4h8M8 12h8M8 20h8"/></svg><span>Ruta</span></div>
+          <div class="route-row"><div class="route-num" id="formRouteNumber">4</div><div class="route-text">Posición de tarea</div><button class="view-map" type="button">Cambiar</button></div>
+        </section>
+      </div>
+
+      <footer class="side-panel__footer">
+        <div class="footer-grid">
+          <button class="btn btn--secondary" id="formCancelButton" type="button">Cancelar</button>
+          <button class="btn btn--primary" id="formSaveButton" type="button">Guardar tarea</button>
+        </div>
+      </footer>
+    </aside>
+
+    <div class="toast" id="toast">Acción simulada</div>
+  </div>
+</main>
+
+<script>
+/*
+  JavaScript de demostración.
+  En Vue, estas transiciones deben salir de refs/computed/emits.
+*/
+const workspace = document.getElementById('trackingWorkspace');
+const taskPanel = document.getElementById('taskPanel');
+const viewPanel = document.getElementById('viewPanel');
+const formPanel = document.getElementById('formPanel');
+const cards = [...document.querySelectorAll('.task-card')];
+const toast = document.getElementById('toast');
+const typeFarm = document.getElementById('typeFarm');
+const typeZone = document.getElementById('typeZone');
+const formLineBlock = document.getElementById('formLineBlock');
+const formZoneBlock = document.getElementById('formZoneBlock');
+const zonesTitle = document.getElementById('zonesTitle');
+const zonesHelper = document.getElementById('zonesHelper');
+const addZoneButton = document.getElementById('addZoneButton');
+let formMode = 'create';
+let currentTaskType = 'finca';
+let duration = 60;
+
+const taskData = {
+  '1': { title:'DESPACHO DE COMBUSTIBLE Y MANTENIMIENTO', type:'finca', worker:'Pedro Hurtado', status:'Sin iniciar', estimate:'60 min', time:'60 min est.', order:'1' },
+  '2': { title:'APLICACIÓN DE HERBICIDA', type:'finca', worker:'Pedro Hurtado', status:'En ruta', estimate:'45 min', time:'45 min est.', order:'2' },
+  '3': { title:'FERTILIZACIÓN', type:'finca', worker:'Pedro Hurtado', status:'En ubicación', estimate:'60 min', time:'38 min en tarea', order:'3' },
+  '4': { title:'APLICACIÓN DE INSUMOS', type:'zona', worker:'Pedro Hurtado', status:'Visitada', estimate:'45 min', time:'52 min total', order:'4' },
+  '5': { title:'PERMANENCIA NO IDENTIFICADA DETECTADA AUTOMÁTICAMENTE', type:'duda', worker:'Sin trabajador asignado', status:'Duda', estimate:'—', time:'27 min permanencia', order:'—' }
+};
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove('show'), 1600);
+}
+
+function closePanels() {
+  viewPanel.classList.remove('is-open');
+  formPanel.classList.remove('is-open');
+  workspace.classList.remove('has-side-panel');
+  taskPanel.classList.remove('is-covered');
+}
+
+function openView(taskId) {
+  const data = taskData[taskId];
+  if (!data) return;
+
+  formPanel.classList.remove('is-open');
+  viewPanel.classList.add('is-open');
+  workspace.classList.add('has-side-panel');
+  if (window.innerWidth <= 760) taskPanel.classList.add('is-covered');
+
+  cards.forEach(card => card.classList.toggle('selected', card.dataset.taskId === taskId));
+  document.getElementById('viewTitle').textContent = data.title;
+  document.getElementById('viewDescription').textContent = data.title;
+  document.getElementById('viewWorker').textContent = data.worker;
+  document.getElementById('viewStatus').textContent = data.status;
+  document.getElementById('viewTime').textContent = data.time;
+  document.getElementById('viewEstimate').textContent = data.estimate;
+  document.getElementById('viewOrder').textContent = data.order;
+
+  const finca = data.type === 'finca';
+  const zona = data.type === 'zona';
+  document.getElementById('readonlyFinca').classList.toggle('active', finca);
+  document.getElementById('readonlyZona').classList.toggle('active', zona);
+  document.getElementById('viewLineBlock').style.display = finca ? '' : 'none';
+  document.getElementById('viewZoneBlock').style.display = (finca || zona) ? '' : 'none';
+  document.getElementById('viewGeometrySection').style.display = data.type === 'duda' ? 'none' : '';
+
+  viewPanel.dataset.taskId = taskId;
+}
+
+function applyFormType(type) {
+  currentTaskType = type;
+  const isFarm = type === 'finca';
+  typeFarm.setAttribute('aria-pressed', isFarm ? 'true' : 'false');
+  typeZone.setAttribute('aria-pressed', isFarm ? 'false' : 'true');
+  formLineBlock.style.display = isFarm ? '' : 'none';
+  zonesTitle.textContent = isFarm ? 'Zonas' : 'Zona de control';
+  zonesHelper.textContent = isFarm
+    ? 'Polígonos definidos únicamente por sus puntos.'
+    : 'Una única zona determina entrada y salida de la tarea.';
+  addZoneButton.style.display = isFarm ? '' : 'none';
+}
+
+function setFormMode(mode, taskId = null) {
+  formMode = mode;
+  viewPanel.classList.remove('is-open');
+  formPanel.classList.add('is-open');
+  workspace.classList.add('has-side-panel');
+  if (window.innerWidth <= 760) taskPanel.classList.add('is-covered');
+
+  const editing = mode === 'edit';
+  document.getElementById('formTitle').textContent = editing ? 'Editar tarea' : 'Nueva tarea';
+  document.getElementById('formSubtitle').textContent = editing
+    ? 'El tipo queda bloqueado; modifica solamente los campos permitidos.'
+    : 'Define la tarea y su geometría operativa.';
+  document.getElementById('formSaveButton').textContent = editing ? 'Guardar cambios' : 'Guardar tarea';
+  typeFarm.disabled = editing;
+  typeZone.disabled = editing;
+
+  if (editing && taskId && taskData[taskId]) {
+    const data = taskData[taskId];
+    document.getElementById('formDescription').value = data.title;
+    document.getElementById('formWorker').value = data.worker === 'Sin trabajador asignado' ? 'Pedro Hurtado' : data.worker;
+    duration = parseInt(data.estimate, 10) || 60;
+    document.getElementById('durationValue').textContent = duration;
+    applyFormType(data.type === 'zona' ? 'zona' : 'finca');
+    document.getElementById('formRouteNumber').textContent = data.order === '—' ? '4' : data.order;
+    formPanel.dataset.taskId = taskId;
+  } else {
+    document.getElementById('formDescription').value = 'DESPACHO DE COMBUSTIBLE Y MANTENIMIENTO';
+    duration = 60;
+    document.getElementById('durationValue').textContent = duration;
+    applyFormType('finca');
+    document.getElementById('formRouteNumber').textContent = '4';
+    formPanel.dataset.taskId = '';
+  }
+}
+
+cards.forEach(card => card.addEventListener('click', () => openView(card.dataset.taskId)));
+
+document.getElementById('newTaskButton').addEventListener('click', () => setFormMode('create'));
+document.getElementById('editTaskButton').addEventListener('click', () => setFormMode('edit', viewPanel.dataset.taskId));
+
+document.querySelectorAll('[data-close-panel]').forEach(button => button.addEventListener('click', closePanels));
+document.getElementById('formCancelButton').addEventListener('click', closePanels);
+
+typeFarm.addEventListener('click', () => { if (!typeFarm.disabled) applyFormType('finca'); });
+typeZone.addEventListener('click', () => { if (!typeZone.disabled) applyFormType('zona'); });
+
+document.getElementById('durationMinus').addEventListener('click', () => {
+  duration = Math.max(15, duration - 15);
+  document.getElementById('durationValue').textContent = duration;
+});
+document.getElementById('durationPlus').addEventListener('click', () => {
+  duration += 15;
+  document.getElementById('durationValue').textContent = duration;
+});
+
+document.getElementById('formSaveButton').addEventListener('click', () => {
+  showToast(formMode === 'edit' ? 'Cambios guardados (simulación)' : 'Tarea creada (simulación)');
+  closePanels();
+});
+
+document.getElementById('cancelTaskButton').addEventListener('click', () => showToast('Cancelación simulada'));
+document.getElementById('deleteTaskButton').addEventListener('click', () => showToast('Eliminación simulada'));
+
+document.getElementById('taskStatusFilter').addEventListener('change', (event) => {
+  const value = event.target.value;
+  cards.forEach(card => {
+    card.style.display = value === 'all' || card.dataset.state === value ? '' : 'none';
+  });
+});
+
+document.getElementById('goCoordinates').addEventListener('click', () => {
+  showToast(`Mapa centrado en ${document.getElementById('filterCoordinates').value}`);
+});
+
+document.getElementById('resetMap').addEventListener('click', () => showToast('Vista del mapa restablecida'));
+
+document.querySelectorAll('[data-map-focus]').forEach(button => {
+  button.addEventListener('click', () => showToast(`Enfocar ${button.dataset.mapFocus} en el mapa`));
+});
+
+document.getElementById('addZoneButton').addEventListener('click', () => {
+  const list = document.getElementById('zonesList');
+  const index = list.children.length + 1;
+  const item = document.createElement('div');
+  item.className = 'zone-item';
+  item.innerHTML = `<span class="zone-index">${index}</span><div><div class="zone-points__count">4 puntos</div><div class="zone-points__visual"><span class="point-dot"></span><span class="point-link"></span><span class="point-dot"></span><span class="point-link"></span><span class="point-dot"></span><span class="point-link"></span><span class="point-dot"></span></div></div><button class="zone-edit" type="button">Editar</button>`;
+  list.appendChild(item);
+  showToast('Zona agregada al mockup');
+});
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 760) taskPanel.classList.remove('is-covered');
+});
+</script>
+</body>
+</html>

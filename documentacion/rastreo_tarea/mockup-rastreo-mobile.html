@@ -1,0 +1,1839 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rastreo operativo — comportamiento mobile documentado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+<script type="text/plain" id="developer-documentation">
+===============================================================================
+VISTA-RASTREO-MOBILE-DOCUMENTADA.HTML
+===============================================================================
+
+OBJETIVO
+--------
+Documentar el comportamiento RESPONSIVE MOBILE del BODY del módulo de rastreo,
+partiendo de los prototipos:
+
+- vista-rastreo-completa.html
+- panel-creacion-tarea.html
+- panel-edicion-tarea.html
+
+No incluye:
+- navbar global
+- sidebar global
+- breadcrumb global
+
+La navegación móvil usa la PROPUESTA 2:
+"vistas completas por estado".
+
+En desktop se conserva el patrón:
+[TaskListPanel][Filters + Map][RightPanel]
+
+En mobile NO se apilan lateralmente paneles.
+Cada estado ocupa el body completo del módulo.
+
+-------------------------------------------------------------------------------
+ESTADOS MOBILE
+-------------------------------------------------------------------------------
+
+type MobileTrackingView =
+  | 'map'
+  | 'filters'
+  | 'list'
+  | 'view'
+  | 'create'
+  | 'edit'
+  | 'map-focus'
+  | 'map-edit'
+
+Flujo principal:
+
+map
+ ├─ filtros ----------> filters ----------> map
+ ├─ tareas -----------> list
+ │                       └─ task ----------> view
+ │                                           ├─ ver mapa -> map-focus -> view
+ │                                           └─ editar ---> edit
+ │                                                         └─ geometría -> map-edit -> edit
+ └─ nueva tarea ------> create
+                         └─ geometría ------> map-edit -> create
+
+-------------------------------------------------------------------------------
+VUE 3 + TYPESCRIPT
+-------------------------------------------------------------------------------
+
+TrackingWorkspace.vue
+├─ TrackingDesktopLayout.vue
+└─ TrackingMobileLayout.vue
+   ├─ MobileMapPage.vue
+   ├─ MobileFiltersPage.vue
+   ├─ MobileTaskListPage.vue
+   ├─ MobileTaskViewPage.vue
+   ├─ MobileTaskFormPage.vue       // REUTILIZADO create | edit
+   ├─ MobileMapFocusPage.vue
+   └─ MobileGeometryEditorPage.vue
+
+Estado recomendado en el padre:
+
+type MobileTrackingView =
+  | 'map'
+  | 'filters'
+  | 'list'
+  | 'view'
+  | 'create'
+  | 'edit'
+  | 'map-focus'
+  | 'map-edit'
+
+type TaskFormMode = 'create' | 'edit'
+type GeometryEditKind = 'route-point' | 'control-line' | 'control-zone'
+
+const mobileView = ref<MobileTrackingView>('map')
+const selectedTaskId = ref<string | null>(null)
+
+const mapReturnView = ref<'view' | 'create' | 'edit'>('view')
+const geometryEditKind = ref<GeometryEditKind | null>(null)
+
+function showMap() {
+  mobileView.value = 'map'
+}
+
+function showTasks() {
+  mobileView.value = 'list'
+}
+
+function openTask(taskId: string) {
+  selectedTaskId.value = taskId
+  mobileView.value = 'view'
+}
+
+function createTask() {
+  selectedTaskId.value = null
+  mobileView.value = 'create'
+}
+
+function editTask() {
+  if (!selectedTaskId.value) return
+  mobileView.value = 'edit'
+}
+
+function focusTaskOnMap() {
+  mapReturnView.value = 'view'
+  mobileView.value = 'map-focus'
+}
+
+function editGeometry(
+  kind: GeometryEditKind,
+  from: 'create' | 'edit'
+) {
+  geometryEditKind.value = kind
+  mapReturnView.value = from
+  mobileView.value = 'map-edit'
+}
+
+function finishMapMode() {
+  mobileView.value = mapReturnView.value
+}
+
+-------------------------------------------------------------------------------
+FORMULARIO REUTILIZABLE
+-------------------------------------------------------------------------------
+
+NO crear:
+- TaskCreateMobilePage.vue
+- TaskEditMobilePage.vue
+
+como formularios productivos separados.
+
+Usar:
+
+<MobileTaskFormPage
+  mode="create"
+  :model-value="draft"
+/>
+
+<MobileTaskFormPage
+  mode="edit"
+  :model-value="draft"
+  :task="selectedTask"
+/>
+
+Props sugeridas:
+
+interface MobileTaskFormPageProps {
+  mode: 'create' | 'edit'
+  modelValue: TaskForm
+  task?: TaskDetail | null
+}
+
+interface TaskForm {
+  tipo: 'finca' | 'zona'
+  trabajadorId: string
+  trackerId: number
+  acompananteId: string | null
+  indicaciones: string
+  fechaProgramada: string
+  prioridadId: number
+  tiempoEstimadoMinutos: number
+  puntoEnrutado: { lat: number; lng: number } | null
+  lineaControl: GeoJSON.MultiLineString | null
+  zonaControl: GeoJSON.MultiPolygon | null
+  ordenRuta: number | null
+}
+
+Reglas:
+- create: tipo editable.
+- edit: tipo bloqueado.
+- edit + hasVisits: geometría de detección protegida.
+- punto_enrutado puede cambiar si las reglas lo permiten.
+- prioridad NO modifica orden_ruta.
+- orden_ruta se cambia explícitamente.
+- duración cambia en pasos de 15 minutos.
+
+-------------------------------------------------------------------------------
+TAILWIND CSS — ESTRUCTURA EQUIVALENTE
+-------------------------------------------------------------------------------
+
+Contenedor mobile:
+  md:hidden relative h-full min-h-0 overflow-hidden bg-gray-50
+
+Página:
+  absolute inset-0 flex flex-col bg-gray-50
+
+Header local:
+  shrink-0 border-b border-gray-100 bg-white px-4 py-3
+
+Contenido:
+  min-h-0 flex-1 overflow-y-auto bg-gray-50 p-3
+
+Footer sticky interno:
+  shrink-0 border-t border-gray-100 bg-white p-3
+
+Mapa:
+  absolute inset-0
+
+Acción inferior del mapa:
+  absolute inset-x-0 bottom-0 grid grid-cols-2 gap-2
+  border-t border-gray-100 bg-white p-3
+
+Para desktop:
+  hidden md:block
+
+Para mobile:
+  md:hidden
+
+IMPORTANTE:
+Este prototipo usa CSS plano únicamente para documentar visualmente.
+La implementación productiva debe traducir las reglas a Tailwind.
+===============================================================================
+</script>
+
+<style>
+:root{
+  --color-main:#004643;
+  --color-main-light:#006B65;
+  --color-main-dark:#002E2C;
+  --color-main-muted:#004643CC;
+  --color-second:#F0EDE5;
+  --color-second-dark:#E2DDD3;
+  --color-second-deep:#C9C3B4;
+  --color-accent:#D4A853;
+  --color-accent-light:#E8C47A;
+  --color-accent-dark:#B8892F;
+  --color-success:#2D8A4E;
+  --color-success-bg:#E8F5ED;
+  --color-warning:#C97B2F;
+  --color-warning-bg:#FDF3E3;
+  --color-danger:#C0392B;
+  --color-danger-bg:#FDECEA;
+  --color-info:#1A6B9A;
+  --color-info-bg:#E3F0FA;
+  --color-white:#FFFFFF;
+  --color-gray-50:#F8F7F4;
+  --color-gray-100:#EFEDE7;
+  --color-gray-200:#D8D4CA;
+  --color-gray-300:#B8B3A7;
+  --color-gray-400:#8F8A7F;
+  --color-gray-500:#6B6660;
+  --color-gray-600:#4A4640;
+  --color-gray-700:#2E2B26;
+  --color-gray-900:#1A1917;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 12px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.07);
+  --shadow-lg:0 10px 30px rgba(0,0,0,.12),0 4px 12px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  font-family:"DM Sans","Segoe UI",sans-serif;
+  color:var(--color-gray-900)
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+
+.workspace{
+  position:relative;
+  width:100vw;
+  height:100dvh;
+  min-height:640px;
+  overflow:hidden;
+  background:var(--color-gray-50)
+}
+
+/* ============================================================================
+   MAPA SIMULADO
+   En Vue debe reemplazarse por TrackingMap.vue / Google Maps.
+   ============================================================================ */
+.map{
+  position:absolute;
+  inset:0;
+  overflow:hidden;
+  background:
+    linear-gradient(22deg,rgba(65,89,62,.22) 0 18%,transparent 18% 100%),
+    linear-gradient(115deg,#78906c 0 17%,#b9aa78 17% 34%,#708661 34% 48%,#9a885f 48% 61%,#667c59 61% 74%,#b0a06e 74% 100%)
+}
+.field{position:absolute;border:1px solid rgba(255,255,255,.15);box-shadow:inset 0 0 30px rgba(0,0,0,.06)}
+.field.a{left:7%;top:12%;width:35%;height:28%;transform:rotate(-8deg);background:rgba(149,126,85,.38)}
+.field.b{left:50%;top:12%;width:33%;height:36%;transform:rotate(7deg);background:rgba(92,123,73,.42)}
+.field.c{left:22%;top:57%;width:45%;height:27%;transform:rotate(-3deg);background:rgba(173,151,94,.40)}
+.road{position:absolute;height:7px;background:rgba(213,200,167,.78);box-shadow:0 0 0 1px rgba(65,61,49,.18)}
+.road.r1{left:-7%;top:49%;width:120%;transform:rotate(-15deg)}
+.road.r2{left:59%;top:-3%;width:6px;height:108%;transform:rotate(8deg)}
+.route-line{position:absolute;left:27%;top:43%;width:48%;height:3px;background:var(--color-info);transform:rotate(11deg);transform-origin:left center;opacity:.88}
+.marker{
+  position:absolute;
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  border:4px solid white;
+  border-radius:50%;
+  box-shadow:0 2px 7px rgba(0,0,0,.28);
+  font-size:8px;
+  font-weight:800
+}
+.marker.m1{left:32%;top:45%;background:var(--color-accent)}
+.marker.m2{left:53%;top:52%;background:var(--color-main-light);color:white}
+.marker.m3{left:72%;top:59%;background:var(--color-info);color:white}
+.marker.tracker{
+  left:45%;top:38%;
+  width:34px;height:34px;
+  background:var(--color-main);
+  color:white;
+  border-width:4px
+}
+.focus-line{
+  position:absolute;
+  left:23%;
+  top:52%;
+  width:54%;
+  height:5px;
+  background:var(--color-accent);
+  box-shadow:0 0 0 2px white;
+  transform:rotate(-10deg)
+}
+.focus-zone{
+  position:absolute;
+  left:25%;
+  top:34%;
+  width:48%;
+  height:28%;
+  border:3px solid var(--color-info);
+  background:rgba(26,107,154,.15);
+  transform:rotate(-4deg)
+}
+
+/* ============================================================================
+   MOBILE ROUTER VISUAL
+   ============================================================================ */
+.mobile-layout{
+  position:absolute;
+  inset:0;
+  z-index:10;
+  display:block;
+  background:var(--color-gray-50)
+}
+.mobile-page{
+  position:absolute;
+  inset:0;
+  display:none;
+  flex-direction:column;
+  min-width:0;
+  min-height:0;
+  background:var(--color-gray-50)
+}
+.mobile-page.active{display:flex}
+.mobile-page--map{background:transparent}
+
+.mobile-head{
+  flex:0 0 auto;
+  min-height:54px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px 12px;
+  border-bottom:1px solid var(--color-gray-100);
+  background:var(--color-white);
+  z-index:5
+}
+.mobile-head__back{
+  width:36px;
+  height:36px;
+  flex:0 0 auto;
+  border:1px solid var(--color-gray-200);
+  border-radius:8px;
+  background:white;
+  color:var(--color-main);
+  font-size:17px;
+  font-weight:800
+}
+.mobile-head__title{min-width:0;flex:1}
+.mobile-head__title h1{
+  margin:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:15px;
+  line-height:1.2
+}
+.mobile-head__title p{
+  margin:2px 0 0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--color-gray-500);
+  font-size:9px
+}
+.mobile-head__action{
+  flex:0 0 auto;
+  min-height:34px;
+  padding:0 10px;
+  border:1px solid var(--color-main);
+  border-radius:8px;
+  background:white;
+  color:var(--color-main);
+  font-size:9px;
+  font-weight:800
+}
+.mobile-head__action--primary{background:var(--color-main);color:white}
+
+.mobile-scroll{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  padding:10px;
+  background:var(--color-gray-50);
+  scrollbar-width:thin;
+  scrollbar-color:var(--color-gray-300) transparent
+}
+.mobile-footer{
+  flex:0 0 auto;
+  display:grid;
+  gap:8px;
+  padding:10px;
+  border-top:1px solid var(--color-gray-100);
+  background:var(--color-white);
+  z-index:5
+}
+.mobile-footer--2{grid-template-columns:1fr 1.25fr}
+.mobile-footer--3{grid-template-columns:1.15fr .9fr .9fr}
+
+/* ============================================================================
+   MAP PAGE
+   ============================================================================ */
+.map-page-map{position:absolute;inset:0}
+.map-filter-summary{
+  position:absolute;
+  z-index:4;
+  top:10px;
+  left:10px;
+  right:10px;
+  padding:9px;
+  border:1px solid rgba(216,212,202,.95);
+  background:rgba(255,255,255,.97);
+  box-shadow:var(--shadow-sm)
+}
+.map-filter-summary__top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px
+}
+.map-filter-summary__date{
+  color:var(--color-main-dark);
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  font-weight:700
+}
+.filter-open{
+  height:30px;
+  padding:0 9px;
+  border:1px solid var(--color-main);
+  border-radius:7px;
+  background:white;
+  color:var(--color-main);
+  font-size:8px;
+  font-weight:800
+}
+.map-filter-summary__meta{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  min-width:0;
+  margin-top:6px;
+  color:var(--color-gray-500);
+  font-size:9px
+}
+.sep{width:3px;height:3px;flex:0 0 auto;border-radius:50%;background:var(--color-gray-300)}
+.map-bottom-actions{
+  position:absolute;
+  z-index:4;
+  left:0;
+  right:0;
+  bottom:0;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  padding:10px;
+  border-top:1px solid var(--color-gray-100);
+  background:var(--color-white)
+}
+.action{
+  min-height:42px;
+  border-radius:8px;
+  font-size:10px;
+  font-weight:800
+}
+.action--ghost{border:1px solid var(--color-main);background:white;color:var(--color-main)}
+.action--primary{border:1px solid var(--color-main);background:var(--color-main);color:white}
+.action--danger{border:1px solid var(--color-danger);background:white;color:var(--color-danger)}
+.action--danger-soft{border:1px solid transparent;background:var(--color-danger-bg);color:var(--color-danger)}
+
+/* ============================================================================
+   FILTER PAGE
+   ============================================================================ */
+.form-section{
+  margin:0 0 9px;
+  padding:11px;
+  border:1px solid var(--color-gray-100);
+  border-radius:10px;
+  background:white
+}
+.form-section:last-child{margin-bottom:0}
+.section-title{
+  margin:0 0 9px;
+  color:var(--color-main);
+  font-size:11px;
+  font-weight:800
+}
+.label{
+  display:block;
+  margin:8px 0 4px;
+  color:var(--color-gray-500);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase
+}
+.label:first-of-type{margin-top:0}
+.required{color:var(--color-danger)}
+.input,.select,.textarea{
+  width:100%;
+  min-height:38px;
+  padding:8px 9px;
+  border:1px solid var(--color-gray-200);
+  border-radius:7px;
+  background:white;
+  color:var(--color-gray-700);
+  font-size:11px;
+  outline:none
+}
+.textarea{min-height:76px;resize:vertical;line-height:1.4}
+.input:focus,.select:focus,.textarea:focus{
+  border-color:var(--color-main-light);
+  box-shadow:0 0 0 3px rgba(0,107,101,.08)
+}
+.coord-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+
+/* ============================================================================
+   TASK LIST
+   ============================================================================ */
+.list-tools{
+  flex:0 0 auto;
+  padding:9px 10px;
+  border-bottom:1px solid var(--color-gray-100);
+  background:white
+}
+.list-tools select{
+  width:100%;
+  height:36px;
+  padding:0 9px;
+  border:1px solid var(--color-gray-200);
+  border-radius:7px;
+  background:white;
+  color:var(--color-gray-600);
+  font-size:10px
+}
+.task-list-mobile{
+  display:grid;
+  gap:8px
+}
+.task-card{
+  display:grid;
+  grid-template-columns:32px minmax(0,1fr) auto;
+  gap:8px;
+  align-items:start;
+  width:100%;
+  padding:10px;
+  border:1px solid var(--color-gray-200);
+  border-radius:9px;
+  background:white;
+  text-align:left
+}
+.task-card.active{
+  border-color:var(--color-main);
+  background:rgba(0,70,67,.045)
+}
+.task-icon{
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border-radius:8px;
+  background:var(--color-second);
+  color:var(--color-main);
+  font-size:12px;
+  font-weight:800
+}
+.task-main{min-width:0}
+.task-title{
+  margin:0;
+  color:var(--color-gray-900);
+  font-size:11px;
+  font-weight:700;
+  line-height:1.3
+}
+.task-place{
+  display:block;
+  margin-top:4px;
+  color:var(--color-gray-500);
+  font-size:9px
+}
+.task-meta{
+  display:block;
+  margin-top:5px;
+  color:var(--color-gray-400);
+  font-size:8px
+}
+.task-state{
+  display:grid;
+  justify-items:end;
+  gap:5px
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:4px 7px;
+  border-radius:999px;
+  font-size:8px;
+  font-weight:800;
+  white-space:nowrap
+}
+.badge::before{
+  content:"";
+  width:5px;
+  height:5px;
+  border-radius:50%;
+  background:currentColor
+}
+.badge--info{background:var(--color-info-bg);color:var(--color-info)}
+.badge--success{background:var(--color-success-bg);color:var(--color-success)}
+.badge--warning{background:var(--color-warning-bg);color:var(--color-warning)}
+.badge--neutral{background:var(--color-gray-100);color:var(--color-gray-600)}
+.task-time{
+  color:var(--color-gray-600);
+  font-family:"JetBrains Mono",monospace;
+  font-size:9px;
+  font-weight:700
+}
+
+/* ============================================================================
+   DETAIL PAGE
+   ============================================================================ */
+.section{
+  margin:0 0 9px;
+  padding:11px;
+  border:1px solid var(--color-gray-100);
+  border-radius:10px;
+  background:white
+}
+.section:last-child{margin-bottom:0}
+.section h3{
+  margin:0 0 9px;
+  color:var(--color-main);
+  font-size:11px
+}
+.read-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.metric{
+  padding:9px;
+  border:1px solid var(--color-gray-100);
+  border-radius:8px;
+  background:var(--color-gray-50)
+}
+.metric small{
+  display:block;
+  color:var(--color-gray-400);
+  font-size:7px;
+  font-weight:700;
+  letter-spacing:.03em;
+  text-transform:uppercase
+}
+.metric strong{
+  display:block;
+  margin-top:4px;
+  color:var(--color-gray-700);
+  font-size:9px;
+  line-height:1.35
+}
+.metric--wide{grid-column:1/-1}
+.observation{
+  padding:9px;
+  border:1px solid var(--color-gray-100);
+  border-radius:8px;
+  background:var(--color-gray-50)
+}
+.observation + .observation{margin-top:7px}
+.observation strong{font-size:9px}
+.observation small{color:var(--color-gray-400);font-size:7px}
+.observation p{margin:5px 0 0;font-size:9px;line-height:1.4}
+.geo-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:9px;
+  border:1px solid var(--color-gray-100);
+  border-radius:8px;
+  background:var(--color-gray-50)
+}
+.geo-row + .geo-row{margin-top:7px}
+.geo-row strong{display:block;font-size:10px}
+.geo-row small{
+  display:block;
+  margin-top:2px;
+  color:var(--color-gray-400);
+  font-size:8px;
+  line-height:1.3
+}
+.geo-action{
+  min-width:55px;
+  height:29px;
+  padding:0 8px;
+  border:1px solid var(--color-gray-200);
+  border-radius:7px;
+  background:white;
+  color:var(--color-main);
+  font-size:8px;
+  font-weight:800
+}
+.geo-action[disabled]{
+  cursor:not-allowed;
+  background:var(--color-gray-100);
+  color:var(--color-gray-400)
+}
+
+/* ============================================================================
+   CREATE / EDIT SHARED FORM
+   ============================================================================ */
+.type-selector{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.type-btn{
+  min-height:48px;
+  padding:8px 9px;
+  text-align:left;
+  border:1px solid var(--color-gray-200);
+  border-radius:8px;
+  background:white;
+  color:var(--color-gray-600)
+}
+.type-btn[aria-pressed="true"]{
+  border-color:var(--color-main);
+  background:rgba(0,70,67,.05);
+  box-shadow:inset 3px 0 0 var(--color-main);
+  color:var(--color-main-dark)
+}
+.type-btn:disabled{cursor:not-allowed;opacity:.72}
+.type-btn strong{display:block;font-size:10px}
+.type-btn span{
+  display:block;
+  margin-top:2px;
+  color:var(--color-gray-400);
+  font-size:8px;
+  line-height:1.25
+}
+.duration{
+  display:grid;
+  grid-template-columns:44px 1fr 44px;
+  min-height:46px;
+  overflow:hidden;
+  border:1px solid var(--color-gray-200);
+  border-radius:8px;
+  background:white
+}
+.duration button{
+  border:0;
+  background:var(--color-gray-50);
+  color:var(--color-main);
+  font-size:17px;
+  font-weight:800
+}
+.duration button:first-child{border-right:1px solid var(--color-gray-100)}
+.duration button:last-child{border-left:1px solid var(--color-gray-100)}
+.duration__value{display:grid;place-items:center;align-content:center}
+.duration__value strong{font-family:"JetBrains Mono",monospace;font-size:14px}
+.duration__value span{color:var(--color-gray-400);font-size:8px}
+.priority-selector{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.priority-btn{
+  min-height:42px;
+  border:1px solid var(--color-gray-200);
+  border-radius:8px;
+  background:white;
+  color:var(--color-gray-600);
+  font-size:10px;
+  font-weight:800
+}
+.priority-btn.active{
+  border-color:var(--color-accent-dark);
+  background:#FFF8E8;
+  color:var(--color-accent-dark)
+}
+.helper{
+  margin-top:4px;
+  color:var(--color-gray-400);
+  font-size:8px;
+  line-height:1.35
+}
+.notice{
+  margin-bottom:9px;
+  padding:9px 10px;
+  border:1px solid rgba(201,123,47,.25);
+  border-radius:9px;
+  background:var(--color-warning-bg);
+  color:var(--color-warning);
+  font-size:9px;
+  line-height:1.4
+}
+.locked{
+  padding:9px;
+  border:1px solid var(--color-gray-200);
+  border-radius:8px;
+  background:var(--color-gray-50)
+}
+.locked__top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px
+}
+.locked strong{font-size:10px}
+.locked span{color:var(--color-gray-400);font-size:8px}
+.lock-badge{
+  padding:3px 6px;
+  border-radius:999px;
+  background:var(--color-gray-100);
+  color:var(--color-gray-500)!important;
+  font-size:8px!important;
+  font-weight:800
+}
+.route-row{
+  display:grid;
+  grid-template-columns:40px minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+  padding:9px;
+  border:1px solid var(--color-gray-200);
+  border-radius:8px;
+  background:white
+}
+.route-num{
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:var(--color-main);
+  color:white;
+  font-family:"JetBrains Mono",monospace;
+  font-size:10px;
+  font-weight:800
+}
+.route-row strong{font-size:10px}
+.route-row small{
+  display:block;
+  margin-top:2px;
+  color:var(--color-gray-400);
+  font-size:8px
+}
+
+/* ============================================================================
+   MAP FOCUS / MAP EDIT
+   ============================================================================ */
+.map-context-head{
+  position:absolute;
+  z-index:5;
+  top:0;
+  left:0;
+  right:0;
+  min-height:56px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:8px;
+  padding:9px 10px;
+  border-bottom:1px solid var(--color-gray-100);
+  background:white
+}
+.map-context-head strong{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:11px
+}
+.map-context-head small{
+  display:block;
+  margin-top:2px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:var(--color-gray-500);
+  font-size:8px
+}
+.map-context-help{
+  position:absolute;
+  z-index:5;
+  left:10px;
+  right:10px;
+  bottom:74px;
+  padding:9px 10px;
+  border:1px solid var(--color-gray-200);
+  background:rgba(255,255,255,.96);
+  box-shadow:var(--shadow-sm);
+  color:var(--color-gray-600);
+  font-size:9px;
+  line-height:1.4
+}
+.map-context-footer{
+  position:absolute;
+  z-index:5;
+  left:0;
+  right:0;
+  bottom:0;
+  display:grid;
+  grid-template-columns:1fr 1.25fr;
+  gap:8px;
+  padding:10px;
+  border-top:1px solid var(--color-gray-100);
+  background:white
+}
+
+/* ============================================================================
+   DESKTOP REFERENCE
+   Se incluye una referencia resumida para mostrar que el mismo archivo
+   documenta ambos breakpoints. El foco de este prototipo es MOBILE.
+   ============================================================================ */
+.desktop-reference{display:none}
+
+/* Por debajo de 768 px se muestra el comportamiento mobile. */
+@media(min-width:768px){
+  .mobile-layout{display:none}
+  .desktop-reference{
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center;
+    padding:30px;
+    background:var(--color-gray-50)
+  }
+  .desktop-note{
+    width:min(760px,100%);
+    padding:24px;
+    border:1px solid var(--color-gray-200);
+    background:white;
+    box-shadow:var(--shadow-md)
+  }
+  .desktop-note h1{margin:0 0 8px;font-size:20px}
+  .desktop-note p{margin:0;color:var(--color-gray-600);font-size:12px;line-height:1.6}
+  .desktop-note code{
+    display:block;
+    margin-top:14px;
+    padding:12px;
+    background:var(--color-gray-50);
+    color:var(--color-main-dark);
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="workspace" id="workspace">
+
+  <span hidden data-doc="desktop-reference">Para desktop productivo reutiliza vista-rastreo-completa.html.</span>
+  <section class="desktop-reference">
+    <div class="desktop-note">
+      <h1>Mockup enfocado en comportamiento mobile</h1>
+      <p>
+        A partir de <strong>768 px</strong> la aplicación debe conservar el layout
+        desktop ya definido: panel de tareas pegado a la izquierda, filtros arriba,
+        mapa de fondo y panel contextual pegado a la derecha.
+      </p>
+      <code>Tailwind: mobile = md:hidden · desktop = hidden md:block</code>
+    </div>
+  </section>
+
+  <!-- ======================================================================
+       MOBILE LAYOUT
+       Vue: <TrackingMobileLayout v-if="isMobile" />
+       ====================================================================== -->
+  <div class="mobile-layout" id="mobileLayout">
+
+    <!-- ================================================================
+         PAGE: MAP
+         Vue: MobileMapPage.vue
+         ================================================================ -->
+    <section class="mobile-page mobile-page--map active" data-view="map">
+      <div class="map map-page-map" aria-label="Mapa simulado">
+        <div class="field a"></div>
+        <div class="field b"></div>
+        <div class="field c"></div>
+        <div class="road r1"></div>
+        <div class="road r2"></div>
+        <div class="route-line"></div>
+        <div class="marker m1">1</div>
+        <div class="marker m2">2</div>
+        <div class="marker m3">Z</div>
+        <div class="marker tracker">T</div>
+      </div>
+
+      <!-- Filtros compactos: resumen solamente.
+           Los controles completos viven en la vista 'filters'. -->
+      <div class="map-filter-summary">
+        <div class="map-filter-summary__top">
+          <span class="map-filter-summary__date">26/08/2026 · Engrase</span>
+          <button class="filter-open" type="button" data-nav="filters">Filtros</button>
+        </div>
+        <div class="map-filter-summary__meta">
+          <span class="truncate">Pedro Hurtado</span>
+          <span class="sep"></span>
+          <span class="truncate">SolarGuardX 100</span>
+        </div>
+      </div>
+
+      <div class="map-bottom-actions">
+        <button class="action action--ghost" type="button" data-nav="list">Tareas · 4</button>
+        <button class="action action--primary" type="button" data-nav="create">＋ Nueva tarea</button>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         PAGE: FILTERS
+         Vue: MobileFiltersPage.vue
+         ================================================================ -->
+    <section class="mobile-page" data-view="filters">
+      <header class="mobile-head">
+        <button class="mobile-head__back" type="button" data-nav="map">←</button>
+        <div class="mobile-head__title">
+          <h1>Filtros del mapa</h1>
+          <p>Contexto operativo y búsqueda por coordenadas.</p>
+        </div>
+      </header>
+
+      <main class="mobile-scroll">
+        <section class="form-section">
+          <h2 class="section-title">Contexto operativo</h2>
+          <label class="label">Área</label>
+          <select class="select"><option>Engrase</option></select>
+
+          <label class="label">Fecha</label>
+          <input class="input" type="date" value="2026-08-26">
+
+          <label class="label">Trabajador</label>
+          <select class="select"><option>Pedro Hurtado</option><option>Felix Arauz</option></select>
+
+          <label class="label">Tracker</label>
+          <select class="select"><option>SolarGuardX 100</option><option>TRACTOR 84-95</option></select>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">Ir a coordenadas</h2>
+          <div class="coord-grid">
+            <div>
+              <label class="label">Latitud</label>
+              <input class="input" value="8.43008">
+            </div>
+            <div>
+              <label class="label">Longitud</label>
+              <input class="input" value="-82.50821">
+            </div>
+          </div>
+          <div class="helper">Las coordenadas son una herramienta del mapa, no un filtro de tareas.</div>
+        </section>
+      </main>
+
+      <footer class="mobile-footer mobile-footer--2">
+        <button class="action action--ghost" type="button" data-nav="map">Cancelar</button>
+        <button class="action action--primary" type="button" data-apply-filters>Aplicar filtros</button>
+      </footer>
+    </section>
+
+    <!-- ================================================================
+         PAGE: TASK LIST
+         Vue: MobileTaskListPage.vue
+         ================================================================ -->
+    <section class="mobile-page" data-view="list">
+      <header class="mobile-head">
+        <button class="mobile-head__back" type="button" data-nav="map">←</button>
+        <div class="mobile-head__title">
+          <h1>Tareas</h1>
+          <p>4 tareas para Pedro Hurtado · SolarGuardX 100</p>
+        </div>
+        <button class="mobile-head__action mobile-head__action--primary" type="button" data-nav="create">＋ Nueva</button>
+      </header>
+
+      <div class="list-tools">
+        <select aria-label="Filtrar tareas">
+          <option>Todas (4)</option>
+          <option>Sin iniciar</option>
+          <option>En ruta</option>
+          <option>En ubicación</option>
+          <option>Visitadas</option>
+          <option>Dudas</option>
+        </select>
+      </div>
+
+      <main class="mobile-scroll">
+        <div class="task-list-mobile">
+          <button class="task-card" type="button" data-open-task="1">
+            <span class="task-icon">⌖</span>
+            <span class="task-main">
+              <span class="task-title">DESPACHO DE COMBUSTIBLE Y MANTENIMIENTO</span>
+              <span class="task-place">Finca · Calle Larga</span>
+              <span class="task-meta">Pedro Hurtado · SolarGuardX 100</span>
+            </span>
+            <span class="task-state">
+              <span class="badge badge--neutral">Sin iniciar</span>
+              <span class="task-time">60 min est.</span>
+            </span>
+          </button>
+
+          <button class="task-card active" type="button" data-open-task="2">
+            <span class="task-icon">⌖</span>
+            <span class="task-main">
+              <span class="task-title">FERTILIZACIÓN</span>
+              <span class="task-place">Finca · Lote Norte</span>
+              <span class="task-meta">Pedro Hurtado · SolarGuardX 100</span>
+            </span>
+            <span class="task-state">
+              <span class="badge badge--success">En ubicación</span>
+              <span class="task-time">38 min</span>
+            </span>
+          </button>
+
+          <button class="task-card" type="button" data-open-task="3">
+            <span class="task-icon">▱</span>
+            <span class="task-main">
+              <span class="task-title">APLICACIÓN DE INSUMOS</span>
+              <span class="task-place">Zona · Carga Norte</span>
+              <span class="task-meta">Pedro Hurtado · SolarGuardX 100</span>
+            </span>
+            <span class="task-state">
+              <span class="badge badge--info">Visitada</span>
+              <span class="task-time">52 min</span>
+            </span>
+          </button>
+
+          <button class="task-card" type="button" data-open-task="4">
+            <span class="task-icon" style="background:var(--color-warning-bg);color:var(--color-warning)">?</span>
+            <span class="task-main">
+              <span class="task-title">PERMANENCIA NO IDENTIFICADA</span>
+              <span class="task-place">Duda automática</span>
+              <span class="task-meta">SolarGuardX 100 · sin trabajador resuelto</span>
+            </span>
+            <span class="task-state">
+              <span class="badge badge--warning">Duda</span>
+              <span class="task-time">27 min</span>
+            </span>
+          </button>
+        </div>
+      </main>
+    </section>
+
+    <!-- ================================================================
+         PAGE: TASK VIEW
+         Vue: MobileTaskViewPage.vue
+         ================================================================ -->
+    <section class="mobile-page" data-view="view">
+      <header class="mobile-head">
+        <button class="mobile-head__back" type="button" data-nav="list">←</button>
+        <div class="mobile-head__title">
+          <h1 id="detailTitle">FERTILIZACIÓN</h1>
+          <p id="detailSubtitle">Finca · Lote Norte</p>
+        </div>
+        <button class="mobile-head__action" type="button" data-focus-map>Ver mapa</button>
+      </header>
+
+      <main class="mobile-scroll">
+        <section class="section">
+          <h3>Estado de la tarea</h3>
+          <div class="read-grid">
+            <div class="metric"><small>Administrativo</small><strong>Asignada</strong></div>
+            <div class="metric"><small>Operativo</small><strong>En ubicación</strong></div>
+            <div class="metric"><small>Tiempo total</small><strong>38 min</strong></div>
+            <div class="metric"><small>Visitas</small><strong>2</strong></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3>Tipo de tarea</h3>
+          <div class="metric">
+            <small>Solo lectura</small>
+            <strong id="detailTaskType">Finca · punto de enrutado + línea de control</strong>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3>Asignación</h3>
+          <div class="read-grid">
+            <div class="metric"><small>Trabajador</small><strong id="detailWorker">Pedro Hurtado</strong></div>
+            <div class="metric"><small>Tracker</small><strong>SolarGuardX 100</strong></div>
+            <div class="metric metric--wide"><small>Acompañante</small><strong>ALEXANDER ARCIA</strong></div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3>Detalles</h3>
+          <div class="read-grid">
+            <div class="metric metric--wide"><small>Indicaciones</small><strong id="detailDescription">FERTILIZACIÓN</strong></div>
+            <div class="metric"><small>Fecha</small><strong>26/08/2026</strong></div>
+            <div class="metric"><small>Duración estimada</small><strong>60 min</strong></div>
+          </div>
+        </section>
+
+        <section class="section" id="detailGeometry">
+          <h3>Ubicación y geometría</h3>
+          <div class="geo-row">
+            <div>
+              <strong>Punto de enrutado</strong>
+              <small>8.43008, -82.50821 · ajustado a red vial.</small>
+            </div>
+            <button class="geo-action" type="button" data-focus-geometry="route-point">Ver</button>
+          </div>
+          <div class="geo-row" id="detailControlLine">
+            <div>
+              <strong>Línea de control</strong>
+              <small>Geometría utilizada para activar/cerrar la tarea.</small>
+            </div>
+            <button class="geo-action" type="button" data-focus-geometry="control-line">Ver</button>
+          </div>
+          <div class="geo-row" id="detailControlZone" hidden>
+            <div>
+              <strong>Zona de control</strong>
+              <small>Entrada/salida de la zona determina la visita.</small>
+            </div>
+            <button class="geo-action" type="button" data-focus-geometry="control-zone">Ver</button>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3>Posición en ruta</h3>
+          <div class="route-row">
+            <div class="route-num">4</div>
+            <div>
+              <strong>Después de “Aplicación de herbicida”</strong>
+              <small>Orden definido manualmente por el supervisor.</small>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3>Observaciones</h3>
+          <article class="observation">
+            <strong>Avance</strong><small> · 10:41 a. m.</small>
+            <p>Se completó la primera parte.</p>
+          </article>
+          <article class="observation">
+            <strong>Aclaración</strong><small> · 10:52 a. m.</small>
+            <p>Primero se trabajó el lote norte.</p>
+          </article>
+        </section>
+      </main>
+
+      <footer class="mobile-footer mobile-footer--3">
+        <button class="action action--primary" type="button" data-nav="edit">Editar</button>
+        <button class="action action--danger" type="button" data-demo-action="cancelar">Cancelar</button>
+        <button class="action action--danger-soft" type="button" data-demo-action="eliminar">Eliminar</button>
+      </footer>
+    </section>
+
+    <!-- ================================================================
+         PAGE: CREATE
+         VISUALMENTE usa el mismo contenido del formulario compartido.
+         Vue productivo: MobileTaskFormPage mode="create".
+         ================================================================ -->
+    <section class="mobile-page" data-view="create">
+      <header class="mobile-head">
+        <button class="mobile-head__back" type="button" data-nav="map">×</button>
+        <div class="mobile-head__title">
+          <h1>Nueva tarea</h1>
+          <p>Asignación, detalles, geometría y posición de ruta.</p>
+        </div>
+      </header>
+
+      <main class="mobile-scroll task-form" data-form-mode="create">
+        <section class="form-section">
+          <h2 class="section-title">Tipo de tarea</h2>
+          <div class="type-selector">
+            <button class="type-btn" type="button" data-type-create="finca" aria-pressed="true">
+              <strong>Finca</strong><span>Punto + línea de control</span>
+            </button>
+            <button class="type-btn" type="button" data-type-create="zona" aria-pressed="false">
+              <strong>Zona</strong><span>Punto + zona de control</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">Asignación</h2>
+          <label class="label">Trabajador <span class="required">*</span></label>
+          <select class="select"><option>Pedro Hurtado</option><option>Felix Arauz</option></select>
+
+          <label class="label">Equipo / tracker <span class="required">*</span></label>
+          <select class="select"><option>TopFlyTech SolarGuardX 100</option><option>TRACTOR 84-95</option></select>
+
+          <label class="label">Acompañante</label>
+          <select class="select"><option>Sin acompañante</option><option>ALEXANDER ARCIA</option></select>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">Detalles</h2>
+          <label class="label">Indicaciones <span class="required">*</span></label>
+          <textarea class="textarea">DESPACHO DE COMBUSTIBLE Y MANTENIMIENTO</textarea>
+
+          <label class="label">Fecha <span class="required">*</span></label>
+          <input class="input" type="date" value="2026-08-26">
+
+          <label class="label">Duración <span class="required">*</span></label>
+          <div class="duration">
+            <button type="button" data-duration-minus="create">−</button>
+            <div class="duration__value"><strong><span data-duration-value="create">60</span> min</strong><span>intervalos de 15 min</span></div>
+            <button type="button" data-duration-plus="create">＋</button>
+          </div>
+
+          <label class="label">Prioridad</label>
+          <div class="priority-selector">
+            <button class="priority-btn active" type="button">Normal</button>
+            <button class="priority-btn" type="button">Urgente</button>
+          </div>
+          <div class="helper">La prioridad es visual/operativa; no cambia orden_ruta.</div>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">Ubicación y geometría</h2>
+          <div class="geo-row">
+            <div>
+              <strong>Punto de enrutado</strong>
+              <small>8.43008, -82.50821 · ajustado a red vial.</small>
+            </div>
+            <button class="geo-action" type="button" data-edit-geometry="route-point" data-from="create">Cambiar</button>
+          </div>
+
+          <div class="geo-row" data-create-farm-geometry>
+            <div>
+              <strong>Línea de control</strong>
+              <small>Generada desde el punto y perpendicular a la vía.</small>
+            </div>
+            <button class="geo-action" type="button" data-edit-geometry="control-line" data-from="create">Editar</button>
+          </div>
+
+          <div class="geo-row" data-create-zone-geometry hidden>
+            <div>
+              <strong>Zona de control</strong>
+              <small>Polígono definido únicamente por sus puntos.</small>
+            </div>
+            <button class="geo-action" type="button" data-edit-geometry="control-zone" data-from="create">Editar</button>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">Posición en ruta</h2>
+          <div class="route-row">
+            <div class="route-num">4</div>
+            <div>
+              <strong>Después de “Aplicación de herbicida”</strong>
+              <small>El supervisor define la posición entre tareas pendientes.</small>
+            </div>
+            <button class="geo-action" type="button" data-demo-action="orden">Cambiar</button>
+          </div>
+        </section>
+      </main>
+
+      <footer class="mobile-footer mobile-footer--2">
+        <button class="action action--ghost" type="button" data-nav="map">Cancelar</button>
+        <button class="action action--primary" type="button" data-save-create>Guardar tarea</button>
+      </footer>
+    </section>
+
+    <!-- ================================================================
+         PAGE: EDIT
+         Vue productivo: MISMO MobileTaskFormPage mode="edit".
+         Se muestra separado solo porque este archivo es un mockup HTML.
+         ================================================================ -->
+    <section class="mobile-page" data-view="edit">
+      <header class="mobile-head">
+        <button class="mobile-head__back" type="button" data-nav="view">←</button>
+        <div class="mobile-head__title">
+          <h1>Editar tarea</h1>
+          <p>Tipo bloqueado y geometría histórica protegida.</p>
+        </div>
+      </header>
+
+      <main class="mobile-scroll task-form" data-form-mode="edit">
+        <div class="notice">
+          Esta tarea registra 2 visitas. La geometría usada para detectar entrada/salida
+          queda protegida.
+        </div>
+
+        <section class="form-section">
+          <h2 class="section-title">Tipo de tarea</h2>
+          <div class="locked">
+            <div class="locked__top">
+              <strong>Finca</strong>
+              <span class="lock-badge">SOLO LECTURA</span>
+            </div>
+            <span>Punto de enrutado + línea de control</span>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">Asignación</h2>
+          <label class="label">Trabajador</label>
+          <select class="select"><option>Pedro Hurtado</option><option>Felix Arauz</option></select>
+
+          <label class="label">Equipo / tracker</label>
+          <select class="select"><option>TopFlyTech SolarGuardX 100</option><option>TRACTOR 84-95</option></select>
+
+          <label class="label">Acompañante</label>
+          <select class="select"><option>ALEXANDER ARCIA</option><option>Sin acompañante</option></select>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">Detalles</h2>
+          <label class="label">Indicaciones</label>
+          <textarea class="textarea">FERTILIZACIÓN</textarea>
+
+          <label class="label">Fecha</label>
+          <input class="input" type="date" value="2026-08-26">
+
+          <label class="label">Duración</label>
+          <div class="duration">
+            <button type="button" data-duration-minus="edit">−</button>
+            <div class="duration__value"><strong><span data-duration-value="edit">60</span> min</strong><span>intervalos de 15 min</span></div>
+            <button type="button" data-duration-plus="edit">＋</button>
+          </div>
+
+          <label class="label">Prioridad</label>
+          <select class="select"><option>Normal</option><option>Urgente</option></select>
+          <div class="helper">Cambiar prioridad no modifica orden_ruta.</div>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">Ubicación y geometría</h2>
+          <div class="geo-row">
+            <div>
+              <strong>Punto de enrutado</strong>
+              <small>Puede recalcular la ruta pendiente.</small>
+            </div>
+            <button class="geo-action" type="button" data-edit-geometry="route-point" data-from="edit">Cambiar</button>
+          </div>
+
+          <div class="geo-row">
+            <div>
+              <strong>Línea de control</strong>
+              <small>Bloqueada porque existen visitas tracker.</small>
+            </div>
+            <button class="geo-action" type="button" disabled>Bloqueada</button>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">Posición en ruta</h2>
+          <div class="route-row">
+            <div class="route-num">4</div>
+            <div>
+              <strong>Después de “Aplicación de herbicida”</strong>
+              <small>Solo se reordena la parte pendiente.</small>
+            </div>
+            <button class="geo-action" type="button" data-demo-action="orden">Cambiar</button>
+          </div>
+        </section>
+      </main>
+
+      <footer class="mobile-footer mobile-footer--2">
+        <button class="action action--ghost" type="button" data-nav="view">Descartar</button>
+        <button class="action action--primary" type="button" data-save-edit>Guardar cambios</button>
+      </footer>
+    </section>
+
+    <!-- ================================================================
+         PAGE: MAP FOCUS
+         Se usa desde VIEW para observar punto/línea/zona sin el formulario.
+         ================================================================ -->
+    <section class="mobile-page mobile-page--map" data-view="map-focus">
+      <div class="map">
+        <div class="field a"></div><div class="field b"></div><div class="field c"></div>
+        <div class="road r1"></div><div class="road r2"></div>
+        <div class="route-line"></div>
+        <div class="focus-line" id="focusLine"></div>
+        <div class="focus-zone" id="focusZone" hidden></div>
+        <div class="marker m2">2</div>
+      </div>
+
+      <div class="map-context-head">
+        <button class="mobile-head__back" type="button" data-return-map>←</button>
+        <div>
+          <strong id="mapFocusTitle">FERTILIZACIÓN</strong>
+          <small id="mapFocusSubtitle">Ubicación de la tarea seleccionada.</small>
+        </div>
+        <button class="mobile-head__action" type="button" data-return-map>Volver</button>
+      </div>
+
+      <div class="map-context-help" id="mapFocusHelp">
+        Vista de contexto. No se edita ninguna geometría desde este estado.
+      </div>
+    </section>
+
+    <!-- ================================================================
+         PAGE: MAP EDIT
+         Se usa desde CREATE / EDIT.
+         Al finalizar vuelve exactamente al formulario que lo abrió.
+         ================================================================ -->
+    <section class="mobile-page mobile-page--map" data-view="map-edit">
+      <div class="map">
+        <div class="field a"></div><div class="field b"></div><div class="field c"></div>
+        <div class="road r1"></div><div class="road r2"></div>
+        <div class="marker m2">P</div>
+        <div class="focus-line" id="editorLine"></div>
+        <div class="focus-zone" id="editorZone" hidden></div>
+      </div>
+
+      <div class="map-context-head">
+        <button class="mobile-head__back" type="button" data-cancel-map-edit>×</button>
+        <div>
+          <strong id="mapEditTitle">Editar geometría</strong>
+          <small id="mapEditSubtitle">Los cambios se aplican al formulario al confirmar.</small>
+        </div>
+        <button class="mobile-head__action mobile-head__action--primary" type="button" data-finish-map-edit>Listo</button>
+      </div>
+
+      <div class="map-context-help" id="mapEditHelp">
+        Arrastra la geometría sobre el mapa. Este mockup simula el flujo; en Vue el
+        editor debe trabajar sobre un draft local y emitir el resultado al confirmar.
+      </div>
+
+      <div class="map-context-footer">
+        <button class="action action--ghost" type="button" data-cancel-map-edit>Cancelar</button>
+        <button class="action action--primary" type="button" data-finish-map-edit>Aplicar</button>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/*
+===============================================================================
+JAVASCRIPT DE DEMOSTRACIÓN
+===============================================================================
+
+En Vue NO manipular clases con querySelector.
+Este JS existe solamente para probar el comportamiento visual.
+
+Vue recomendado:
+
+const mobileView = ref<MobileTrackingView>('map')
+
+Template:
+
+<MobileMapPage
+  v-if="mobileView === 'map'"
+  @tasks="mobileView = 'list'"
+  @create="mobileView = 'create'"
+/>
+
+<MobileTaskListPage
+  v-else-if="mobileView === 'list'"
+  @back="mobileView = 'map'"
+  @select="openTask"
+/>
+
+...
+
+Para preservar formularios al ir a map-edit:
+- mantener el draft en TrackingWorkspace.vue o en un composable;
+- NO destruir el draft al cambiar de vista;
+- map-edit modifica una copia temporal;
+- "Aplicar" actualiza el draft;
+- "Cancelar" vuelve sin mutar el draft.
+===============================================================================
+*/
+
+const pages = [...document.querySelectorAll('[data-view]')];
+
+let currentView = 'map';
+let mapReturnView = 'view';
+let selectedTaskId = '2';
+let geometryKind = 'control-line';
+
+const tasks = {
+  '1': {
+    title:'DESPACHO DE COMBUSTIBLE Y MANTENIMIENTO',
+    subtitle:'Finca · Calle Larga',
+    type:'finca',
+    worker:'Pedro Hurtado'
+  },
+  '2': {
+    title:'FERTILIZACIÓN',
+    subtitle:'Finca · Lote Norte',
+    type:'finca',
+    worker:'Pedro Hurtado'
+  },
+  '3': {
+    title:'APLICACIÓN DE INSUMOS',
+    subtitle:'Zona · Carga Norte',
+    type:'zona',
+    worker:'Pedro Hurtado'
+  },
+  '4': {
+    title:'PERMANENCIA NO IDENTIFICADA',
+    subtitle:'Duda automática',
+    type:'duda',
+    worker:'Sin trabajador resuelto'
+  }
+};
+
+function showView(view){
+  currentView = view;
+  pages.forEach(page => page.classList.toggle('active', page.dataset.view === view));
+
+  // En un componente Vue productivo se recomienda:
+  // nextTick(() => scrollContainer.value?.scrollTo({ top:0 }))
+  const active = pages.find(page => page.dataset.view === view);
+  const scroll = active?.querySelector('.mobile-scroll');
+  if(scroll) scroll.scrollTop = 0;
+}
+
+document.querySelectorAll('[data-nav]').forEach(button => {
+  button.addEventListener('click', () => showView(button.dataset.nav));
+});
+
+document.querySelectorAll('[data-open-task]').forEach(card => {
+  card.addEventListener('click', () => {
+    selectedTaskId = card.dataset.openTask;
+    const task = tasks[selectedTaskId];
+    document.getElementById('detailTitle').textContent = task.title;
+    document.getElementById('detailSubtitle').textContent = task.subtitle;
+    document.getElementById('detailDescription').textContent = task.title;
+    document.getElementById('detailWorker').textContent = task.worker;
+
+    const line = document.getElementById('detailControlLine');
+    const zone = document.getElementById('detailControlZone');
+    const geometry = document.getElementById('detailGeometry');
+
+    if(task.type === 'zona'){
+      document.getElementById('detailTaskType').textContent = 'Zona · punto de enrutado + zona de control';
+      line.hidden = true;
+      zone.hidden = false;
+      geometry.hidden = false;
+    }else if(task.type === 'duda'){
+      document.getElementById('detailTaskType').textContent = 'Duda automática';
+      geometry.hidden = true;
+    }else{
+      document.getElementById('detailTaskType').textContent = 'Finca · punto de enrutado + línea de control';
+      line.hidden = false;
+      zone.hidden = true;
+      geometry.hidden = false;
+    }
+
+    showView('view');
+  });
+});
+
+/* Filtro: aplicar y volver al mapa. */
+document.querySelector('[data-apply-filters]').addEventListener('click', () => {
+  showView('map');
+});
+
+/* CREATE: alterna finca/zona sin cambiar de formulario. */
+const createTypeButtons = [...document.querySelectorAll('[data-type-create]')];
+const createFarm = document.querySelector('[data-create-farm-geometry]');
+const createZone = document.querySelector('[data-create-zone-geometry]');
+
+createTypeButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    createTypeButtons.forEach(item => {
+      item.setAttribute('aria-pressed', String(item === button));
+    });
+
+    const isFarm = button.dataset.typeCreate === 'finca';
+    createFarm.hidden = !isFarm;
+    createZone.hidden = isFarm;
+  });
+});
+
+/* Duración: mismo comportamiento para create/edit. */
+const durationState = { create:60, edit:60 };
+
+function updateDuration(mode, delta){
+  durationState[mode] = Math.max(15, Math.min(10080, durationState[mode] + delta));
+  document.querySelector(`[data-duration-value="${mode}"]`).textContent = durationState[mode];
+}
+
+document.querySelectorAll('[data-duration-minus]').forEach(button => {
+  button.addEventListener('click', () => updateDuration(button.dataset.durationMinus, -15));
+});
+document.querySelectorAll('[data-duration-plus]').forEach(button => {
+  button.addEventListener('click', () => updateDuration(button.dataset.durationPlus, 15));
+});
+
+/*
+  MAP-FOCUS:
+  Desde detail se abre un mapa completo y el botón volver regresa a VIEW.
+*/
+function openMapFocus(kind='task'){
+  mapReturnView = 'view';
+
+  const task = tasks[selectedTaskId] || tasks['2'];
+  document.getElementById('mapFocusTitle').textContent = task.title;
+
+  const line = document.getElementById('focusLine');
+  const zone = document.getElementById('focusZone');
+
+  if(kind === 'control-zone' || task.type === 'zona'){
+    line.hidden = true;
+    zone.hidden = false;
+    document.getElementById('mapFocusSubtitle').textContent = 'Zona de control';
+  }else if(kind === 'control-line'){
+    line.hidden = false;
+    zone.hidden = true;
+    document.getElementById('mapFocusSubtitle').textContent = 'Línea de control';
+  }else{
+    line.hidden = false;
+    zone.hidden = true;
+    document.getElementById('mapFocusSubtitle').textContent = 'Contexto geográfico de la tarea';
+  }
+
+  showView('map-focus');
+}
+
+document.querySelector('[data-focus-map]').addEventListener('click', () => openMapFocus('task'));
+
+document.querySelectorAll('[data-focus-geometry]').forEach(button => {
+  button.addEventListener('click', () => openMapFocus(button.dataset.focusGeometry));
+});
+
+document.querySelectorAll('[data-return-map]').forEach(button => {
+  button.addEventListener('click', () => showView(mapReturnView));
+});
+
+/*
+  MAP-EDIT:
+  from = create | edit
+  kind = route-point | control-line | control-zone
+
+  La vista recuerda de dónde vino para regresar exactamente al formulario.
+*/
+function openMapEdit(kind, from){
+  geometryKind = kind;
+  mapReturnView = from;
+
+  const editorLine = document.getElementById('editorLine');
+  const editorZone = document.getElementById('editorZone');
+  const title = document.getElementById('mapEditTitle');
+  const subtitle = document.getElementById('mapEditSubtitle');
+  const help = document.getElementById('mapEditHelp');
+
+  editorLine.hidden = true;
+  editorZone.hidden = true;
+
+  if(kind === 'control-line'){
+    title.textContent = 'Editar línea de control';
+    subtitle.textContent = 'Finca · geometría de activación';
+    help.textContent = 'Arrastra los extremos para rotar, alargar o acortar la línea. El punto de enrutado permanece como ancla.';
+    editorLine.hidden = false;
+  }else if(kind === 'control-zone'){
+    title.textContent = 'Editar zona de control';
+    subtitle.textContent = 'Zona · geometría de entrada y salida';
+    help.textContent = 'Ajusta los puntos del polígono. La zona no requiere nombre ni descripción.';
+    editorZone.hidden = false;
+  }else{
+    title.textContent = 'Cambiar punto de enrutado';
+    subtitle.textContent = 'Ajustar el punto a la red vial';
+    help.textContent = 'Toca una vía válida para mover el punto. En finca, cambiar el punto puede regenerar la línea de control.';
+  }
+
+  showView('map-edit');
+}
+
+document.querySelectorAll('[data-edit-geometry]').forEach(button => {
+  button.addEventListener('click', () => {
+    openMapEdit(button.dataset.editGeometry, button.dataset.from);
+  });
+});
+
+document.querySelectorAll('[data-finish-map-edit]').forEach(button => {
+  button.addEventListener('click', () => {
+    /*
+      Vue:
+      geometryDraft.value = editorResult
+      emit('update:geometry', editorResult)
+    */
+    showView(mapReturnView);
+  });
+});
+
+document.querySelectorAll('[data-cancel-map-edit]').forEach(button => {
+  button.addEventListener('click', () => {
+    /*
+      Vue:
+      descartar geometryEditorDraft;
+      NO modificar TaskForm.
+    */
+    showView(mapReturnView);
+  });
+});
+
+/* Acciones de guardado simuladas. */
+document.querySelector('[data-save-create]').addEventListener('click', () => {
+  showView('list');
+});
+document.querySelector('[data-save-edit]').addEventListener('click', () => {
+  showView('view');
+});
+
+document.querySelectorAll('[data-demo-action]').forEach(button => {
+  button.addEventListener('click', () => {
+    alert(`Acción simulada: ${button.dataset.demoAction}`);
+  });
+});
+</script>
+</body>
+</html>
