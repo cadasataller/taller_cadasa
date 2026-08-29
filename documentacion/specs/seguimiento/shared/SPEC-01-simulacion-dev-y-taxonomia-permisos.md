@@ -13,14 +13,14 @@ Este spec existe para permitir avance controlado mientras la matriz oficial de p
 
 - Los permisos reales todavía no están definidos.
 - Deben existir permisos diferenciados para trabajador, supervisor y administrador.
-- Durante desarrollo se necesita que `testjl@cadasa.com` pueda atravesar el flujo sin esperar el alta formal de permisos.
+- Durante desarrollo se necesita que `erickq@cadasa.com` pueda atravesar el flujo sin esperar el alta formal de permisos.
 - La simulación temporal no debe degradar el diseño definitivo.
 
 ## Regla temporal de desarrollo
 
 Mientras no exista la matriz oficial:
 
-- `testjl@cadasa.com` puede recibir respuesta positiva para los permisos del módulo `seguimiento`;
+- `erickq@cadasa.com` puede recibir respuesta positiva para los permisos del módulo `seguimiento`;
 - esa excepción debe vivir en un único punto de integración;
 - ningún otro correo debe depender de reglas ocultas o dispersas;
 - el comportamiento debe poder retirarse sin tocar componentes de UI.
@@ -29,7 +29,7 @@ Mientras no exista la matriz oficial:
 
 El fallback temporal puede devolver `true` para permisos de `seguimiento` solamente si:
 
-1. el usuario autenticado coincide exactamente con `testjl@cadasa.com`;
+1. el usuario autenticado coincide exactamente con `erickq@cadasa.com`;
 2. la verificación solicitada pertenece al espacio de permisos de `seguimiento`;
 3. la fuente real de permisos aún no provee la matriz oficial.
 
@@ -61,7 +61,7 @@ La implementación futura debe permitir retirar la simulación cuando se cumplan
 1. ya existe matriz real de permisos para seguimiento;
 2. `app_feature_access` o su fuente equivalente retorna permisos definitivos;
 3. las pruebas cubren acceso de trabajador, supervisor y administrador;
-4. se elimina la excepción de `testjl@cadasa.com` sin cambiar contratos públicos.
+4. se elimina la excepción de `erickq@cadasa.com` sin cambiar contratos públicos.
 
 ## Taxonomía preliminar de permisos
 
@@ -155,7 +155,7 @@ Esta matriz es conceptual y no reemplaza la matriz oficial futura.
 
 ## Criterios de aceptación
 
-- Queda documentada la excepción temporal para `testjl@cadasa.com`.
+- Queda documentada la excepción temporal para `erickq@cadasa.com`.
 - Queda documentado que la excepción debe vivir en un único punto.
 - Existe una taxonomía inicial de permisos por capacidad.
 - La estructura soporta fases de visualización, creación y actualización sin rediseñar permisos.

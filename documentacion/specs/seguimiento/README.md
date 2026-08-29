@@ -27,7 +27,7 @@ La documentación se separa en:
 - El módulo padre se llama `Seguimiento`.
 - La primera subruta es `Tareas`.
 - Debe existir una estrategia de permisos por acción desde el diseño, aunque la matriz real aún no esté publicada.
-- Mientras no existan permisos definitivos, se permitirá una simulación temporal de acceso para `testjl@cadasa.com`.
+- Mientras no existan permisos definitivos, se permitirá una simulación temporal de acceso para `erickq@cadasa.com`.
 - Deben existir tres fases funcionales:
   1. visualización;
   2. creación;

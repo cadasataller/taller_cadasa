@@ -1,7 +1,7 @@
 import { ALL_SEGUIMIENTO_FEATURES } from '@/seguimiento/shared/seguimiento.permissions';
 import type { FuncionalidadPermitida } from './featureAccess.types';
 
-const DEVELOPMENT_EMAIL = 'testjl@cadasa.com';
+const DEVELOPMENT_EMAIL = 'erickq@cadasa.com';
 
 /**
  * Temporary, centralized bridge until Seguimiento is returned by the permissions RPC.
