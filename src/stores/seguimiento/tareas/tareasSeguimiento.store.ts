@@ -100,6 +100,16 @@ export const useTareasSeguimientoStore = defineStore(
               capturedAt: location.capturedAt,
               status: location.currentTaskId ? "at_task" : "available",
               currentTaskId: location.currentTaskId,
+              movementStatus: location.movementStatus ?? tracker.movementStatus,
+              movementStatusUpdatedAt:
+                location.movementStatusUpdatedAt ??
+                tracker.movementStatusUpdatedAt,
+              connectionStatus:
+                location.connectionStatus ?? tracker.connectionStatus,
+              ignition: location.ignition ?? tracker.ignition,
+              ignitionUpdatedAt:
+                location.ignitionUpdatedAt ?? tracker.ignitionUpdatedAt,
+              speed: location.speed ?? tracker.speed,
             }
           : tracker,
       );
@@ -116,6 +126,12 @@ export const useTareasSeguimientoStore = defineStore(
         longitude: location.longitud,
         capturedAt: location.capturada_en,
         currentTaskId: location.tarea_actual_id ?? null,
+        movementStatus: location.movement_status,
+        movementStatusUpdatedAt: location.movement_status_update,
+        connectionStatus: location.connection_status,
+        ignition: location.ignition,
+        ignitionUpdatedAt: location.ignition_update,
+        speed: location.velocidad,
       });
     }
 

@@ -104,5 +104,11 @@ export function mapSeguimientoTracker(
     status,
     currentTaskId:
       row.estado_operativo_codigo === "en_ubicacion" ? row.id : null,
+    movementStatus: null,
+    movementStatusUpdatedAt: null,
+    connectionStatus: null,
+    ignition: null,
+    ignitionUpdatedAt: null,
+    speed: null,
   };
 }

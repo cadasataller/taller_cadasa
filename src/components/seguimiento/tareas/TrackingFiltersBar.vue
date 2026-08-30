@@ -11,6 +11,8 @@ interface Props {
   loading: boolean;
   disabled: boolean;
   showTrackers: boolean;
+  mode?: "toolbar" | "panel";
+  formId?: string;
 }
 const props = defineProps<Props>();
 const emit = defineEmits<{
@@ -25,6 +27,23 @@ const draft = reactive({
   coordinates: "",
 });
 const trackerOptions = computed(() => props.trackers);
+const displayMode = computed(() => props.mode ?? "toolbar");
+const showAreaSelector = computed(() => props.catalog.areas.length > 1);
+const toolbarGridClass = computed(() => {
+  if (showAreaSelector.value && props.showTrackers) {
+    return "md:grid-cols-[minmax(0,.7fr)_minmax(0,.8fr)_minmax(0,.9fr)_minmax(0,1fr)_minmax(0,1.25fr)_2.75rem]";
+  }
+
+  if (showAreaSelector.value) {
+    return "md:grid-cols-[minmax(0,.8fr)_minmax(0,.9fr)_minmax(0,1fr)_minmax(0,1.25fr)_2.75rem]";
+  }
+
+  if (props.showTrackers) {
+    return "md:grid-cols-[minmax(0,.8fr)_minmax(0,.9fr)_minmax(0,1fr)_minmax(0,1.25fr)_2.75rem]";
+  }
+
+  return "md:grid-cols-[minmax(0,.9fr)_minmax(0,1fr)_minmax(0,1.25fr)_2.75rem]";
+});
 const workerOptions = computed(
   () =>
     props.catalog.areas.find((area) => area.id === draft.areaId)?.workers ?? [],
@@ -38,6 +57,20 @@ watch(
     draft.sourceId = filters.sourceId?.toString() ?? "";
   },
   { deep: true },
+);
+watch(
+  () => props.catalog.areas,
+  (areas) => {
+    const [area] = areas;
+
+    if (areas.length !== 1 || !area || draft.areaId === area.id) {
+      return;
+    }
+
+    draft.areaId = area.id;
+    apply();
+  },
+  { immediate: true },
 );
 function apply(): void {
   emit("apply", {
@@ -61,16 +94,25 @@ function focusCoordinates(): void {
 </script>
 <template>
   <form
-    class="flex flex-wrap items-end gap-2 rounded-lg border border-gray-200 bg-white/95 p-2 shadow-md backdrop-blur"
+    :id="props.formId"
+    class="grid min-w-0 gap-2 border border-slate-200 bg-white/95 p-2 shadow-lg shadow-slate-950/10 backdrop-blur"
+    :class="[
+      displayMode === 'panel'
+        ? 'w-full grid-cols-1 rounded-none border-x-0 border-t-0 bg-[#f8f7f4] p-4 shadow-none'
+        : 'w-auto grid-cols-2 rounded-none border-x-0 border-t-0',
+      displayMode === 'toolbar' ? toolbarGridClass : '',
+    ]"
     @submit.prevent="apply"
   >
     <label
-      class="grid min-w-32 flex-1 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-gray-600"
-      ><span>Área</span
+      v-if="showAreaSelector"
+      class="grid min-w-0 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-slate-600"
+      ><span :class="displayMode === 'toolbar' ? 'sr-only' : ''">Área</span
       ><select
         v-model="draft.areaId"
         :disabled="disabled"
-        class="h-11 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        class="h-10 w-full min-w-0 rounded-[0.55rem] border border-slate-200 bg-white px-2.5 text-xs font-medium normal-case text-slate-700 outline-none transition focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        @change="displayMode === 'toolbar' && apply()"
       >
         <option value="">Todas</option>
         <option v-for="area in catalog.areas" :key="area.id" :value="area.id">
@@ -79,21 +121,24 @@ function focusCoordinates(): void {
       </select></label
     >
     <label
-      class="grid min-w-32 flex-1 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-gray-600"
-      ><span>Fecha operativa</span
+      class="grid min-w-0 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-slate-600"
+      ><span :class="displayMode === 'toolbar' ? 'sr-only' : ''">Fecha</span
       ><input
         v-model="draft.scheduledDate"
         :disabled="disabled"
-        class="h-11 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        class="h-10 w-full min-w-0 rounded-[0.55rem] border border-slate-200 bg-white px-2.5 text-xs font-medium normal-case text-slate-700 outline-none transition focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
         type="date"
+        @change="displayMode === 'toolbar' && apply()"
     /></label>
     <label
-      class="grid min-w-32 flex-1 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-gray-600"
-      ><span>Trabajador</span
+      class="grid min-w-0 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-slate-600"
+      ><span :class="displayMode === 'toolbar' ? 'sr-only' : ''"
+        >Trabajador</span
       ><select
         v-model="draft.assignedUserId"
         :disabled="disabled"
-        class="h-11 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        class="h-10 w-full min-w-0 rounded-[0.55rem] border border-slate-200 bg-white px-2.5 text-xs font-medium normal-case text-slate-700 outline-none transition focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        @change="displayMode === 'toolbar' && apply()"
       >
         <option value="">Todos</option>
         <option
@@ -107,12 +152,13 @@ function focusCoordinates(): void {
     >
     <label
       v-if="showTrackers"
-      class="grid min-w-32 flex-1 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-gray-600"
-      ><span>Tracker / equipo</span
+      class="grid min-w-0 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-slate-600"
+      ><span :class="displayMode === 'toolbar' ? 'sr-only' : ''">Tracker</span
       ><select
         v-model="draft.sourceId"
         :disabled="disabled"
-        class="h-11 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        class="h-10 w-full min-w-0 rounded-[0.55rem] border border-slate-200 bg-white px-2.5 text-xs font-medium normal-case text-slate-700 outline-none transition focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        @change="displayMode === 'toolbar' && apply()"
       >
         <option value="">Todos</option>
         <option
@@ -125,29 +171,23 @@ function focusCoordinates(): void {
       </select></label
     >
     <label
-      class="grid min-w-44 flex-[2] gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-gray-600"
-      ><span>Coordenadas</span
+      class="grid min-w-0 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-slate-600"
+      ><span :class="displayMode === 'toolbar' ? 'sr-only' : ''"
+        >Latitud, longitud</span
       ><input
         v-model="draft.coordinates"
         :disabled="disabled"
-        class="h-11 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        class="h-10 w-full min-w-0 rounded-[0.55rem] border border-slate-200 bg-white px-2.5 font-mono text-[11px] font-medium normal-case text-slate-700 outline-none transition focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
         placeholder="8.43, -82.51"
         @keyup.enter.prevent="focusCoordinates"
     /></label>
     <button
-      class="h-11 rounded-md bg-second-dark px-3 text-sm font-bold text-main transition hover:bg-second-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main disabled:cursor-not-allowed disabled:opacity-55"
+      class="h-10 w-11 shrink-0 rounded-[0.55rem] bg-main px-0 text-xs font-extrabold text-white transition hover:bg-main-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main disabled:cursor-not-allowed disabled:opacity-55"
       :disabled="disabled"
       type="button"
       @click="focusCoordinates"
     >
       Ir
-    </button>
-    <button
-      class="h-11 rounded-md bg-main px-3 text-sm font-bold text-white transition hover:bg-main-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main disabled:cursor-not-allowed disabled:opacity-55"
-      :disabled="disabled || loading"
-      type="submit"
-    >
-      {{ loading ? "Aplicando…" : "Aplicar" }}
     </button>
   </form>
 </template>

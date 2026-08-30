@@ -3,6 +3,11 @@ import { onBeforeUnmount, onMounted, useTemplateRef, watch } from "vue";
 import { mapsProviderLoader } from "@/seguimiento/shared/maps/mapsProvider.loader";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
 import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
+import {
+  createTrackerMarkerIcon,
+  getTrackerMarkerTitle,
+} from "@/seguimiento/shared/trackers/trackerMapMarker.helpers";
+import { resolveTrackerMarkerDisplayMode } from "@/seguimiento/shared/trackers/trackerMarkerDisplayMode.strategy";
 import type {
   SeguimientoMapStatus,
   SeguimientoMapToolState,
@@ -29,12 +34,13 @@ const emit = defineEmits<{ ready: []; error: [error: unknown] }>();
 const mapCanvas = useTemplateRef<HTMLDivElement>("mapCanvas");
 let map: any = null;
 let taskMarkers: any[] = [];
-let trackerMarkers: any[] = [];
+let trackerMarkers: { marker: any; tracker: SeguimientoTracker }[] = [];
 let routeLine: any = null;
 let farmBoundaries: any[] = [];
 let farmRoads: any[] = [];
 let shelterMarkers: any[] = [];
 let geographyLabels: any[] = [];
+let zoomListener: any = null;
 
 const isToolEnabled = (tool: SeguimientoMapToolState["tool"]): boolean =>
   props.mapTools.find((item) => item.tool === tool)?.enabled ?? false;
@@ -64,7 +70,8 @@ const geometryCenter = (
 };
 
 function clearLayers(): void {
-  [...taskMarkers, ...trackerMarkers].forEach((marker) => marker.setMap(null));
+  taskMarkers.forEach((marker) => marker.setMap(null));
+  trackerMarkers.forEach(({ marker }) => marker.setMap(null));
   taskMarkers = [];
   trackerMarkers = [];
   routeLine?.setMap(null);
@@ -77,6 +84,18 @@ function clearLayers(): void {
   shelterMarkers = [];
   geographyLabels.forEach((label) => label.setMap(null));
   geographyLabels = [];
+}
+
+function updateTrackerMarkerDisplay(): void {
+  if (!map || !window.google?.maps) return;
+  const displayMode = resolveTrackerMarkerDisplayMode(map.getZoom() ?? 0);
+  const maps = window.google.maps;
+  trackerMarkers.forEach(({ marker, tracker }) => {
+    const visible = displayMode !== "hidden";
+    marker.setVisible(visible);
+    if (visible)
+      marker.setIcon(createTrackerMarkerIcon(tracker, displayMode, maps));
+  });
 }
 
 function renderLayers(): void {
@@ -105,23 +124,34 @@ function renderLayers(): void {
         ];
       }),
     );
-    farmRoads = props.geography.flatMap((area) =>
-      area.farms.flatMap((farm) =>
-        (farm.roadNetwork?.coordinates ?? []).map(
-          (line) =>
-            new maps.Polyline({
-              map,
-              path: line.map(([longitude, latitude]) => ({
-                lat: latitude,
-                lng: longitude,
-              })),
-              strokeColor: "#5D88A8",
-              strokeOpacity: 0.65,
-              strokeWeight: 2,
-            }),
+    farmRoads = props.geography
+      .flatMap((area) =>
+        area.farms.flatMap((farm) =>
+          (farm.roadNetwork?.coordinates ?? []).map((line) => {
+            const path = line.map(([longitude, latitude]) => ({
+              lat: latitude,
+              lng: longitude,
+            }));
+            return [
+              new maps.Polyline({
+                map,
+                path,
+                strokeColor: "#111827",
+                strokeOpacity: 0.86,
+                strokeWeight: 6,
+              }),
+              new maps.Polyline({
+                map,
+                path,
+                strokeColor: "#FACC15",
+                strokeOpacity: 0.96,
+                strokeWeight: 3,
+              }),
+            ];
+          }),
         ),
-      ),
-    );
+      )
+      .flat();
     farmBoundaries.push(
       ...props.geography.flatMap((area) =>
         area.shelters.flatMap((shelter) => {
@@ -230,28 +260,16 @@ function renderLayers(): void {
   if (isToolEnabled("trackers")) {
     trackerMarkers = props.trackers
       .filter((tracker) => tracker.position)
-      .map(
-        (tracker) =>
-          new maps.Marker({
-            map,
-            position: toLatLng(tracker.position!),
-            title: tracker.label,
-            label: {
-              text: "T",
-              color: "#ffffff",
-              fontSize: "11px",
-              fontWeight: "700",
-            },
-            icon: {
-              path: maps.SymbolPath.FORWARD_CLOSED_ARROW,
-              scale: 5,
-              fillColor: "#1A6B9A",
-              fillOpacity: 1,
-              strokeColor: "#ffffff",
-              strokeWeight: 2,
-            },
-          }),
-      );
+      .map((tracker) => ({
+        tracker,
+        marker: new maps.Marker({
+          map,
+          position: toLatLng(tracker.position!),
+          title: getTrackerMarkerTitle(tracker),
+          visible: false,
+        }),
+      }));
+    updateTrackerMarkerDisplay();
   }
   if (isToolEnabled("route")) {
     const routePoints = props.tasks
@@ -303,6 +321,7 @@ async function initializeMap(): Promise<void> {
       fullscreenControl: false,
       clickableIcons: false,
     });
+    zoomListener = map.addListener("zoom_changed", updateTrackerMarkerDisplay);
     renderLayers();
     focusMap();
     emit("ready");
@@ -335,7 +354,10 @@ watch(
 onMounted(() => {
   void initializeMap();
 });
-onBeforeUnmount(clearLayers);
+onBeforeUnmount(() => {
+  zoomListener?.remove();
+  clearLayers();
+});
 </script>
 
 <template>

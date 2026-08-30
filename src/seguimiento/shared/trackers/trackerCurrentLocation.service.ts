@@ -9,6 +9,12 @@ interface TrackerCurrentLocationDto {
   longitud: number;
   capturada_en: string | null;
   tarea_actual_id: string | null;
+  movement_status: string | null;
+  movement_status_update: string | null;
+  connection_status: string | null;
+  ignition: boolean | null;
+  ignition_update: string | null;
+  velocidad: number | null;
 }
 
 function isValidSourceId(sourceId: number): boolean {
@@ -32,6 +38,12 @@ function mapCurrentLocation(
     longitude: location.longitud,
     capturedAt: location.capturada_en,
     currentTaskId: location.tarea_actual_id,
+    movementStatus: location.movement_status,
+    movementStatusUpdatedAt: location.movement_status_update,
+    connectionStatus: location.connection_status,
+    ignition: location.ignition,
+    ignitionUpdatedAt: location.ignition_update,
+    speed: location.velocidad,
   };
 }
 

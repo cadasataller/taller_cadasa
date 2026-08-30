@@ -11,6 +11,12 @@ export interface SeguimientoTracker {
   capturedAt: string | null;
   status: TrackerOperationalStatus;
   currentTaskId: string | null;
+  movementStatus: string | null;
+  movementStatusUpdatedAt: string | null;
+  connectionStatus: string | null;
+  ignition: boolean | null;
+  ignitionUpdatedAt: string | null;
+  speed: number | null;
 }
 
 export interface TrackerLocationBroadcast {
@@ -34,6 +40,12 @@ export interface TrackerLocationBroadcast {
   ultimo_evento_clave: string;
   ultimo_resultado?: string;
   actualizado_en: string;
+  movement_status?: string | null;
+  movement_status_update?: string | null;
+  connection_status?: string | null;
+  ignition?: boolean | null;
+  ignition_update?: string | null;
+  velocidad?: number | null;
 }
 
 export interface TrackerCurrentLocation {
@@ -44,6 +56,12 @@ export interface TrackerCurrentLocation {
   longitude: number;
   capturedAt: string | null;
   currentTaskId: string | null;
+  movementStatus?: string | null;
+  movementStatusUpdatedAt?: string | null;
+  connectionStatus?: string | null;
+  ignition?: boolean | null;
+  ignitionUpdatedAt?: string | null;
+  speed?: number | null;
 }
 
 export interface TrackerVisitSummary {

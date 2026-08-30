@@ -57,16 +57,26 @@ const canViewTrackers = computed(
     !featureAccess.isLoaded ||
     featureAccess.tieneFuncionalidad(SEGUIMIENTO_FEATURES.viewTaskTracker),
 );
+const isImplicitAreaSelection = computed(() => {
+  const [onlyArea] = catalog.value.areas;
+
+  return (
+    catalog.value.areas.length === 1 && filters.value.areaId === onlyArea?.id
+  );
+});
 const hasActiveFilters = computed(() =>
   Boolean(
     filters.value.search ||
     filters.value.scheduledDate ||
-    filters.value.areaId ||
+    (filters.value.areaId && !isImplicitAreaSelection.value) ||
     filters.value.assignedUserId ||
     filters.value.sourceId ||
     filters.value.types.length ||
     filters.value.statuses.length,
   ),
+);
+const desktopFiltersPosition = computed(() =>
+  panelMode.value === "view" ? "md:right-[23rem]" : "md:right-0",
 );
 function applyFilters(next: Partial<TareasSeguimientoFilters>): void {
   updateFilters(next);
@@ -92,6 +102,9 @@ function closeTaskDetail(): void {
 }
 function resetMap(): void {
   mapFocus.value = null;
+}
+function reloadMapData(): void {
+  void retry();
 }
 function clearFilters(): void {
   applyFilters({
@@ -133,7 +146,9 @@ function clearFilters(): void {
       No tienes acceso al mapa de seguimiento.
     </div>
     <TrackingFiltersBar
-      class="absolute left-3 right-3 top-3 z-30 hidden md:flex md:left-[22rem] md:right-20"
+      class="absolute left-0 right-0 top-0 z-30 hidden min-w-0 transition-[right] duration-200 md:grid md:left-[20.5rem]"
+      :class="desktopFiltersPosition"
+      mode="toolbar"
       :filters="filters"
       :trackers="trackers"
       :catalog="catalog"
@@ -160,14 +175,16 @@ function clearFilters(): void {
           ←
         </button>
         <div>
-          <h1 class="text-sm font-bold text-slate-800">Filtros</h1>
+          <h1 class="text-sm font-bold text-slate-800">Filtros del mapa</h1>
           <p class="text-[11px] text-slate-500">
-            Ajusta el contexto operativo visible.
+            Contexto operativo y búsqueda por coordenadas.
           </p>
         </div>
       </header>
-      <div class="min-h-0 flex-1 overflow-y-auto p-3">
+      <div class="min-h-0 flex-1 overflow-y-auto">
         <TrackingFiltersBar
+          mode="panel"
+          form-id="tracking-mobile-filters"
           :filters="filters"
           :trackers="trackers"
           :catalog="catalog"
@@ -178,12 +195,32 @@ function clearFilters(): void {
           @focus="focusMap"
         />
       </div>
+      <footer
+        class="grid grid-cols-[1fr_1.25fr] gap-2 border-t border-slate-200 bg-white p-3"
+      >
+        <button
+          class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
+          type="button"
+          @click="mobileView = 'map'"
+        >
+          Cancelar
+        </button>
+        <button
+          class="h-11 rounded-lg bg-main px-3 text-sm font-extrabold text-white transition hover:bg-main-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main disabled:cursor-not-allowed disabled:opacity-55"
+          :disabled="!canViewMap || loadingInitial"
+          type="submit"
+          form="tracking-mobile-filters"
+        >
+          {{ loadingInitial ? "Aplicando…" : "Aplicar filtros" }}
+        </button>
+      </footer>
     </section>
     <MapToolsOverlay
       v-if="canViewMap"
       class="absolute right-4 top-56 z-30 hidden md:grid md:top-[5.5rem]"
       :tools="mapTools"
       :disabled="mapStatus === 'error'"
+      @reload="reloadMapData"
       @reset="resetMap"
       @toggle="toggleMapTool"
       @focus-selected="focusMap(selectedTask?.routePoint ?? null)"

@@ -79,6 +79,12 @@ function mapTrackerList(
         capturedAt: null,
         status: "without_data",
         currentTaskId: null,
+        movementStatus: null,
+        movementStatusUpdatedAt: null,
+        connectionStatus: null,
+        ignition: null,
+        ignitionUpdatedAt: null,
+        speed: null,
       },
     ];
   });
