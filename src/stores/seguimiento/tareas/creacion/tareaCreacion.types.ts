@@ -9,6 +9,8 @@ export type TareaCreacionTipo = "finca" | "zona";
 
 export type TareaCreacionEstadoEnvio =
   "idle" | "validating" | "submitting" | "success" | "error";
+export type TareaCreacionEstadoFlujo =
+  "idle" | "editing" | "validating" | "submitting" | "success" | "error";
 
 export interface TareaCreacionTrabajadorSeleccionado {
   id: string;

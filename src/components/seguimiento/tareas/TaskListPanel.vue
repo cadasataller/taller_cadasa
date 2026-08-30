@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef } from "vue";
-import { AlertTriangle, ListFilter, SearchX } from "lucide-vue-next";
+import { AlertTriangle, ListFilter, Plus, SearchX } from "lucide-vue-next";
 import TaskCard from "./TaskCard.vue";
 import type { TareaSeguimientoListItem } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 
@@ -12,6 +12,7 @@ const props = defineProps<{
   search: string;
   hasActiveFilters: boolean;
   showBack?: boolean;
+  canCreate?: boolean;
 }>();
 const emit = defineEmits<{
   select: [taskId: string];
@@ -19,6 +20,7 @@ const emit = defineEmits<{
   updateSearch: [value: string];
   clearFilters: [];
   back: [];
+  create: [];
 }>();
 const localSegment = shallowRef<"all" | "active" | "doubt">("all");
 const localTasks = computed(() =>
@@ -60,10 +62,20 @@ const panelMessage = computed(() =>
           </p>
           <h1 class="mt-0.5 text-xl font-bold text-main">Tareas</h1>
         </div>
-        <span
-          class="rounded-full bg-second px-2.5 py-1 text-xs font-extrabold text-main"
-          >{{ tasks.length }}</span
-        >
+        <div class="flex items-center gap-2">
+          <button
+            v-if="canCreate"
+            class="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-main px-3 text-xs font-bold text-white transition hover:bg-main-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
+            type="button"
+            @click="emit('create')"
+          >
+            <Plus class="size-3.5" aria-hidden="true" />Nueva
+          </button>
+          <span
+            class="rounded-full bg-second px-2.5 py-1 text-xs font-extrabold text-main"
+            >{{ tasks.length }}</span
+          >
+        </div>
       </div>
       <p class="mt-1 text-xs leading-5 text-slate-500">
         Explora tareas, su contexto y estado operativo.

@@ -4,10 +4,12 @@ import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_acc
 import MapToolsOverlay from "@/components/seguimiento/tareas/MapToolsOverlay.vue";
 import MobileMapActions from "@/components/seguimiento/tareas/MobileMapActions.vue";
 import TaskDetailPanel from "@/components/seguimiento/tareas/TaskDetailPanel.vue";
+import TaskCreatePanel from "@/components/seguimiento/tareas/create/TaskCreatePanel.vue";
 import TaskListPanel from "@/components/seguimiento/tareas/TaskListPanel.vue";
 import TrackingFiltersBar from "@/components/seguimiento/tareas/TrackingFiltersBar.vue";
 import TrackingMapWorkspace from "@/components/seguimiento/tareas/TrackingMapWorkspace.vue";
 import { useSeguimientoTareasView } from "@/composables/seguimiento/useSeguimientoTareasView";
+import { useSeguimientoTareaCreacion } from "@/composables/seguimiento/useSeguimientoTareaCreacion";
 import { SEGUIMIENTO_FEATURES } from "@/seguimiento/shared/seguimiento.permissions";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
 import type {
@@ -44,6 +46,21 @@ const {
   toggleMapTool,
   updateFilters,
 } = useSeguimientoTareasView();
+const {
+  draft: createDraft,
+  isPanelOpen: isCreatePanelOpen,
+  isDiscardConfirmationOpen,
+  validationErrors: createValidationErrors,
+  openCreate,
+  requestCloseCreate,
+  continueCreateEditing,
+  discardCreate,
+  updateType,
+  updateWorker,
+  updateTracker,
+  updateCompanion,
+  updateDetails,
+} = useSeguimientoTareaCreacion();
 const mapFocus = shallowRef<SeguimientoCoordinates | null>(null);
 const crossFilter = shallowRef<SeguimientoCrossFilter>({
   workerId: null,
@@ -61,6 +78,16 @@ const canViewTrackers = computed(
   () =>
     !featureAccess.isLoaded ||
     featureAccess.tieneFuncionalidad(SEGUIMIENTO_FEATURES.viewTaskTracker),
+);
+const canCreateTasks = computed(
+  () =>
+    featureAccess.isLoaded &&
+    featureAccess.tieneFuncionalidad(SEGUIMIENTO_FEATURES.createTasks),
+);
+const createWorkers = computed(
+  () =>
+    catalog.value.areas.find((area) => area.id === createDraft.value.areaId)
+      ?.workers ?? [],
 );
 const isImplicitAreaSelection = computed(() => {
   const [onlyArea] = catalog.value.areas;
@@ -83,7 +110,9 @@ const hasActiveFilters = computed(() =>
   ),
 );
 const desktopFiltersPosition = computed(() =>
-  panelMode.value === "view" ? "md:right-[23rem]" : "md:right-0",
+  panelMode.value === "view" || isCreatePanelOpen.value
+    ? "md:right-[23rem]"
+    : "md:right-0",
 );
 const locallyFilteredTasks = computed(() =>
   visibleTasks.value.filter(
@@ -115,6 +144,25 @@ function openTask(taskId: string): void {
 function closeTaskDetail(): void {
   closeDetail();
   mobileView.value = "list";
+}
+function startCreate(): void {
+  if (!canCreateTasks.value) return;
+  closeDetail();
+  mobileView.value = "view";
+  openCreate(filters.value.areaId ?? catalog.value.areas[0]?.id ?? null);
+}
+function selectCreateWorker(workerId: string): void {
+  updateWorker(
+    createWorkers.value.find((worker) => worker.id === workerId) ?? null,
+  );
+}
+function selectCreateTracker(sourceId: number): void {
+  const tracker = trackers.value.find((item) => item.sourceId === sourceId);
+  updateTracker(
+    tracker
+      ? { id: tracker.id, sourceId: tracker.sourceId, label: tracker.label }
+      : null,
+  );
 }
 function resetMap(): void {
   mapFocus.value = null;
@@ -283,14 +331,16 @@ function clearFilters(): void {
       :search="filters.search"
       :has-active-filters="hasActiveFilters"
       :show-back="true"
+      :can-create="canCreateTasks"
       @select="openTask"
       @retry="retry"
       @update-search="updateFilters({ search: $event })"
       @clear-filters="clearFilters"
       @back="mobileView = 'map'"
+      @create="startCreate"
     />
     <TaskDetailPanel
-      v-if="panelMode === 'view'"
+      v-if="panelMode === 'view' && !isCreatePanelOpen"
       class="fixed inset-0 z-50 max-h-none md:absolute md:inset-y-0 md:left-auto md:right-0 md:z-40 md:w-[23rem]"
       :class="mobileView === 'view' ? '' : 'max-md:hidden'"
       :task="detail ?? selectedTask"
@@ -299,6 +349,24 @@ function clearFilters(): void {
       @close="closeTaskDetail"
       @focus="focusTaskOnMap"
       @retry="selectedTaskId && selectTask(selectedTaskId)"
+    />
+    <TaskCreatePanel
+      v-if="isCreatePanelOpen"
+      class="fixed inset-0 z-50 max-h-none md:absolute md:inset-y-0 md:left-auto md:right-0 md:z-40 md:w-[23rem]"
+      :class="mobileView === 'view' ? '' : 'max-md:hidden'"
+      :draft="createDraft"
+      :workers="createWorkers"
+      :trackers="trackers"
+      :errors="createValidationErrors"
+      :show-discard-confirmation="isDiscardConfirmationOpen"
+      @close="requestCloseCreate"
+      @continue-editing="continueCreateEditing"
+      @discard="discardCreate"
+      @update:type="updateType"
+      @update:worker="selectCreateWorker"
+      @update:tracker="selectCreateTracker"
+      @update:companion="updateCompanion"
+      @update:details="updateDetails"
     />
   </section>
 </template>
