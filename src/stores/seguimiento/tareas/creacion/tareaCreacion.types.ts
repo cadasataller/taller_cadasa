@@ -42,6 +42,10 @@ export interface TareaCreacionGeometria {
   controlZone: SeguimientoControlZone | null;
 }
 
+export type TareaCreacionModoGeometria = "point" | "line" | "zone" | null;
+export type TareaCreacionEstadoGeometria =
+  "empty" | "captured" | "editing" | "invalid" | "remote-error";
+
 export interface TareaCreacionRuta {
   order: number | null;
 }

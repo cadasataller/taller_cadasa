@@ -16,5 +16,10 @@ export function useSeguimientoTareaCreacion() {
     updateTracker: store.updateTracker,
     updateCompanion: store.updateCompanion,
     updateDetails: store.updateDetails,
+    updateGeometry: store.updateGeometry,
+    updateRoute: store.updateRoute,
+    beginGeometryEdit: store.beginGeometryEdit,
+    finishGeometryEdit: store.finishGeometryEdit,
+    submitCreate: store.submit,
   };
 }

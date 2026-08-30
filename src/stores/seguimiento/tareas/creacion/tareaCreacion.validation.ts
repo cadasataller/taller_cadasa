@@ -7,6 +7,11 @@ import type {
   TareaCreacionErrorValidacion,
   TareaCreacionResultadoValidacion,
 } from "./tareaCreacion.types";
+import {
+  isValidControlLine,
+  isValidControlZone,
+  isValidRoutePoint,
+} from "./tareaCreacion.geometry";
 
 const minutesSchema = z.number().int().min(15).max(10080).multipleOf(15);
 const isoDateSchema = z
@@ -50,8 +55,20 @@ const creationDraftSchema = z
           longitude: z.number().finite(),
         })
         .nullable(),
-      controlLine: z.unknown().nullable(),
-      controlZone: z.unknown().nullable(),
+      controlLine: z
+        .object({
+          type: z.literal("MultiLineString"),
+          coordinates: z.array(z.array(z.tuple([z.number(), z.number()]))),
+        })
+        .nullable(),
+      controlZone: z
+        .object({
+          type: z.literal("MultiPolygon"),
+          coordinates: z.array(
+            z.array(z.array(z.tuple([z.number(), z.number()]))),
+          ),
+        })
+        .nullable(),
     }),
     route: z.object({ order: z.number().int().positive().nullable() }),
   })
@@ -86,7 +103,8 @@ const creationDraftSchema = z
     }
     if (
       draft.type === "finca" &&
-      (!draft.geometry.locationId || !draft.geometry.controlLine)
+      (!draft.geometry.locationId ||
+        !isValidControlLine(draft.geometry.controlLine))
     ) {
       context.addIssue({
         code: "custom",
@@ -96,7 +114,8 @@ const creationDraftSchema = z
     }
     if (
       draft.type === "zona" &&
-      (!draft.geometry.controlZone || draft.geometry.locationId !== null)
+      (!isValidControlZone(draft.geometry.controlZone) ||
+        draft.geometry.locationId !== null)
     ) {
       context.addIssue({
         code: "custom",
@@ -104,7 +123,7 @@ const creationDraftSchema = z
         message: "La zona requiere polígono de control y no usa ubicación.",
       });
     }
-    if (!draft.geometry.routePoint) {
+    if (!isValidRoutePoint(draft.geometry.routePoint)) {
       context.addIssue({
         code: "custom",
         path: ["geometry"],

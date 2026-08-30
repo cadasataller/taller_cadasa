@@ -1,12 +1,17 @@
 import { computed, ref, shallowRef, toRaw } from "vue";
 import { defineStore } from "pinia";
 import { validateTareaCreacionDraft } from "./tareaCreacion.validation";
+import { toCrearTareaV2Params } from "./tareaCreacion.payload";
+import { tareaCreacionService } from "./tareaCreacion.service";
+import { toTareaCreacionRemoteError } from "./tareaCreacion.validation";
 import type {
   TareaCreacionBloquesValidos,
   TareaCreacionBorrador,
   TareaCreacionErrorRemoto,
   TareaCreacionErrorValidacion,
   TareaCreacionEstadoFlujo,
+  TareaCreacionModoGeometria,
+  TareaCreacionRespuestaRpc,
   TareaCreacionTipo,
   TareaCreacionTrackerSeleccionado,
   TareaCreacionTrabajadorSeleccionado,
@@ -53,6 +58,7 @@ export const useTareaCreacionStore = defineStore(
     const flowState = shallowRef<TareaCreacionEstadoFlujo>("idle");
     const validationErrors = ref<TareaCreacionErrorValidacion[]>([]);
     const remoteError = shallowRef<TareaCreacionErrorRemoto | null>(null);
+    const geometryMode = shallowRef<TareaCreacionModoGeometria>(null);
     const isDiscardConfirmationOpen = shallowRef(false);
     const hasUnsavedChanges = computed(
       () => JSON.stringify(draft.value) !== JSON.stringify(originalDraft.value),
@@ -83,6 +89,7 @@ export const useTareaCreacionStore = defineStore(
         controlLine: null,
         controlZone: null,
       };
+      geometryMode.value = null;
       flowState.value = "editing";
       refreshValidation();
     }
@@ -106,6 +113,54 @@ export const useTareaCreacionStore = defineStore(
     ): void {
       draft.value.details = { ...draft.value.details, ...next };
       refreshValidation();
+    }
+    function updateGeometry(
+      next: Partial<TareaCreacionBorrador["geometry"]>,
+    ): void {
+      draft.value.geometry = { ...draft.value.geometry, ...next };
+      remoteError.value = null;
+      refreshValidation();
+    }
+    function updateRoute(order: number | null): void {
+      draft.value.route = { order };
+      remoteError.value = null;
+      refreshValidation();
+    }
+    function beginGeometryEdit(
+      mode: Exclude<TareaCreacionModoGeometria, null>,
+    ): void {
+      geometryMode.value = mode;
+      remoteError.value = null;
+    }
+    function finishGeometryEdit(): void {
+      geometryMode.value = null;
+      refreshValidation();
+    }
+    async function submit(): Promise<TareaCreacionRespuestaRpc | null> {
+      refreshValidation();
+      if (validationErrors.value.length) {
+        flowState.value = "editing";
+        return null;
+      }
+      flowState.value = "submitting";
+      draft.value.submitStatus = "submitting";
+      remoteError.value = null;
+      try {
+        const result = await tareaCreacionService.create(
+          toCrearTareaV2Params(draft.value),
+        );
+        flowState.value = "success";
+        draft.value.submitStatus = "success";
+        originalDraft.value = copyDraft(draft.value);
+        geometryMode.value = null;
+        isPanelOpen.value = false;
+        return result;
+      } catch (error) {
+        remoteError.value = toTareaCreacionRemoteError(error);
+        flowState.value = "error";
+        draft.value.submitStatus = "error";
+        return null;
+      }
     }
     function requestClose(): boolean {
       if (isSubmitLocked.value) return false;
@@ -137,6 +192,7 @@ export const useTareaCreacionStore = defineStore(
       flowState,
       validationErrors,
       remoteError,
+      geometryMode,
       isDiscardConfirmationOpen,
       hasUnsavedChanges,
       isSubmitLocked,
@@ -147,6 +203,11 @@ export const useTareaCreacionStore = defineStore(
       updateTracker,
       updateCompanion,
       updateDetails,
+      updateGeometry,
+      updateRoute,
+      beginGeometryEdit,
+      finishGeometryEdit,
+      submit,
       requestClose,
       close,
       continueEditing,

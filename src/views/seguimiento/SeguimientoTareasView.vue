@@ -60,6 +60,14 @@ const {
   updateTracker,
   updateCompanion,
   updateDetails,
+  updateGeometry,
+  updateRoute,
+  geometryMode,
+  beginGeometryEdit,
+  finishGeometryEdit,
+  remoteError: createRemoteError,
+  isSubmitLocked: isCreateSubmitting,
+  submitCreate,
 } = useSeguimientoTareaCreacion();
 const mapFocus = shallowRef<SeguimientoCoordinates | null>(null);
 const crossFilter = shallowRef<SeguimientoCrossFilter>({
@@ -164,6 +172,15 @@ function selectCreateTracker(sourceId: number): void {
       : null,
   );
 }
+function submitTaskCreate(): void {
+  void submitCreate().then((result) => {
+    if (!result) return;
+    finishGeometryEdit();
+    const taskId = typeof result.tarea_id === "string" ? result.tarea_id : null;
+    if (taskId) void selectTask(taskId);
+    else void retry();
+  });
+}
 function resetMap(): void {
   mapFocus.value = null;
 }
@@ -200,8 +217,20 @@ function clearFilters(): void {
       :focus="mapFocus"
       :map-configuration="mapConfiguration"
       :geography="geography"
+      :creation-geometry-mode="geometryMode"
       @ready="setMapReady"
       @error="setMapError"
+      @capture:route-point="updateGeometry({ routePoint: $event })"
+      @capture:control-line="
+        updateGeometry({
+          controlLine: { type: 'MultiLineString', coordinates: $event },
+        })
+      "
+      @capture:control-zone="
+        updateGeometry({
+          controlZone: { type: 'MultiPolygon', coordinates: $event },
+        })
+      "
     />
     <div
       v-else
@@ -359,6 +388,10 @@ function clearFilters(): void {
       :trackers="trackers"
       :errors="createValidationErrors"
       :show-discard-confirmation="isDiscardConfirmationOpen"
+      :geography="geography"
+      :geometry-mode="geometryMode"
+      :remote-error="createRemoteError?.message ?? null"
+      :submitting="isCreateSubmitting"
       @close="requestCloseCreate"
       @continue-editing="continueCreateEditing"
       @discard="discardCreate"
@@ -367,6 +400,11 @@ function clearFilters(): void {
       @update:tracker="selectCreateTracker"
       @update:companion="updateCompanion"
       @update:details="updateDetails"
+      @update:geometry="updateGeometry"
+      @update:route="updateRoute"
+      @edit:geometry="beginGeometryEdit"
+      @finish:geometry="finishGeometryEdit"
+      @submit="submitTaskCreate"
     />
   </section>
 </template>

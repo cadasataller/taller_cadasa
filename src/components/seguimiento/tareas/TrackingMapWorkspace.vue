@@ -6,6 +6,7 @@ import {
   seguimientoMapZIndex,
 } from "@/seguimiento/shared/maps/mapZoomHierarchy.strategy";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
+import type { TareaCreacionModoGeometria } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
 import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
 import {
   createTrackerMarkerIcon,
@@ -33,8 +34,15 @@ const props = defineProps<{
     zoom: number;
   } | null;
   geography: SeguimientoOperationalGeography[];
+  creationGeometryMode?: TareaCreacionModoGeometria;
 }>();
-const emit = defineEmits<{ ready: []; error: [error: unknown] }>();
+const emit = defineEmits<{
+  ready: [];
+  error: [error: unknown];
+  "capture:route-point": [coordinates: SeguimientoCoordinates];
+  "capture:control-line": [coordinates: number[][][]];
+  "capture:control-zone": [coordinates: number[][][][]];
+}>();
 const mapCanvas = useTemplateRef<HTMLDivElement>("mapCanvas");
 let map: any = null;
 let taskMarkers: { marker: any; selected: boolean }[] = [];
@@ -47,6 +55,8 @@ let shelterMarkers: any[] = [];
 let geographyLabels: any[] = [];
 let shelterInfoWindow: any = null;
 let zoomListener: any = null;
+let creationClickListener: any = null;
+let creationVertices: number[][] = [];
 
 const isToolEnabled = (tool: SeguimientoMapToolState["tool"]): boolean =>
   props.mapTools.find((item) => item.tool === tool)?.enabled ?? false;
@@ -457,6 +467,28 @@ async function initializeMap(): Promise<void> {
       clickableIcons: false,
     });
     zoomListener = map.addListener("zoom_changed", updateZoomDrivenLayers);
+    creationClickListener = map.addListener("click", (event: any) => {
+      const point = event.latLng;
+      if (!point || !props.creationGeometryMode) return;
+      const coordinate = [point.lng(), point.lat()];
+      if (props.creationGeometryMode === "point") {
+        emit("capture:route-point", {
+          latitude: coordinate[1],
+          longitude: coordinate[0],
+        });
+        return;
+      }
+      creationVertices = [...creationVertices, coordinate];
+      if (props.creationGeometryMode === "line")
+        emit("capture:control-line", [creationVertices]);
+      if (props.creationGeometryMode === "zone") {
+        const ring =
+          creationVertices.length >= 3
+            ? [...creationVertices, creationVertices[0]]
+            : creationVertices;
+        emit("capture:control-zone", [[ring]]);
+      }
+    });
     renderLayers();
     focusMap();
     emit("ready");
@@ -478,6 +510,12 @@ watch(
 );
 watch(() => props.focus, focusMap);
 watch(
+  () => props.creationGeometryMode,
+  () => {
+    creationVertices = [];
+  },
+);
+watch(
   () => props.mapConfiguration,
   (configuration) => {
     if (map && configuration) {
@@ -491,6 +529,7 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   zoomListener?.remove();
+  creationClickListener?.remove();
   clearLayers();
 });
 </script>

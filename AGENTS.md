@@ -7,3 +7,5 @@ valida que los specs de segumineot usan la conexion de supabaseRastreoTareas sin
 usa iconos de lucide icon
 
 valida si tiene zod instalado, si lo tien cualquier logica de validacion que puedaser reempzlad por zod, sino esta instlado detente y pide que lo instale
+
+si hay algun componente que usa input date usa la libreria vue date picker que esya instalado, sino lo esta detente y pide qye lo instale, adapta la logica de fecha que se neceati al date picker vue

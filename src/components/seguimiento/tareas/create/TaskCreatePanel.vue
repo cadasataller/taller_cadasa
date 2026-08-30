@@ -1,14 +1,20 @@
 <script setup lang="ts">
-import { AlertTriangle, MapPin, X } from "lucide-vue-next";
+import { AlertTriangle, MapPin, Save, X } from "lucide-vue-next";
 import TaskAssignmentSection from "./TaskAssignmentSection.vue";
 import TaskDetailsSection from "./TaskDetailsSection.vue";
 import TaskTypeSelector from "./TaskTypeSelector.vue";
+import TaskGeometrySection from "./TaskGeometrySection.vue";
+import TaskRoutePosition from "./TaskRoutePosition.vue";
 import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
-import type { SeguimientoTaskWorkerOption } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
+import type {
+  SeguimientoOperationalGeography,
+  SeguimientoTaskWorkerOption,
+} from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 import type {
   TareaCreacionBorrador,
   TareaCreacionErrorValidacion,
   TareaCreacionTipo,
+  TareaCreacionModoGeometria,
 } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
 const props = defineProps<{
   draft: TareaCreacionBorrador;
@@ -16,6 +22,10 @@ const props = defineProps<{
   trackers: SeguimientoTracker[];
   errors: TareaCreacionErrorValidacion[];
   showDiscardConfirmation: boolean;
+  geography: SeguimientoOperationalGeography[];
+  geometryMode: TareaCreacionModoGeometria;
+  remoteError: string | null;
+  submitting: boolean;
 }>();
 const emit = defineEmits<{
   close: [];
@@ -26,6 +36,11 @@ const emit = defineEmits<{
   "update:tracker": [value: number];
   "update:companion": [value: string | null];
   "update:details": [value: Partial<TareaCreacionBorrador["details"]>];
+  "update:geometry": [value: Partial<TareaCreacionBorrador["geometry"]>];
+  "update:route": [value: number | null];
+  "edit:geometry": [value: Exclude<TareaCreacionModoGeometria, null>];
+  "finish:geometry": [];
+  submit: [];
 }>();
 const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
   props.errors.find((error) => error.field === field)?.message ?? null;
@@ -86,13 +101,40 @@ const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
         :error="errorFor('details')"
         @update:details="emit('update:details', $event)"
       />
-      <section class="border-t border-slate-100 py-4">
-        <p class="text-xs font-bold text-slate-700">Ubicación y geometría</p>
-        <p class="mt-1 text-[11px] leading-5 text-slate-500">
-          Se configura en el mapa al continuar el flujo de creación.
-        </p>
-      </section>
+      <TaskGeometrySection
+        :type="draft.type"
+        :geometry="draft.geometry"
+        :geography="geography"
+        :area-id="draft.areaId"
+        :mode="geometryMode"
+        :error="errorFor('geometry')"
+        @update:location="emit('update:geometry', { locationId: $event })"
+        @edit="emit('edit:geometry', $event)"
+        @finish="emit('finish:geometry')"
+      />
+      <TaskRoutePosition
+        :order="draft.route.order"
+        :error="errorFor('route')"
+        @update:order="emit('update:route', $event)"
+      />
+      <p
+        v-if="remoteError"
+        class="mb-3 rounded-lg border border-danger/30 bg-danger-bg p-3 text-[11px] leading-5 text-danger"
+        role="alert"
+      >
+        {{ remoteError }}
+      </p>
     </div>
+    <footer class="border-t border-slate-200 bg-white p-3">
+      <button
+        class="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-main px-3 text-xs font-extrabold text-white transition hover:bg-main-light disabled:cursor-not-allowed disabled:opacity-55"
+        :disabled="submitting"
+        type="button"
+        @click="emit('submit')"
+      >
+        <Save class="size-4" />{{ submitting ? "Guardando…" : "Guardar tarea" }}
+      </button>
+    </footer>
     <div
       v-if="showDiscardConfirmation"
       class="border-t border-warning/30 bg-warning-bg p-3"

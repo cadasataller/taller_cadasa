@@ -47,6 +47,23 @@ const emit = defineEmits<{
         "
     /></label>
     <label class="mt-3 block text-xs font-bold text-slate-700"
+      >Prioridad <span class="text-danger">*</span
+      ><input
+        class="mt-1.5 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-800 outline-none focus:border-main focus:ring-2 focus:ring-main/15"
+        type="number"
+        min="1"
+        step="1"
+        :value="details.priorityId ?? ''"
+        placeholder="Define la prioridad operativa"
+        @input="
+          emit('update:details', {
+            priorityId: ($event.target as HTMLInputElement).value
+              ? Number(($event.target as HTMLInputElement).value)
+              : null,
+          })
+        "
+    /></label>
+    <label class="mt-3 block text-xs font-bold text-slate-700"
       >Duración estimada <span class="text-danger">*</span
       ><DurationStepper
         :model-value="details.estimatedMinutes"
