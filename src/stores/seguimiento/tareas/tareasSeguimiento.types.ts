@@ -22,6 +22,12 @@ export interface TareasSeguimientoFilters {
   search: string;
 }
 
+/** Filtro visual aplicado sobre las tareas ya cargadas, sin consultar el RPC. */
+export interface SeguimientoCrossFilter {
+  workerId: string | null;
+  sourceId: number | null;
+}
+
 export interface ListarTareasRastreoV2Params {
   p_area_id: string | null;
   p_fecha: string | null;

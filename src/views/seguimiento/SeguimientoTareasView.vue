@@ -11,6 +11,7 @@ import { useSeguimientoTareasView } from "@/composables/seguimiento/useSeguimien
 import { SEGUIMIENTO_FEATURES } from "@/seguimiento/shared/seguimiento.permissions";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
 import type {
+  SeguimientoCrossFilter,
   SeguimientoMapTool,
   TareasSeguimientoFilters,
 } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
@@ -44,6 +45,10 @@ const {
   updateFilters,
 } = useSeguimientoTareasView();
 const mapFocus = shallowRef<SeguimientoCoordinates | null>(null);
+const crossFilter = shallowRef<SeguimientoCrossFilter>({
+  workerId: null,
+  sourceId: null,
+});
 const mobileView = shallowRef<
   "map" | "filters" | "list" | "view" | "map-focus"
 >("map");
@@ -71,12 +76,23 @@ const hasActiveFilters = computed(() =>
     (filters.value.areaId && !isImplicitAreaSelection.value) ||
     filters.value.assignedUserId ||
     filters.value.sourceId ||
+    crossFilter.value.workerId ||
+    crossFilter.value.sourceId !== null ||
     filters.value.types.length ||
     filters.value.statuses.length,
   ),
 );
 const desktopFiltersPosition = computed(() =>
   panelMode.value === "view" ? "md:right-[23rem]" : "md:right-0",
+);
+const locallyFilteredTasks = computed(() =>
+  visibleTasks.value.filter(
+    (task) =>
+      (!crossFilter.value.workerId ||
+        task.assignedUserId === crossFilter.value.workerId) &&
+      (crossFilter.value.sourceId === null ||
+        task.sourceId === crossFilter.value.sourceId),
+  ),
 );
 function applyFilters(next: Partial<TareasSeguimientoFilters>): void {
   updateFilters(next);
@@ -107,6 +123,7 @@ function reloadMapData(): void {
   void retry();
 }
 function clearFilters(): void {
+  crossFilter.value = { workerId: null, sourceId: null };
   applyFilters({
     scheduledDate: null,
     areaId: null,
@@ -126,7 +143,7 @@ function clearFilters(): void {
   >
     <TrackingMapWorkspace
       v-if="canViewMap"
-      :tasks="tasks"
+      :tasks="locallyFilteredTasks"
       :trackers="trackers"
       :selected-task-id="selectedTaskId"
       :map-tools="mapTools"
@@ -150,6 +167,7 @@ function clearFilters(): void {
       :class="desktopFiltersPosition"
       mode="toolbar"
       :filters="filters"
+      :cross-filter="crossFilter"
       :trackers="trackers"
       :catalog="catalog"
       :loading="loadingInitial"
@@ -157,6 +175,7 @@ function clearFilters(): void {
       :show-trackers="canViewTrackers"
       @apply="applyFilters"
       @focus="focusMap"
+      @update:cross-filter="crossFilter = $event"
     />
     <section
       v-if="mobileView === 'filters'"
@@ -186,6 +205,7 @@ function clearFilters(): void {
           mode="panel"
           form-id="tracking-mobile-filters"
           :filters="filters"
+          :cross-filter="crossFilter"
           :trackers="trackers"
           :catalog="catalog"
           :loading="loadingInitial"
@@ -193,6 +213,7 @@ function clearFilters(): void {
           :show-trackers="canViewTrackers"
           @apply="applyFilters"
           @focus="focusMap"
+          @update:cross-filter="crossFilter = $event"
         />
       </div>
       <footer
@@ -248,14 +269,14 @@ function clearFilters(): void {
     </div>
     <MobileMapActions
       v-if="mobileView === 'map' || mobileView === 'map-focus'"
-      :task-count="visibleTasks.length"
+      :task-count="locallyFilteredTasks.length"
       @open-filters="mobileView = 'filters'"
       @open-tasks="mobileView = 'list'"
     />
     <TaskListPanel
       class="fixed inset-0 z-50 w-full bg-[#f8f7f4] transition md:absolute md:inset-y-0 md:left-0 md:z-40 md:w-[20.5rem]"
       :class="mobileView === 'list' ? '' : 'max-md:hidden'"
-      :tasks="visibleTasks"
+      :tasks="locallyFilteredTasks"
       :selected-task-id="selectedTaskId"
       :loading="loadingInitial"
       :error="initialError"
