@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from "vue";
 import { mapsProviderLoader } from "@/seguimiento/shared/maps/mapsProvider.loader";
+import {
+  resolveSeguimientoMapZoomProfile,
+  seguimientoMapZIndex,
+} from "@/seguimiento/shared/maps/mapZoomHierarchy.strategy";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
 import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
 import {
@@ -33,13 +37,15 @@ const props = defineProps<{
 const emit = defineEmits<{ ready: []; error: [error: unknown] }>();
 const mapCanvas = useTemplateRef<HTMLDivElement>("mapCanvas");
 let map: any = null;
-let taskMarkers: any[] = [];
+let taskMarkers: { marker: any; selected: boolean }[] = [];
 let trackerMarkers: { marker: any; tracker: SeguimientoTracker }[] = [];
 let routeLine: any = null;
-let farmBoundaries: any[] = [];
-let farmRoads: any[] = [];
+let farmBoundaries: { halo: any; surface: any }[] = [];
+let farmRoads: { halo: any; surface: any }[] = [];
+let shelterBoundaries: { halo: any; surface: any }[] = [];
 let shelterMarkers: any[] = [];
 let geographyLabels: any[] = [];
+let shelterInfoWindow: any = null;
 let zoomListener: any = null;
 
 const isToolEnabled = (tool: SeguimientoMapToolState["tool"]): boolean =>
@@ -70,20 +76,67 @@ const geometryCenter = (
 };
 
 function clearLayers(): void {
-  taskMarkers.forEach((marker) => marker.setMap(null));
+  taskMarkers.forEach(({ marker }) => marker.setMap(null));
   trackerMarkers.forEach(({ marker }) => marker.setMap(null));
   taskMarkers = [];
   trackerMarkers = [];
   routeLine?.setMap(null);
   routeLine = null;
-  farmBoundaries.forEach((boundary) => boundary.setMap(null));
+  farmBoundaries.forEach(({ halo, surface }) => {
+    halo.setMap(null);
+    surface.setMap(null);
+  });
   farmBoundaries = [];
-  farmRoads.forEach((road) => road.setMap(null));
+  farmRoads.forEach(({ halo, surface }) => {
+    halo.setMap(null);
+    surface.setMap(null);
+  });
   farmRoads = [];
+  shelterBoundaries.forEach(({ halo, surface }) => {
+    halo.setMap(null);
+    surface.setMap(null);
+  });
+  shelterBoundaries = [];
   shelterMarkers.forEach((marker) => marker.setMap(null));
   shelterMarkers = [];
   geographyLabels.forEach((label) => label.setMap(null));
   geographyLabels = [];
+  shelterInfoWindow?.close();
+  shelterInfoWindow = null;
+}
+
+const escapeXml = (value: string): string =>
+  value.replace(
+    /[<>&"']/g,
+    (character) =>
+      ({
+        "<": "&lt;",
+        ">": "&gt;",
+        "&": "&amp;",
+        '"': "&quot;",
+        "'": "&apos;",
+      })[character] ?? character,
+  );
+
+function createFarmLabelIcon(name: string, maps: any): object {
+  const width = Math.min(200, Math.max(92, name.length * 6.2 + 16));
+  const safeName = escapeXml(name);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="26" viewBox="0 0 ${width} 26"><rect x=".5" y=".5" width="${width - 1}" height="25" rx="6" fill="#fffaf0" fill-opacity=".82" stroke="#31544d" stroke-opacity=".5"/><text x="${width / 2}" y="17" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#173d35">${safeName}</text></svg>`;
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new maps.Size(width, 26),
+    anchor: new maps.Point(width / 2, 13),
+  };
+}
+
+function createShelterIcon(maps: any): object {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="#fffaf0" fill-opacity=".94" stroke="#004643" stroke-width="2"/><path d="M8.5 14.2 15 9l6.5 5.2v7.3h-4.2v-4.7h-4.6v4.7H8.5z" fill="none" stroke="#004643" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new maps.Size(30, 30),
+    anchor: new maps.Point(15, 15),
+  };
 }
 
 function updateTrackerMarkerDisplay(): void {
@@ -93,9 +146,67 @@ function updateTrackerMarkerDisplay(): void {
   trackerMarkers.forEach(({ marker, tracker }) => {
     const visible = displayMode !== "hidden";
     marker.setVisible(visible);
+    marker.setZIndex(seguimientoMapZIndex.tracker);
     if (visible)
       marker.setIcon(createTrackerMarkerIcon(tracker, displayMode, maps));
   });
+}
+
+function updateZoomDrivenLayers(): void {
+  if (!map) return;
+  const profile = resolveSeguimientoMapZoomProfile(map.getZoom() ?? 0);
+
+  farmBoundaries.forEach(({ halo, surface }) => {
+    halo.setOptions({
+      visible: true,
+      strokeOpacity: profile.farmHaloOpacity,
+      strokeWeight: profile.farmHaloWeight,
+      zIndex: seguimientoMapZIndex.farm,
+    });
+    surface.setOptions({
+      visible: true,
+      strokeOpacity: profile.farmStrokeOpacity,
+      strokeWeight: profile.farmStrokeWeight,
+      fillOpacity: profile.farmFillOpacity,
+      zIndex: seguimientoMapZIndex.farm + 1,
+    });
+  });
+  geographyLabels.forEach((label) =>
+    label.setVisible(profile.farmLabelVisible),
+  );
+  farmRoads.forEach(({ halo, surface }) => {
+    halo.setOptions({
+      visible: profile.roadsVisible,
+      strokeOpacity: profile.roadHaloOpacity,
+      strokeWeight: profile.roadHaloWeight,
+      zIndex: seguimientoMapZIndex.road,
+    });
+    surface.setOptions({
+      visible: profile.roadsVisible,
+      strokeOpacity: profile.roadOpacity,
+      strokeWeight: profile.roadWeight,
+      zIndex: seguimientoMapZIndex.road + 1,
+    });
+  });
+  shelterBoundaries.forEach(({ halo, surface }) => {
+    halo.setOptions({
+      visible: profile.zonesVisible,
+      strokeOpacity: profile.zoneHaloOpacity,
+      zIndex: seguimientoMapZIndex.zone,
+    });
+    surface.setOptions({
+      visible: profile.zonesVisible,
+      fillOpacity: profile.zoneFillOpacity,
+      zIndex: seguimientoMapZIndex.zone + 1,
+    });
+  });
+  shelterMarkers.forEach((marker) =>
+    marker.setVisible(profile.sheltersVisible),
+  );
+  taskMarkers.forEach(({ marker, selected }) =>
+    marker.setVisible(selected || profile.tasksVisible),
+  );
+  updateTrackerMarkerDisplay();
 }
 
 function renderLayers(): void {
@@ -106,74 +217,98 @@ function renderLayers(): void {
     farmBoundaries = props.geography.flatMap((area) =>
       area.farms.flatMap((farm) => {
         if (!farm.boundary) return [];
+        const paths = farm.boundary.coordinates.map((polygon) =>
+          polygon[0].map(([longitude, latitude]) => ({
+            lat: latitude,
+            lng: longitude,
+          })),
+        );
         return [
-          new maps.Polygon({
-            map,
-            paths: farm.boundary.coordinates.map((polygon) =>
-              polygon[0].map(([longitude, latitude]) => ({
-                lat: latitude,
-                lng: longitude,
-              })),
-            ),
-            strokeColor: "#1A6B9A",
-            strokeOpacity: 0.8,
-            strokeWeight: 2,
-            fillColor: "#1A6B9A",
-            fillOpacity: 0.2,
-          }),
+          {
+            halo: new maps.Polygon({
+              map,
+              paths,
+              strokeColor: "#FFFDF5",
+              strokeOpacity: 0.72,
+              strokeWeight: 6,
+              fillOpacity: 0,
+              zIndex: seguimientoMapZIndex.farm,
+            }),
+            surface: new maps.Polygon({
+              map,
+              paths,
+              strokeColor: "#004643",
+              strokeOpacity: 0.8,
+              strokeWeight: 2,
+              fillColor: "#0F766E",
+              fillOpacity: 0.1,
+              zIndex: seguimientoMapZIndex.farm + 1,
+            }),
+          },
         ];
       }),
     );
-    farmRoads = props.geography
-      .flatMap((area) =>
-        area.farms.flatMap((farm) =>
-          (farm.roadNetwork?.coordinates ?? []).map((line) => {
-            const path = line.map(([longitude, latitude]) => ({
-              lat: latitude,
-              lng: longitude,
-            }));
-            return [
-              new maps.Polyline({
-                map,
-                path,
-                strokeColor: "#111827",
-                strokeOpacity: 0.86,
-                strokeWeight: 6,
-              }),
-              new maps.Polyline({
-                map,
-                path,
-                strokeColor: "#FACC15",
-                strokeOpacity: 0.96,
-                strokeWeight: 3,
-              }),
-            ];
-          }),
-        ),
-      )
-      .flat();
-    farmBoundaries.push(
-      ...props.geography.flatMap((area) =>
-        area.shelters.flatMap((shelter) => {
-          if (!shelter.boundary) return [];
-          return [
-            new maps.Polygon({
+    farmRoads = props.geography.flatMap((area) =>
+      area.farms.flatMap((farm) =>
+        (farm.roadNetwork?.coordinates ?? []).map((line) => {
+          const path = line.map(([longitude, latitude]) => ({
+            lat: latitude,
+            lng: longitude,
+          }));
+          return {
+            halo: new maps.Polyline({
               map,
-              paths: shelter.boundary.coordinates.map((polygon) =>
-                polygon[0].map(([longitude, latitude]) => ({
-                  lat: latitude,
-                  lng: longitude,
-                })),
-              ),
-              strokeColor: "#1A6B9A",
-              strokeOpacity: 0.8,
-              strokeWeight: 2,
-              fillColor: "#1A6B9A",
-              fillOpacity: 0.2,
+              path,
+              strokeColor: "#0F172A",
+              strokeOpacity: 0,
+              strokeWeight: 4,
+              zIndex: seguimientoMapZIndex.road,
             }),
-          ];
+            surface: new maps.Polyline({
+              map,
+              path,
+              strokeColor: "#FACC15",
+              strokeOpacity: 0,
+              strokeWeight: 2,
+              zIndex: seguimientoMapZIndex.road + 1,
+            }),
+          };
         }),
       ),
+    );
+    shelterBoundaries = props.geography.flatMap((area) =>
+      area.shelters.flatMap((shelter) => {
+        if (!shelter.boundary) return [];
+        const paths = shelter.boundary.coordinates.map((polygon) =>
+          polygon[0].map(([longitude, latitude]) => ({
+            lat: latitude,
+            lng: longitude,
+          })),
+        );
+        return [
+          {
+            halo: new maps.Polygon({
+              map,
+              paths,
+              strokeColor: "#FFFDF5",
+              strokeOpacity: 0,
+              strokeWeight: 6,
+              fillOpacity: 0,
+              zIndex: seguimientoMapZIndex.zone,
+            }),
+            surface: new maps.Polygon({
+              map,
+              paths,
+              strokeColor: "#1A6B9A",
+              strokeOpacity: 1,
+              strokeWeight: 2.5,
+              fillColor: "#1A6B9A",
+              fillOpacity: 0,
+              zIndex: seguimientoMapZIndex.zone + 1,
+            }),
+          },
+        ];
+      }),
     );
     geographyLabels = props.geography.flatMap((area) =>
       area.farms.flatMap((farm) => {
@@ -186,76 +321,73 @@ function renderLayers(): void {
                 map,
                 position: toLatLng(center),
                 title: farm.name,
-                label: {
-                  text: farm.name,
-                  color: "#ffffff",
-                  fontSize: "10px",
-                  fontWeight: "700",
-                },
-                icon: {
-                  path: maps.SymbolPath.CIRCLE,
-                  scale: 9,
-                  fillColor: "#1A6B9A",
-                  fillOpacity: 0.9,
-                  strokeColor: "#ffffff",
-                  strokeWeight: 2,
-                },
+                icon: createFarmLabelIcon(farm.name, maps),
+                zIndex: seguimientoMapZIndex.farmLabel,
+                optimized: false,
               }),
             ]
           : [];
       }),
     );
+    shelterInfoWindow = new maps.InfoWindow();
     shelterMarkers = props.geography.flatMap((area) =>
-      area.shelters.flatMap((shelter) =>
-        shelter.routePoint
-          ? [
-              new maps.Marker({
-                map,
-                position: toLatLng(shelter.routePoint),
-                title: `Resguardo: ${shelter.name}`,
-                label: {
-                  text: "R",
-                  color: "#ffffff",
-                  fontSize: "11px",
-                  fontWeight: "700",
-                },
-                icon: {
+      area.shelters.flatMap((shelter) => {
+        if (!shelter.routePoint) return [];
+        const marker = new maps.Marker({
+          map,
+          position: toLatLng(shelter.routePoint),
+          title: `Resguardo: ${shelter.name}`,
+          icon: createShelterIcon(maps),
+          zIndex: seguimientoMapZIndex.shelter,
+          visible: false,
+        });
+        marker.addListener("click", () => {
+          const content = document.createElement("div");
+          content.textContent = shelter.name;
+          content.style.color = "#173d35";
+          content.style.fontSize = "12px";
+          content.style.fontWeight = "700";
+          content.style.padding = "2px 4px";
+          shelterInfoWindow?.setContent(content);
+          shelterInfoWindow?.open({ map, anchor: marker });
+        });
+        return [marker];
+      }),
+    );
+  }
+  if (isToolEnabled("tasks") || props.selectedTaskId) {
+    const showTaskLayer = isToolEnabled("tasks");
+    taskMarkers = props.tasks
+      .filter(
+        (task) =>
+          task.routePoint &&
+          (showTaskLayer || task.id === props.selectedTaskId),
+      )
+      .map((task) => {
+        const selected = task.id === props.selectedTaskId;
+        return {
+          selected,
+          marker: new maps.Marker({
+            map,
+            position: toLatLng(task.routePoint!),
+            title: task.instructions ?? "Tarea",
+            label: task.routeOrder?.toString(),
+            zIndex: selected
+              ? seguimientoMapZIndex.selected
+              : seguimientoMapZIndex.task,
+            icon: selected
+              ? {
                   path: maps.SymbolPath.CIRCLE,
                   scale: 10,
                   fillColor: "#004643",
                   fillOpacity: 1,
                   strokeColor: "#ffffff",
-                  strokeWeight: 2,
-                },
-              }),
-            ]
-          : [],
-      ),
-    );
-  }
-  if (isToolEnabled("tasks")) {
-    taskMarkers = props.tasks
-      .filter((task) => task.routePoint)
-      .map(
-        (task) =>
-          new maps.Marker({
-            map,
-            position: toLatLng(task.routePoint!),
-            title: task.instructions ?? "Tarea",
-            label: task.routeOrder?.toString(),
-            icon:
-              task.id === props.selectedTaskId
-                ? {
-                    path: maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: "#004643",
-                    fillOpacity: 1,
-                    strokeColor: "#ffffff",
-                    strokeWeight: 3,
-                  }
-                : undefined,
+                  strokeWeight: 3,
+                }
+              : undefined,
           }),
-      );
+        };
+      });
   }
   if (isToolEnabled("trackers")) {
     trackerMarkers = props.trackers
@@ -266,6 +398,7 @@ function renderLayers(): void {
           map,
           position: toLatLng(tracker.position!),
           title: getTrackerMarkerTitle(tracker),
+          zIndex: seguimientoMapZIndex.tracker,
           visible: false,
         }),
       }));
@@ -286,10 +419,12 @@ function renderLayers(): void {
         path: routePoints,
         geodesic: true,
         strokeColor: "#D4A853",
-        strokeOpacity: 0.9,
-        strokeWeight: 4,
+        strokeOpacity: 0.96,
+        strokeWeight: 4.5,
+        zIndex: seguimientoMapZIndex.route,
       });
   }
+  updateZoomDrivenLayers();
 }
 
 function focusMap(): void {
@@ -321,7 +456,7 @@ async function initializeMap(): Promise<void> {
       fullscreenControl: false,
       clickableIcons: false,
     });
-    zoomListener = map.addListener("zoom_changed", updateTrackerMarkerDisplay);
+    zoomListener = map.addListener("zoom_changed", updateZoomDrivenLayers);
     renderLayers();
     focusMap();
     emit("ready");
