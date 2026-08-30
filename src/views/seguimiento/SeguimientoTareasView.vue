@@ -2,6 +2,7 @@
 import { computed, shallowRef } from "vue";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 import MapToolsOverlay from "@/components/seguimiento/tareas/MapToolsOverlay.vue";
+import MobileMapActions from "@/components/seguimiento/tareas/MobileMapActions.vue";
 import TaskDetailPanel from "@/components/seguimiento/tareas/TaskDetailPanel.vue";
 import TaskListPanel from "@/components/seguimiento/tareas/TaskListPanel.vue";
 import TrackingFiltersBar from "@/components/seguimiento/tareas/TrackingFiltersBar.vue";
@@ -23,12 +24,15 @@ const {
   loadingDetail,
   loadingInitial,
   mapError,
+  mapConfiguration,
+  geography,
   mapStatus,
   mapTools,
   panelMode,
   selectedTask,
   selectedTaskId,
   tasks,
+  catalog,
   trackers,
   visibleTasks,
   closeDetail,
@@ -40,6 +44,9 @@ const {
   updateFilters,
 } = useSeguimientoTareasView();
 const mapFocus = shallowRef<SeguimientoCoordinates | null>(null);
+const mobileView = shallowRef<
+  "map" | "filters" | "list" | "view" | "map-focus"
+>("map");
 const canViewMap = computed(
   () =>
     !featureAccess.isLoaded ||
@@ -50,17 +57,52 @@ const canViewTrackers = computed(
     !featureAccess.isLoaded ||
     featureAccess.tieneFuncionalidad(SEGUIMIENTO_FEATURES.viewTaskTracker),
 );
+const hasActiveFilters = computed(() =>
+  Boolean(
+    filters.value.search ||
+    filters.value.scheduledDate ||
+    filters.value.areaId ||
+    filters.value.assignedUserId ||
+    filters.value.sourceId ||
+    filters.value.types.length ||
+    filters.value.statuses.length,
+  ),
+);
 function applyFilters(next: Partial<TareasSeguimientoFilters>): void {
   updateFilters(next);
   void retry();
+  mobileView.value = "map";
 }
 function focusMap(coordinates: SeguimientoCoordinates | null): void {
   if (coordinates) {
     mapFocus.value = coordinates;
   }
 }
+function focusTaskOnMap(coordinates: SeguimientoCoordinates | null): void {
+  focusMap(coordinates);
+  mobileView.value = "map-focus";
+}
+function openTask(taskId: string): void {
+  mobileView.value = "view";
+  void selectTask(taskId);
+}
+function closeTaskDetail(): void {
+  closeDetail();
+  mobileView.value = "list";
+}
 function resetMap(): void {
   mapFocus.value = null;
+}
+function clearFilters(): void {
+  applyFilters({
+    scheduledDate: null,
+    areaId: null,
+    assignedUserId: null,
+    sourceId: null,
+    types: [],
+    statuses: [],
+    search: "",
+  });
 }
 </script>
 
@@ -78,6 +120,8 @@ function resetMap(): void {
       :status="mapStatus"
       :error="mapError"
       :focus="mapFocus"
+      :map-configuration="mapConfiguration"
+      :geography="geography"
       @ready="setMapReady"
       @error="setMapError"
     />
@@ -89,43 +133,114 @@ function resetMap(): void {
       No tienes acceso al mapa de seguimiento.
     </div>
     <TrackingFiltersBar
-      class="absolute left-3 right-3 top-3 z-30 md:left-[22rem] md:right-20"
+      class="absolute left-3 right-3 top-3 z-30 hidden md:flex md:left-[22rem] md:right-20"
       :filters="filters"
       :trackers="trackers"
+      :catalog="catalog"
       :loading="loadingInitial"
       :disabled="!canViewMap"
       :show-trackers="canViewTrackers"
       @apply="applyFilters"
       @focus="focusMap"
     />
+    <section
+      v-if="mobileView === 'filters'"
+      class="fixed inset-0 z-50 flex flex-col bg-[#f8f7f4] md:hidden"
+      aria-label="Filtros de seguimiento"
+    >
+      <header
+        class="flex min-h-16 items-center gap-3 border-b border-slate-200 bg-white px-4"
+      >
+        <button
+          class="grid size-11 place-items-center rounded-lg border border-slate-200 text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
+          type="button"
+          aria-label="Volver al mapa"
+          @click="mobileView = 'map'"
+        >
+          ←
+        </button>
+        <div>
+          <h1 class="text-sm font-bold text-slate-800">Filtros</h1>
+          <p class="text-[11px] text-slate-500">
+            Ajusta el contexto operativo visible.
+          </p>
+        </div>
+      </header>
+      <div class="min-h-0 flex-1 overflow-y-auto p-3">
+        <TrackingFiltersBar
+          :filters="filters"
+          :trackers="trackers"
+          :catalog="catalog"
+          :loading="loadingInitial"
+          :disabled="!canViewMap"
+          :show-trackers="canViewTrackers"
+          @apply="applyFilters"
+          @focus="focusMap"
+        />
+      </div>
+    </section>
     <MapToolsOverlay
       v-if="canViewMap"
-      class="absolute right-4 top-56 z-30 md:top-[5.5rem]"
+      class="absolute right-4 top-56 z-30 hidden md:grid md:top-[5.5rem]"
       :tools="mapTools"
       :disabled="mapStatus === 'error'"
       @reset="resetMap"
       @toggle="toggleMapTool"
       @focus-selected="focusMap(selectedTask?.routePoint ?? null)"
     />
+    <div
+      v-if="mobileView === 'map-focus'"
+      class="absolute inset-x-3 top-3 z-30 flex min-h-14 items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-3 shadow-md backdrop-blur md:hidden"
+    >
+      <button
+        class="grid size-11 place-items-center rounded-lg text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
+        type="button"
+        aria-label="Volver al detalle"
+        @click="mobileView = 'view'"
+      >
+        ←
+      </button>
+      <div class="min-w-0">
+        <p class="truncate text-xs font-bold text-slate-800">
+          {{ selectedTask?.instructions || "Tarea seleccionada" }}
+        </p>
+        <p class="text-[10px] text-slate-500">
+          Ubicación de la tarea seleccionada
+        </p>
+      </div>
+    </div>
+    <MobileMapActions
+      v-if="mobileView === 'map' || mobileView === 'map-focus'"
+      :task-count="visibleTasks.length"
+      @open-filters="mobileView = 'filters'"
+      @open-tasks="mobileView = 'list'"
+    />
     <TaskListPanel
-      class="relative z-40 mt-48 w-full md:absolute md:inset-y-0 md:left-0 md:mt-0 md:w-[20.5rem]"
+      class="fixed inset-0 z-50 w-full bg-[#f8f7f4] transition md:absolute md:inset-y-0 md:left-0 md:z-40 md:w-[20.5rem]"
+      :class="mobileView === 'list' ? '' : 'max-md:hidden'"
       :tasks="visibleTasks"
       :selected-task-id="selectedTaskId"
       :loading="loadingInitial"
       :error="initialError"
       :search="filters.search"
-      @select="selectTask"
+      :has-active-filters="hasActiveFilters"
+      :show-back="true"
+      @select="openTask"
       @retry="retry"
       @update-search="updateFilters({ search: $event })"
+      @clear-filters="clearFilters"
+      @back="mobileView = 'map'"
     />
     <TaskDetailPanel
       v-if="panelMode === 'view'"
-      class="absolute inset-x-3 bottom-3 z-40 max-h-[70dvh] md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[23rem]"
+      class="fixed inset-0 z-50 max-h-none md:absolute md:inset-y-0 md:left-auto md:right-0 md:z-40 md:w-[23rem]"
+      :class="mobileView === 'view' ? '' : 'max-md:hidden'"
       :task="detail ?? selectedTask"
       :loading="loadingDetail"
       :error="detailError"
-      @close="closeDetail"
-      @focus="focusMap"
+      @close="closeTaskDetail"
+      @focus="focusTaskOnMap"
+      @retry="selectedTaskId && selectTask(selectedTaskId)"
     />
   </section>
 </template>

@@ -5,9 +5,18 @@ import {
   toErrorMessage,
 } from "./tareasSeguimiento.helpers";
 import { tareasSeguimientoService } from "./tareasSeguimiento.service";
-import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
+import type {
+  SeguimientoTracker,
+  TrackerCurrentLocation,
+  TrackerLocationBroadcast,
+} from "@/seguimiento/shared/trackers/tracker.types";
+import { trackerCurrentLocationService } from "@/seguimiento/shared/trackers/trackerCurrentLocation.service";
+import { trackerLocationService } from "@/seguimiento/shared/trackers/trackerLocation.service";
 import type {
   SeguimientoMapStatus,
+  SeguimientoMapConfiguration,
+  SeguimientoOperationalGeography,
+  SeguimientoTaskCatalog,
   SeguimientoMapToolState,
   TareaSeguimientoDetail,
   TareaSeguimientoListItem,
@@ -29,6 +38,13 @@ export const useTareasSeguimientoStore = defineStore(
     );
     const tasks = ref<TareaSeguimientoListItem[]>([]);
     const trackers = ref<SeguimientoTracker[]>([]);
+    const trackerLoadObservations = ref<string[]>([]);
+    const trackerLocationError = shallowRef<string | null>(null);
+    const catalog = ref<SeguimientoTaskCatalog>({ areas: [] });
+    const geography = ref<SeguimientoOperationalGeography[]>([]);
+    const mapConfiguration = shallowRef<SeguimientoMapConfiguration | null>(
+      null,
+    );
     const selectedTaskId = shallowRef<string | null>(null);
     const detail = ref<TareaSeguimientoDetail | null>(null);
     const panelMode = shallowRef<"closed" | "view">("closed");
@@ -41,6 +57,7 @@ export const useTareasSeguimientoStore = defineStore(
     const detailError = shallowRef<string | null>(null);
     let initialRequest: Promise<void> | null = null;
     let detailRequestId = 0;
+    let trackerLocationSyncRequest: Promise<void> = Promise.resolve();
 
     const visibleTasks = computed(() => {
       const search = filters.value.search.trim().toLocaleLowerCase();
@@ -60,6 +77,71 @@ export const useTareasSeguimientoStore = defineStore(
       () =>
         tasks.value.find((task) => task.id === selectedTaskId.value) ?? null,
     );
+    const trackerLocationSourceIds = computed(() => {
+      if (
+        !mapTools.value.some((tool) => tool.tool === "trackers" && tool.enabled)
+      )
+        return [];
+      if (filters.value.sourceId) return [filters.value.sourceId];
+      return trackers.value.map((tracker) => tracker.sourceId);
+    });
+
+    function applyTrackerLocation(location: TrackerCurrentLocation): void {
+      trackers.value = trackers.value.map((tracker) =>
+        tracker.sourceId === location.sourceId
+          ? {
+              ...tracker,
+              id: location.trackerId ?? tracker.id,
+              label: location.trackerLabel ?? tracker.label,
+              position: {
+                latitude: location.latitude,
+                longitude: location.longitude,
+              },
+              capturedAt: location.capturedAt,
+              status: location.currentTaskId ? "at_task" : "available",
+              currentTaskId: location.currentTaskId,
+            }
+          : tracker,
+      );
+    }
+
+    function applyTrackerLocationBroadcast(
+      location: TrackerLocationBroadcast,
+    ): void {
+      applyTrackerLocation({
+        sourceId: location.source_id,
+        trackerId: location.tracker_id ?? null,
+        trackerLabel: location.tracker_label ?? null,
+        latitude: location.latitud,
+        longitude: location.longitud,
+        capturedAt: location.capturada_en,
+        currentTaskId: location.tarea_actual_id ?? null,
+      });
+    }
+
+    function syncTrackerLocations(): Promise<void> {
+      trackerLocationSyncRequest = trackerLocationSyncRequest
+        .catch(() => undefined)
+        .then(async () => {
+          try {
+            const sourceIds = trackerLocationSourceIds.value;
+            const locations =
+              await trackerCurrentLocationService.load(sourceIds);
+            locations.forEach(applyTrackerLocation);
+            await trackerLocationService.sync(
+              sourceIds,
+              applyTrackerLocationBroadcast,
+            );
+            trackerLocationError.value = null;
+          } catch (error) {
+            trackerLocationError.value = toErrorMessage(
+              error,
+              "No se pudieron actualizar las ubicaciones de trackers.",
+            );
+          }
+        });
+      return trackerLocationSyncRequest;
+    }
 
     async function loadWorkspace(force = false): Promise<void> {
       if (initialRequest && !force) return initialRequest;
@@ -72,6 +154,11 @@ export const useTareasSeguimientoStore = defineStore(
           );
           tasks.value = workspace.tasks;
           trackers.value = workspace.trackers;
+          trackerLoadObservations.value = workspace.trackerLoadObservations;
+          catalog.value = workspace.catalog;
+          geography.value = workspace.geography;
+          mapConfiguration.value = workspace.mapConfiguration;
+          void syncTrackerLocations();
           if (
             selectedTaskId.value &&
             !tasks.value.some((task) => task.id === selectedTaskId.value)
@@ -120,6 +207,7 @@ export const useTareasSeguimientoStore = defineStore(
 
     function setFilters(next: Partial<TareasSeguimientoFilters>): void {
       filters.value = { ...filters.value, ...next };
+      void syncTrackerLocations();
     }
     function setMapReady(): void {
       mapStatus.value = "ready";
@@ -133,12 +221,21 @@ export const useTareasSeguimientoStore = defineStore(
       mapTools.value = mapTools.value.map((item) =>
         item.tool === tool ? { ...item, enabled: !item.enabled } : item,
       );
+      void syncTrackerLocations();
+    }
+    async function clearTrackerLocationSubscriptions(): Promise<void> {
+      await trackerLocationService.clear();
     }
 
     return {
       filters,
       tasks,
       trackers,
+      trackerLoadObservations,
+      trackerLocationError,
+      catalog,
+      geography,
+      mapConfiguration,
       selectedTaskId,
       selectedTask,
       visibleTasks,
@@ -158,6 +255,7 @@ export const useTareasSeguimientoStore = defineStore(
       setMapReady,
       setMapError,
       toggleMapTool,
+      clearTrackerLocationSubscriptions,
     };
   },
 );

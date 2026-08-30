@@ -71,11 +71,16 @@ export function mapTareaSeguimientoDetail(
     trackerId: asignacion.tracker_id,
     sourceId: asignacion.source_id,
     trackerLabel: asignacion.tracker_label,
+    companionName: asignacion.acompanante_nombre,
     routePoint: mapRoutePoint(tarea.punto_latitud, tarea.punto_longitud),
     routeOrder: tarea.orden_ruta,
     controlLine: tarea.linea_control_geojson,
     controlZones: tarea.zonas_control_geojson,
     operationalStatusLabel: estado.operativo_nombre,
+    time: response.tiempo,
+    visits: response.visitas,
+    route: response.ruta,
+    permissions: response.permisos,
     updatedAt: tarea.actualizado_en,
   };
 }

@@ -1,213 +1,146 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, shallowRef } from "vue";
+import { AlertTriangle, ListFilter, SearchX } from "lucide-vue-next";
+import TaskCard from "./TaskCard.vue";
 import type { TareaSeguimientoListItem } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
+
 const props = defineProps<{
   tasks: TareaSeguimientoListItem[];
   selectedTaskId: string | null;
   loading: boolean;
   error: string | null;
   search: string;
+  hasActiveFilters: boolean;
+  showBack?: boolean;
 }>();
 const emit = defineEmits<{
   select: [taskId: string];
   retry: [];
   updateSearch: [value: string];
+  clearFilters: [];
+  back: [];
 }>();
-const taskCount = computed(() => props.tasks.length);
-const statusLabel: Record<TareaSeguimientoListItem["status"], string> = {
-  pendiente: "Pendiente",
-  en_ruta: "En ruta",
-  activa: "Activa",
-  visitada: "Visitada",
-  cancelada: "Cancelada",
-  duda_detectada: "Duda detectada",
-};
-const typeLabel: Record<TareaSeguimientoListItem["type"], string> = {
-  finca: "Finca",
-  zona: "Zona",
-  duda: "Duda",
-};
+const localSegment = shallowRef<"all" | "active" | "doubt">("all");
+const localTasks = computed(() =>
+  props.tasks.filter((task) =>
+    localSegment.value === "all"
+      ? true
+      : localSegment.value === "active"
+        ? task.status === "activa" || task.status === "en_ruta"
+        : task.type === "duda",
+  ),
+);
+const panelMessage = computed(() =>
+  props.hasActiveFilters
+    ? "No hay coincidencias para la búsqueda actual."
+    : "No hay tareas para este contexto.",
+);
 </script>
+
 <template>
-  <aside class="task-list-panel" aria-label="Listado de tareas">
-    <header class="panel-header">
-      <p class="eyebrow">Seguimiento</p>
-      <div class="heading-row">
-        <h1>Tareas</h1>
-        <strong>{{ taskCount }}</strong>
+  <aside
+    class="flex h-full min-h-0 flex-col bg-[#f8f7f4] shadow-[4px_0_16px_rgb(0_0_0_/_16%)]"
+    aria-label="Listado de tareas"
+  >
+    <header class="border-b border-slate-200 px-4 pb-3 pt-4">
+      <button
+        v-if="showBack"
+        class="mb-3 inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main md:hidden"
+        type="button"
+        @click="emit('back')"
+      >
+        ← Mapa
+      </button>
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <p
+            class="text-[10px] font-extrabold uppercase tracking-[0.16em] text-warning"
+          >
+            Seguimiento
+          </p>
+          <h1 class="mt-0.5 text-xl font-bold text-main">Tareas</h1>
+        </div>
+        <span
+          class="rounded-full bg-second px-2.5 py-1 text-xs font-extrabold text-main"
+          >{{ tasks.length }}</span
+        >
       </div>
-      <p>Selecciona una tarea para ver su contexto operativo.</p>
-      <label class="search"
+      <p class="mt-1 text-xs leading-5 text-slate-500">
+        Explora tareas, su contexto y estado operativo.
+      </p>
+      <label class="relative mt-3 block"
         ><span class="sr-only">Buscar tareas</span
         ><input
+          class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-main focus:ring-2 focus:ring-main/15"
           :value="search"
-          placeholder="Buscar en tareas"
+          placeholder="Buscar tareas"
           @input="
             emit('updateSearch', ($event.target as HTMLInputElement).value)
-          "
+          " /><ListFilter
+          class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+          aria-hidden="true"
       /></label>
+      <label class="mt-2 block"
+        ><span class="sr-only">Segmentar listado</span
+        ><select
+          v-model="localSegment"
+          class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 outline-none focus:border-main focus:ring-2 focus:ring-main/15"
+        >
+          <option value="all">Todas las tareas</option>
+          <option value="active">En curso</option>
+          <option value="doubt">Dudas automáticas</option>
+        </select></label
+      >
     </header>
-    <div class="panel-content">
-      <p v-if="loading" class="state">Cargando tareas…</p>
-      <div v-else-if="error" class="state error">
-        <span>{{ error }}</span
-        ><button type="button" @click="emit('retry')">Reintentar</button>
+    <div class="min-h-0 flex-1 overflow-y-auto p-3">
+      <div v-if="loading" class="grid gap-2" aria-live="polite">
+        <div
+          v-for="index in 4"
+          :key="index"
+          class="h-24 animate-pulse rounded-xl bg-slate-200"
+        />
       </div>
-      <p v-else-if="!tasks.length" class="state">
-        No hay tareas para este contexto.
-      </p>
-      <ul v-else class="task-cards">
-        <li v-for="task in tasks" :key="task.id">
-          <button
-            :class="['task-card', { selected: task.id === selectedTaskId }]"
-            type="button"
-            @click="emit('select', task.id)"
-          >
-            <span class="task-top"
-              ><small>{{ typeLabel[task.type] }}</small
-              ><small :class="['status', task.status]">{{
-                statusLabel[task.status]
-              }}</small></span
-            ><strong>{{ task.instructions || "Sin indicaciones" }}</strong
-            ><span>{{ task.trackerLabel || "Sin tracker asignado" }}</span
-            ><span class="task-bottom"
-              ><span>{{ task.scheduledDate }}</span
-              ><span v-if="task.estimatedMinutes"
-                >{{ task.estimatedMinutes }} min</span
-              ></span
-            >
-          </button>
+      <div
+        v-else-if="error"
+        class="rounded-xl border border-danger/25 bg-danger-bg p-4 text-center"
+      >
+        <AlertTriangle class="mx-auto size-5 text-danger" aria-hidden="true" />
+        <p class="mt-2 text-xs leading-5 text-danger">{{ error }}</p>
+        <button
+          class="mt-3 rounded-lg bg-main px-3 py-2 text-xs font-bold text-white"
+          type="button"
+          @click="emit('retry')"
+        >
+          Reintentar
+        </button>
+      </div>
+      <div v-else-if="!tasks.length" class="px-3 py-12 text-center">
+        <SearchX class="mx-auto size-6 text-slate-400" aria-hidden="true" />
+        <p class="mt-3 text-xs leading-5 text-slate-500">{{ panelMessage }}</p>
+        <button
+          v-if="hasActiveFilters"
+          class="mt-3 min-h-11 rounded-lg border border-main px-3 py-2 text-xs font-bold text-main"
+          type="button"
+          @click="emit('clearFilters')"
+        >
+          Limpiar filtros
+        </button>
+      </div>
+      <div v-else-if="!localTasks.length" class="px-3 py-12 text-center">
+        <SearchX class="mx-auto size-6 text-slate-400" aria-hidden="true" />
+        <p class="mt-3 text-xs leading-5 text-slate-500">
+          No hay tareas para esta segmentación.
+        </p>
+      </div>
+      <ul v-else class="grid gap-2" aria-label="Resultados de tareas">
+        <li v-for="task in localTasks" :key="task.id">
+          <TaskCard
+            :task="task"
+            :selected="task.id === selectedTaskId"
+            @select="emit('select', $event)"
+          />
         </li>
       </ul>
     </div>
   </aside>
 </template>
-<style scoped>
-.task-list-panel {
-  background: #f8f7f4;
-  box-shadow: 4px 0 16px rgb(0 0 0 / 16%);
-  display: flex;
-  flex-direction: column;
-}
-.panel-header {
-  border-bottom: 1px solid #ded9ce;
-  padding: 1rem;
-}
-.eyebrow {
-  color: #b8892f;
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  margin: 0 0 0.2rem;
-  text-transform: uppercase;
-}
-.heading-row {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-}
-.heading-row h1 {
-  color: #003f3b;
-  font-size: 1.25rem;
-  margin: 0;
-}
-.heading-row strong {
-  background: #dce9e5;
-  border-radius: 999px;
-  color: #004643;
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-}
-.panel-header p:not(.eyebrow) {
-  color: #68716c;
-  font-size: 0.75rem;
-  line-height: 1.35;
-  margin: 0.35rem 0 0.65rem;
-}
-.search input {
-  border: 1px solid #cfcabe;
-  border-radius: 0.4rem;
-  box-sizing: border-box;
-  font-size: 0.8rem;
-  height: 2.35rem;
-  padding: 0 0.65rem;
-  width: 100%;
-}
-.panel-content {
-  min-height: 0;
-  overflow: auto;
-  padding: 0.65rem;
-}
-.task-cards {
-  display: grid;
-  gap: 0.5rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.task-card {
-  background: white;
-  border: 1px solid #dfdbd1;
-  border-left: 3px solid #b8892f;
-  border-radius: 0.45rem;
-  color: #2d3a35;
-  display: grid;
-  font-size: 0.73rem;
-  gap: 0.35rem;
-  padding: 0.7rem;
-  text-align: left;
-  width: 100%;
-}
-.task-card:hover,
-.task-card.selected {
-  border-color: #006b65;
-  box-shadow: 0 2px 8px rgb(0 70 67 / 15%);
-}
-.task-card strong {
-  font-size: 0.8rem;
-  line-height: 1.25;
-}
-.task-top,
-.task-bottom {
-  color: #68716c;
-  display: flex;
-  justify-content: space-between;
-}
-.status {
-  border-radius: 999px;
-  font-weight: 700;
-}
-.activa {
-  color: #237a43;
-}
-.duda_detectada {
-  color: #a75b12;
-}
-.cancelada {
-  color: #ae3d35;
-}
-.state {
-  color: #65716b;
-  font-size: 0.8rem;
-  padding: 1rem 0.4rem;
-  text-align: center;
-}
-.state.error {
-  color: #9a3931;
-  display: grid;
-  gap: 0.5rem;
-}
-.state button {
-  background: #004643;
-  border: 0;
-  border-radius: 0.35rem;
-  color: #fff;
-  padding: 0.45rem;
-}
-.sr-only {
-  height: 1px;
-  overflow: hidden;
-  position: absolute;
-  width: 1px;
-}
-</style>

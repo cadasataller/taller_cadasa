@@ -1,104 +1,135 @@
-# Estrategia técnica de reutilización de claves del mapa
+# Estrategia técnica de trackers: mapeo de datos y reutilización de carga
 
 ## Objetivo
 
-Garantizar que la carga del mapa sea resiliente frente a límites temporales, cuotas agotadas o rechazo de autenticación, evitando solicitudes innecesarias de claves y permitiendo una recuperación automática desde el cliente.
+Obtener la lista completa de dispositivos una sola vez por sesión activa, conservar la respuesta original para diagnóstico y derivar a partir de ella estructuras más pequeñas y seguras para consumo de la interfaz.
 
-## Modelo de claves
+## Principios
 
-La estrategia opera con dos credenciales lógicas:
+1. La respuesta original del proveedor externo debe preservarse íntegra en memoria.
+2. La transformación para uso interno debe hacerse en una capa separada.
+3. La interfaz no debe volver a pedir la lista si ya existe una versión vigente en memoria.
+4. Las solicitudes concurrentes del mismo recurso deben consolidarse en una sola operación en curso.
+5. Los registros incompletos no deben bloquear toda la carga; deben omitirse y reportarse como observaciones de calidad.
 
-- Clave principal: se utiliza en la primera carga.
-- Clave de respaldo: se reserva para reintentos cuando la principal falla o queda limitada.
+## Flujo de adquisición
 
-Cada credencial se conserva en memoria de la sesión activa del cliente. Eso permite reutilizarla sin volver a pedirla en cada intento de carga, reduciendo latencia y evitando tráfico redundante hacia el backend.
+1. Antes de consultar el listado de dispositivos, el cliente obtiene una credencial temporal del backend.
+2. Esa credencial se guarda en memoria y se reutiliza durante la vida útil de la sesión del cliente.
+3. Con esa credencial, el cliente solicita la lista completa al proveedor externo.
+4. La respuesta completa se conserva en memoria sin recortarla ni mutarla.
+5. Las vistas derivadas se construyen a partir de esa respuesta ya cargada.
 
-## Endpoint involucrado
+## Endpoints involucrados
 
-La obtención de credenciales del mapa se resuelve mediante un endpoint de backend expuesto a través de la capa de servicios del sistema.
+La estrategia utiliza dos puntos de entrada diferenciados:
 
-- Origen del endpoint de credenciales: backend interno expuesto mediante Supabase Edge Functions
-- Endpoint utilizado para clave principal o de respaldo: `maps-key`
-- Origen del proveedor de render del mapa: servicio externo de Google Maps JavaScript
+1. Origen del endpoint de credenciales: backend interno expuesto mediante Supabase Edge Functions
+2. Endpoint interno para obtener la credencial efímera del proveedor externo: `navixy-key`
+3. Origen del endpoint de dispositivos: API externa de Navixy
+4. Endpoint externo para obtener la lista completa de dispositivos: `https://api.us.navixy.com/v2/tracker/list`
 
-Ese endpoint recibe el contexto de la solicitud y responde con la credencial que corresponde al flujo normal o al flujo de respaldo.
+La secuencia esperada es:
 
-## Flujo general de carga
+1. el cliente solicita la credencial al endpoint interno `navixy-key`;
+2. con esa credencial consulta el endpoint externo de listado de dispositivos;
+3. la respuesta externa se conserva en memoria y se reutiliza en adelante.
 
-1. El cliente intenta cargar el motor del mapa con la clave principal.
-2. Si la carga se completa correctamente, la sesión continúa usando esa credencial.
-3. Si la obtención de la clave principal falla o la carga del mapa no llega a completarse, el cliente solicita la clave de respaldo y repite la carga.
-4. Si ambas rutas fallan, el cliente considera que la inicialización no pudo resolverse automáticamente.
+## Cómo evitar cargar la lista cuando ya está cargada
 
-## Cuándo debe pedirse la clave desde el frontend
+La regla principal es simple:
 
-El frontend debe pedir una clave al backend solo en estos casos:
+- si la respuesta completa ya existe en memoria, se reutiliza;
+- si todavía no existe pero ya hay una solicitud en curso, se reutiliza esa misma solicitud;
+- solo si no existe ni respuesta almacenada ni solicitud activa, se inicia una nueva carga remota.
 
-1. Cuando la sesión aún no tiene en memoria la clave principal y se va a iniciar la primera carga del mapa.
-2. Cuando se necesita activar el camino de respaldo y la sesión aún no tiene en memoria la clave secundaria.
-3. Cuando se fuerza una recarga completa del proveedor del mapa tras detectar que la credencial activa ya no es válida para continuar.
+Con esto se evita:
 
-Fuera de esos escenarios, la regla es reutilizar la clave ya disponible en memoria.
+- duplicar tráfico hacia el proveedor externo;
+- inconsistencias entre componentes que piden el mismo recurso al mismo tiempo;
+- esperas innecesarias en pantallas que ya cuentan con datos disponibles.
 
-## Qué comportamientos disparan el cambio a la clave de respaldo
+## Consolidación de solicitudes concurrentes
 
-El paso a la clave secundaria no depende únicamente de una respuesta explícita del backend. También puede dispararse por señales observables en tiempo de ejecución del lado cliente.
+Cuando varias partes del sistema piden la lista casi al mismo tiempo, no deben abrir procesos independientes.
 
-Los disparadores relevantes son:
+La estrategia correcta es mantener una referencia única a la carga activa y entregar ese mismo resultado a todos los consumidores interesados. Al finalizar, esa referencia transitoria se libera para permitir una futura recarga controlada si realmente hiciera falta.
 
-1. Error de autenticación de la credencial al intentar inicializar el proveedor del mapa.
-2. Falla de carga del recurso remoto del mapa.
-3. Mensajes de error que indiquen agotamiento de cuota, límite diario alcanzado o restricción equivalente de la credencial activa.
-4. Inicialización incompleta del mapa acompañada de evidencia de límite de consumo detectada durante el arranque.
+## Estrategia de mapeo de datos
 
-## Detección funcional del límite
+La respuesta externa contiene más campos de los necesarios para la interfaz. Por eso se recomienda derivar un contrato interno reducido con solo los atributos operativos esenciales.
 
-La estrategia no espera solo un error formal al momento de crear el mapa. También observa el comportamiento del proceso de inicialización.
+Para cada dispositivo, el mapeo debe producir una estructura con:
 
-Se considera que la credencial principal debe abandonarse cuando ocurre alguno de estos patrones:
+1. identificador del dispositivo;
+2. nombre visible;
+3. identificador de la fuente operativa asociada.
 
-1. El proveedor emite mensajes compatibles con cuota agotada o límite diario alcanzado.
-2. El mapa intenta construirse, pero antes de estabilizarse aparece una señal consistente con límite de consumo.
-3. El proceso entra en un estado en el que la carga técnica ocurre, pero la instancia no queda operativa de manera confiable.
+## Validación durante el mapeo
 
-Esto es importante porque algunos límites no siempre se manifiestan como una única respuesta de error estructurada; a veces aparecen como mensajes laterales durante el arranque.
+Antes de aceptar cada registro, deben validarse al menos estas condiciones:
 
-## Estrategia de recarga
+1. el identificador del dispositivo existe y es numérico válido;
+2. el nombre visible existe y no está vacío;
+3. el identificador de la fuente asociada existe y es numérico válido.
 
-Cuando se detecta que la clave principal quedó limitada:
+Si un registro incumple alguna de estas reglas:
 
-1. Se invalida la instancia cargada del proveedor del mapa en el cliente.
-2. Se eliminan residuos de la carga previa para evitar mezclar estados.
-3. Se marca la sesión como operando con la clave secundaria.
-4. Se recarga el proveedor del mapa usando la credencial de respaldo.
-5. Se reconstruye la instancia visual del mapa con el mismo contexto funcional que tenía antes de la recarga.
+- el registro se omite del resultado derivado;
+- se agrega una observación de validación;
+- la respuesta completa original se conserva sin alterar.
 
-## Control de concurrencia
+## Separación entre dato fuente y dato derivado
 
-La estrategia debe impedir recargas duplicadas al mismo tiempo. Si múltiples partes de la interfaz detectan el mismo problema, todas deben converger en un único proceso de recuperación en curso.
+Mantener dos niveles de datos evita mezclar responsabilidades:
 
-Esto evita:
+- dato fuente: la respuesta completa recibida del proveedor externo;
+- dato derivado: la lista reducida y validada que usa la interfaz.
 
-- solicitar varias veces la misma clave de respaldo;
-- recargar el proveedor remoto más de una vez;
-- perder consistencia entre el estado visual y el estado interno del mapa.
+Esa separación permite:
+
+- depurar problemas sin perder contexto original;
+- recalcular vistas filtradas sin volver a consultar al proveedor;
+- endurecer validaciones internas sin destruir evidencia de origen.
+
+## Filtrado por contexto operativo sin recarga remota
+
+Cuando una pantalla necesita solo un subconjunto de dispositivos, el filtro debe aplicarse sobre la respuesta ya cargada en memoria, no mediante una nueva consulta al proveedor externo.
+
+El flujo recomendado es:
+
+1. reutilizar la respuesta completa en memoria;
+2. obtener las reglas internas de asociación del contexto solicitado;
+3. filtrar localmente la lista completa;
+4. mapear y validar solo el subconjunto resultante.
+
+## Manejo de errores
+
+La estrategia distingue entre dos clases de error:
+
+1. Error de carga remota: impide obtener la lista completa y debe marcar la operación como fallida.
+2. Error de calidad de registro individual: no impide usar los demás dispositivos válidos, pero debe quedar informado.
+
+Esto mejora la resiliencia porque evita que un solo registro defectuoso inutilice toda la funcionalidad.
 
 ## Beneficios operativos
 
-Esta estrategia ofrece:
+Este enfoque aporta:
 
-- menor número de solicitudes de credenciales;
-- recuperación automática frente a límites temporales;
-- continuidad de la experiencia del usuario sin intervención manual;
-- aislamiento entre el flujo principal y el flujo de respaldo;
-- mejor tolerancia a fallas parciales de autenticación o consumo.
+- menor consumo de red;
+- menor tiempo de respuesta en vistas repetidas;
+- consistencia entre componentes;
+- trazabilidad de la respuesta externa original;
+- validación controlada antes del consumo interno;
+- posibilidad de filtrar localmente sin repetir la consulta remota.
 
 ## Regla de diseño
 
-Si en el futuro se modifica el mecanismo de carga del mapa, debe conservarse un comportamiento equivalente que cumpla estas propiedades:
+Si se refactoriza este flujo en el futuro, deben preservarse estas propiedades:
 
-1. reutilización en memoria por sesión;
-2. distinción entre credencial principal y credencial de respaldo;
-3. detección de límites por error explícito y por comportamiento observado;
-4. recarga controlada del proveedor del mapa;
-5. prevención de recargas simultáneas.
+1. reutilización de la credencial por sesión;
+2. reutilización de la respuesta completa ya cargada;
+3. consolidación de solicitudes simultáneas;
+4. mapeo a un contrato interno mínimo;
+5. omisión segura de registros incompletos con observaciones de validación;
+6. filtrado local a partir de la respuesta ya disponible.

@@ -1,10 +1,22 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import {
+  AlertTriangle,
+  CircleHelp,
+  Clock3,
+  MapPinned,
+  RotateCw,
+  ScanLine,
+  X,
+} from "lucide-vue-next";
+import TaskDoubtSection from "./TaskDetailSections/TaskDoubtSection.vue";
+import TaskGeometrySection from "./TaskDetailSections/TaskGeometrySection.vue";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
 import type {
   TareaSeguimientoDetail,
   TareaSeguimientoListItem,
 } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
+
 const props = defineProps<{
   task: TareaSeguimientoDetail | TareaSeguimientoListItem | null;
   loading: boolean;
@@ -13,201 +25,211 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: [];
   focus: [coordinates: SeguimientoCoordinates | null];
+  retry: [];
 }>();
-const taskType = computed(() =>
-  props.task?.type === "duda"
-    ? "Duda detectada"
+const isDetail = computed((): props is { task: TareaSeguimientoDetail } =>
+  Boolean(props.task && "time" in props.task),
+);
+const isDoubt = computed(() => props.task?.type === "duda");
+const typeLabel = computed(() =>
+  isDoubt.value
+    ? "Duda automática"
     : props.task?.type === "zona"
       ? "Zona"
       : "Finca",
 );
-const geometryLabel = computed(() => {
-  if (!props.task) return "Sin tarea seleccionada";
-  if (props.task.type === "duda")
-    return "Las dudas no habilitan edición ni geometría en esta fase.";
-  return props.task.routePoint
-    ? `${props.task.routePoint.latitude.toFixed(5)}, ${props.task.routePoint.longitude.toFixed(5)}`
-    : "Sin punto de enrutado";
-});
+const statusLabel = computed(() =>
+  props.task?.status === "activa"
+    ? "En ubicación"
+    : props.task?.status === "en_ruta"
+      ? "En ruta"
+      : props.task?.status === "visitada"
+        ? "Visitada"
+        : props.task?.status === "cancelada"
+          ? "Cancelada"
+          : isDoubt.value
+            ? "En revisión"
+            : "Sin iniciar",
+);
+const durationLabel = computed(() =>
+  props.task?.estimatedMinutes
+    ? `${props.task.estimatedMinutes} min`
+    : "Sin estimación",
+);
+const currentTimeLabel = computed(() =>
+  isDetail.value
+    ? `${Math.round(props.task.time.segundos_totales / 60)} min acumulados`
+    : null,
+);
 </script>
+
 <template>
-  <aside class="detail-panel" aria-label="Detalle de tarea">
-    <header>
-      <div>
-        <p class="eyebrow">Detalle de tarea</p>
-        <h2>{{ task?.instructions || "Cargando tarea" }}</h2>
+  <aside
+    class="flex h-full min-h-0 flex-col bg-white shadow-[-4px_0_16px_rgb(0_0_0_/_16%)]"
+    aria-label="Detalle de tarea"
+  >
+    <header class="border-b border-slate-200 p-4">
+      <div class="flex items-start gap-3">
+        <div
+          class="flex size-9 shrink-0 items-center justify-center rounded-lg"
+          :class="
+            isDoubt ? 'bg-warning-bg text-warning' : 'bg-second text-main'
+          "
+        >
+          <CircleHelp v-if="isDoubt" class="size-5" /><MapPinned
+            v-else-if="task?.type === 'finca'"
+            class="size-5"
+          /><ScanLine v-else class="size-5" />
+        </div>
+        <div class="min-w-0 flex-1">
+          <p
+            class="text-[10px] font-extrabold uppercase tracking-[0.14em] text-warning"
+          >
+            {{ isDoubt ? "Duda detectada" : "Detalle de tarea" }}
+          </p>
+          <h2 class="mt-1 text-sm font-bold leading-5 text-slate-800">
+            {{
+              task?.instructions ||
+              (loading ? "Cargando tarea" : "Tarea seleccionada")
+            }}
+          </h2>
+          <p class="mt-1 text-[11px] text-slate-500">
+            {{
+              isDoubt
+                ? "Señal automática para revisión operativa."
+                : "Información operativa de solo lectura."
+            }}
+          </p>
+        </div>
+        <button
+          class="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          aria-label="Cerrar detalle"
+          type="button"
+          @click="emit('close')"
+        >
+          <X class="size-5" />
+        </button>
       </div>
-      <button aria-label="Cerrar detalle" type="button" @click="emit('close')">
-        ×
-      </button>
+      <div v-if="task" class="mt-3 flex flex-wrap items-center gap-1.5">
+        <span
+          class="rounded-full bg-second px-2 py-1 text-[10px] font-bold text-main"
+          >{{ typeLabel }}</span
+        ><span
+          class="rounded-full px-2 py-1 text-[10px] font-bold"
+          :class="
+            isDoubt
+              ? 'bg-warning-bg text-warning'
+              : 'bg-slate-100 text-slate-600'
+          "
+          >{{ statusLabel }}</span
+        ><span
+          v-if="currentTimeLabel"
+          class="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500"
+          ><Clock3 class="size-3" />{{ currentTimeLabel }}</span
+        >
+      </div>
     </header>
-    <div class="content">
-      <p v-if="loading" class="state">Cargando detalle…</p>
-      <p v-else-if="error" class="state error">{{ error }}</p>
-      <template v-else-if="task"
-        ><section>
-          <h3>Tipo y estado</h3>
-          <div class="badges">
-            <span>{{ taskType }}</span
-            ><span>{{ task.status }}</span>
-          </div>
-        </section>
-        <section>
-          <h3>Asignación</h3>
-          <dl>
-            <div>
-              <dt>Tracker</dt>
-              <dd>{{ task.trackerLabel || "Sin asignar" }}</dd>
+    <div class="min-h-0 flex-1 overflow-y-auto p-4">
+      <div v-if="loading" class="grid gap-3" aria-live="polite">
+        <div
+          v-for="index in 5"
+          :key="index"
+          class="h-14 animate-pulse rounded-lg bg-slate-100"
+        />
+      </div>
+      <div
+        v-else-if="error"
+        class="rounded-xl border border-danger/25 bg-danger-bg p-4 text-center"
+      >
+        <AlertTriangle class="mx-auto size-5 text-danger" aria-hidden="true" />
+        <p class="mt-2 text-xs leading-5 text-danger">{{ error }}</p>
+        <button
+          class="mt-3 inline-flex items-center gap-1 rounded-lg bg-main px-3 py-2 text-xs font-bold text-white"
+          type="button"
+          @click="emit('retry')"
+        >
+          <RotateCw class="size-3.5" />Reintentar
+        </button>
+      </div>
+      <template v-else-if="task">
+        <TaskDoubtSection v-if="isDoubt && isDetail" :task="task" />
+        <section class="border-b border-slate-100 py-4">
+          <h3
+            class="text-[11px] font-extrabold uppercase tracking-[0.1em] text-slate-600"
+          >
+            Asignación y tiempo
+          </h3>
+          <dl class="mt-3 grid gap-2.5 text-xs">
+            <div class="flex justify-between gap-4">
+              <dt class="text-slate-500">Trabajador asignado</dt>
+              <dd
+                class="max-w-48 truncate text-right font-bold text-slate-700"
+                :title="task.assignedUserId || undefined"
+              >
+                {{ task.assignedUserId || "Sin asignar" }}
+              </dd>
             </div>
-            <div>
-              <dt>Fecha</dt>
-              <dd>{{ task.scheduledDate }}</dd>
+            <div class="flex justify-between gap-4">
+              <dt class="text-slate-500">Tracker / equipo</dt>
+              <dd class="text-right font-bold text-slate-700">
+                {{ task.trackerLabel || "Sin asignar" }}
+              </dd>
             </div>
-            <div v-if="task.estimatedMinutes">
-              <dt>Duración</dt>
-              <dd>{{ task.estimatedMinutes }} min</dd>
+            <div
+              v-if="isDetail && task.companionName"
+              class="flex justify-between gap-4"
+            >
+              <dt class="text-slate-500">Acompañante</dt>
+              <dd class="text-right font-bold text-slate-700">
+                {{ task.companionName }}
+              </dd>
+            </div>
+            <div class="flex justify-between gap-4">
+              <dt class="text-slate-500">Fecha programada</dt>
+              <dd class="text-right font-bold text-slate-700">
+                {{ task.scheduledDate }}
+              </dd>
+            </div>
+            <div class="flex justify-between gap-4">
+              <dt class="text-slate-500">Duración estimada</dt>
+              <dd class="font-bold text-slate-700">{{ durationLabel }}</dd>
+            </div>
+            <div v-if="isDetail" class="flex justify-between gap-4">
+              <dt class="text-slate-500">Visitas</dt>
+              <dd class="font-bold text-slate-700">
+                {{ task.time.cantidad_visitas
+                }}{{ task.time.visita_abierta ? " (una activa)" : "" }}
+              </dd>
             </div>
           </dl>
         </section>
-        <section>
-          <h3>Ubicación y geometría</h3>
-          <p>{{ geometryLabel }}</p>
-          <button
-            v-if="task.routePoint"
-            class="focus"
-            type="button"
-            @click="emit('focus', task.routePoint)"
+        <TaskGeometrySection
+          v-if="isDetail"
+          class="py-4"
+          :task="task"
+          @focus="emit('focus', $event)"
+        />
+        <section v-if="isDetail && !isDoubt" class="py-4">
+          <h3
+            class="text-[11px] font-extrabold uppercase tracking-[0.1em] text-slate-600"
           >
-            Enfocar en mapa
-          </button>
+            Ruta
+          </h3>
+          <div class="mt-3 flex items-center gap-3 rounded-lg bg-slate-50 p-3">
+            <span
+              class="flex size-7 items-center justify-center rounded-full bg-main text-xs font-extrabold text-white"
+              >{{ task.routeOrder ?? "—" }}</span
+            >
+            <p class="text-xs text-slate-600">
+              {{
+                task.route.id
+                  ? `Posición en ruta (${task.route.estado_calculo || "sin estado"})`
+                  : "Sin ruta planificada asociada"
+              }}
+            </p>
+          </div>
         </section>
-        <section v-if="task.type === 'duda'" class="notice">
-          <h3>Capacidad restringida</h3>
-          <p>Esta tarea automática es sólo de lectura en fase 1.</p>
-        </section>
-        <section v-else>
-          <h3>Ruta</h3>
-          <p>Posición {{ task.routeOrder ?? "sin definir" }}</p>
-        </section></template
-      >
+      </template>
     </div>
   </aside>
 </template>
-<style scoped>
-.detail-panel {
-  background: #fff;
-  box-shadow: -4px 0 16px rgb(0 0 0 / 16%);
-  display: flex;
-  flex-direction: column;
-}
-.detail-panel header {
-  align-items: start;
-  border-bottom: 1px solid #e1ddd4;
-  display: flex;
-  justify-content: space-between;
-  padding: 1rem;
-}
-.eyebrow {
-  color: #b8892f;
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  margin: 0 0 0.25rem;
-  text-transform: uppercase;
-}
-.detail-panel h2 {
-  color: #003f3b;
-  font-size: 1rem;
-  line-height: 1.25;
-  margin: 0;
-  max-width: 17rem;
-}
-.detail-panel header button {
-  background: transparent;
-  border: 0;
-  color: #49605b;
-  font-size: 1.5rem;
-  line-height: 1;
-}
-.content {
-  overflow: auto;
-  padding: 1rem;
-}
-.content section {
-  border-bottom: 1px solid #eeeae2;
-  padding: 0 0 0.85rem;
-  margin-bottom: 0.85rem;
-}
-.content h3 {
-  color: #38514b;
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
-  margin: 0 0 0.55rem;
-  text-transform: uppercase;
-}
-.content p {
-  color: #5e6863;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  margin: 0;
-}
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-.badges span {
-  background: #e7f0ed;
-  border-radius: 999px;
-  color: #00534e;
-  font-size: 0.72rem;
-  padding: 0.25rem 0.5rem;
-}
-dl {
-  display: grid;
-  gap: 0.55rem;
-  margin: 0;
-}
-dl div {
-  display: flex;
-  font-size: 0.8rem;
-  justify-content: space-between;
-  gap: 1rem;
-}
-dt {
-  color: #6b746e;
-}
-dd {
-  color: #283c36;
-  font-weight: 600;
-  margin: 0;
-  text-align: right;
-}
-.focus {
-  background: #edf3f0;
-  border: 1px solid #b9d1c9;
-  border-radius: 0.35rem;
-  color: #004643;
-  font-size: 0.75rem;
-  font-weight: 700;
-  margin-top: 0.65rem;
-  padding: 0.45rem 0.6rem;
-}
-.notice {
-  background: #fdf3e3;
-  border: 0 !important;
-  border-radius: 0.4rem;
-  padding: 0.65rem !important;
-}
-.notice h3 {
-  color: #9b621c;
-}
-.state {
-  color: #65716b;
-  font-size: 0.82rem;
-  text-align: center;
-}
-.state.error {
-  color: #a73c33;
-}
-</style>

@@ -6,6 +6,7 @@ import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.t
 import type {
   SeguimientoMapStatus,
   SeguimientoMapToolState,
+  SeguimientoOperationalGeography,
   TareaSeguimientoListItem,
 } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 
@@ -17,6 +18,12 @@ const props = defineProps<{
   status: SeguimientoMapStatus;
   error: string | null;
   focus: SeguimientoCoordinates | null;
+  mapConfiguration: {
+    latitude: number;
+    longitude: number;
+    zoom: number;
+  } | null;
+  geography: SeguimientoOperationalGeography[];
 }>();
 const emit = defineEmits<{ ready: []; error: [error: unknown] }>();
 const mapCanvas = useTemplateRef<HTMLDivElement>("mapCanvas");
@@ -24,13 +31,37 @@ let map: any = null;
 let taskMarkers: any[] = [];
 let trackerMarkers: any[] = [];
 let routeLine: any = null;
+let farmBoundaries: any[] = [];
+let farmRoads: any[] = [];
+let shelterMarkers: any[] = [];
+let geographyLabels: any[] = [];
 
 const isToolEnabled = (tool: SeguimientoMapToolState["tool"]): boolean =>
   props.mapTools.find((item) => item.tool === tool)?.enabled ?? false;
+
+const centeredZoom = (zoom: number): number =>
+  Math.max(1, Math.round(zoom * 0.9));
 const toLatLng = (coordinates: SeguimientoCoordinates) => ({
   lat: coordinates.latitude,
   lng: coordinates.longitude,
 });
+const geometryCenter = (
+  coordinates: number[][][][],
+): SeguimientoCoordinates | null => {
+  const points = coordinates.flatMap((polygon) => polygon[0] ?? []);
+  if (!points.length) return null;
+  const totals = points.reduce(
+    (result, [longitude, latitude]) => ({
+      latitude: result.latitude + latitude,
+      longitude: result.longitude + longitude,
+    }),
+    { latitude: 0, longitude: 0 },
+  );
+  return {
+    latitude: totals.latitude / points.length,
+    longitude: totals.longitude / points.length,
+  };
+};
 
 function clearLayers(): void {
   [...taskMarkers, ...trackerMarkers].forEach((marker) => marker.setMap(null));
@@ -38,12 +69,140 @@ function clearLayers(): void {
   trackerMarkers = [];
   routeLine?.setMap(null);
   routeLine = null;
+  farmBoundaries.forEach((boundary) => boundary.setMap(null));
+  farmBoundaries = [];
+  farmRoads.forEach((road) => road.setMap(null));
+  farmRoads = [];
+  shelterMarkers.forEach((marker) => marker.setMap(null));
+  shelterMarkers = [];
+  geographyLabels.forEach((label) => label.setMap(null));
+  geographyLabels = [];
 }
 
 function renderLayers(): void {
   if (!map || !window.google?.maps) return;
   clearLayers();
   const maps = window.google.maps;
+  if (isToolEnabled("zones")) {
+    farmBoundaries = props.geography.flatMap((area) =>
+      area.farms.flatMap((farm) => {
+        if (!farm.boundary) return [];
+        return [
+          new maps.Polygon({
+            map,
+            paths: farm.boundary.coordinates.map((polygon) =>
+              polygon[0].map(([longitude, latitude]) => ({
+                lat: latitude,
+                lng: longitude,
+              })),
+            ),
+            strokeColor: "#1A6B9A",
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillColor: "#1A6B9A",
+            fillOpacity: 0.2,
+          }),
+        ];
+      }),
+    );
+    farmRoads = props.geography.flatMap((area) =>
+      area.farms.flatMap((farm) =>
+        (farm.roadNetwork?.coordinates ?? []).map(
+          (line) =>
+            new maps.Polyline({
+              map,
+              path: line.map(([longitude, latitude]) => ({
+                lat: latitude,
+                lng: longitude,
+              })),
+              strokeColor: "#5D88A8",
+              strokeOpacity: 0.65,
+              strokeWeight: 2,
+            }),
+        ),
+      ),
+    );
+    farmBoundaries.push(
+      ...props.geography.flatMap((area) =>
+        area.shelters.flatMap((shelter) => {
+          if (!shelter.boundary) return [];
+          return [
+            new maps.Polygon({
+              map,
+              paths: shelter.boundary.coordinates.map((polygon) =>
+                polygon[0].map(([longitude, latitude]) => ({
+                  lat: latitude,
+                  lng: longitude,
+                })),
+              ),
+              strokeColor: "#1A6B9A",
+              strokeOpacity: 0.8,
+              strokeWeight: 2,
+              fillColor: "#1A6B9A",
+              fillOpacity: 0.2,
+            }),
+          ];
+        }),
+      ),
+    );
+    geographyLabels = props.geography.flatMap((area) =>
+      area.farms.flatMap((farm) => {
+        const center = farm.boundary
+          ? geometryCenter(farm.boundary.coordinates)
+          : null;
+        return center
+          ? [
+              new maps.Marker({
+                map,
+                position: toLatLng(center),
+                title: farm.name,
+                label: {
+                  text: farm.name,
+                  color: "#ffffff",
+                  fontSize: "10px",
+                  fontWeight: "700",
+                },
+                icon: {
+                  path: maps.SymbolPath.CIRCLE,
+                  scale: 9,
+                  fillColor: "#1A6B9A",
+                  fillOpacity: 0.9,
+                  strokeColor: "#ffffff",
+                  strokeWeight: 2,
+                },
+              }),
+            ]
+          : [];
+      }),
+    );
+    shelterMarkers = props.geography.flatMap((area) =>
+      area.shelters.flatMap((shelter) =>
+        shelter.routePoint
+          ? [
+              new maps.Marker({
+                map,
+                position: toLatLng(shelter.routePoint),
+                title: `Resguardo: ${shelter.name}`,
+                label: {
+                  text: "R",
+                  color: "#ffffff",
+                  fontSize: "11px",
+                  fontWeight: "700",
+                },
+                icon: {
+                  path: maps.SymbolPath.CIRCLE,
+                  scale: 10,
+                  fillColor: "#004643",
+                  fillOpacity: 1,
+                  strokeColor: "#ffffff",
+                  strokeWeight: 2,
+                },
+              }),
+            ]
+          : [],
+      ),
+    );
+  }
   if (isToolEnabled("tasks")) {
     taskMarkers = props.tasks
       .filter((task) => task.routePoint)
@@ -77,6 +236,12 @@ function renderLayers(): void {
             map,
             position: toLatLng(tracker.position!),
             title: tracker.label,
+            label: {
+              text: "T",
+              color: "#ffffff",
+              fontSize: "11px",
+              fontWeight: "700",
+            },
             icon: {
               path: maps.SymbolPath.FORWARD_CLOSED_ARROW,
               scale: 5,
@@ -119,9 +284,21 @@ async function initializeMap(): Promise<void> {
     if (!mapCanvas.value || !window.google?.maps)
       throw new Error("Google Maps no quedó disponible.");
     map = new window.google.maps.Map(mapCanvas.value, {
-      center: { lat: 8.538, lng: -80.782 },
-      zoom: 8,
+      center: props.mapConfiguration
+        ? toLatLng(props.mapConfiguration)
+        : { lat: 8.538, lng: -80.782 },
+      zoom: props.mapConfiguration
+        ? centeredZoom(props.mapConfiguration.zoom)
+        : centeredZoom(8),
       mapTypeControl: false,
+      mapTypeId: "satellite",
+      styles: [
+        {
+          featureType: "all",
+          elementType: "labels",
+          stylers: [{ visibility: "off" }],
+        },
+      ],
       streetViewControl: false,
       fullscreenControl: false,
       clickableIcons: false,
@@ -135,11 +312,26 @@ async function initializeMap(): Promise<void> {
 }
 
 watch(
-  () => [props.tasks, props.trackers, props.mapTools, props.selectedTaskId],
+  () => [
+    props.tasks,
+    props.trackers,
+    props.geography,
+    props.mapTools,
+    props.selectedTaskId,
+  ],
   renderLayers,
   { deep: true },
 );
 watch(() => props.focus, focusMap);
+watch(
+  () => props.mapConfiguration,
+  (configuration) => {
+    if (map && configuration) {
+      map.setCenter(toLatLng(configuration));
+      map.setZoom(centeredZoom(configuration.zoom));
+    }
+  },
+);
 onMounted(() => {
   void initializeMap();
 });

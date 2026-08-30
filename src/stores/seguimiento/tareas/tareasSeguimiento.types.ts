@@ -10,10 +10,7 @@ export type SeguimientoMapStatus = "idle" | "ready" | "error";
 export type SeguimientoMapTool = "tasks" | "trackers" | "zones" | "route";
 export type TareaRastreoTipoCodigo = "finca" | "zona" | "duda_automatica";
 export type TareaRastreoEstadoOperativoCodigo =
-  | "sin_iniciar"
-  | "en_ruta"
-  | "en_ubicacion"
-  | "visitada";
+  "sin_iniciar" | "en_ruta" | "en_ubicacion" | "visitada";
 
 export interface TareasSeguimientoFilters {
   scheduledDate: string | null;
@@ -73,6 +70,46 @@ export interface SeguimientoLineGeometry {
 export interface SeguimientoZoneGeometry {
   type: "MultiPolygon";
   coordinates: number[][][][];
+}
+
+export interface SeguimientoTaskWorkerOption {
+  id: string;
+  label: string;
+}
+export interface SeguimientoTaskAreaOption {
+  id: string;
+  label: string;
+  workers: SeguimientoTaskWorkerOption[];
+}
+export interface SeguimientoTaskCatalog {
+  areas: SeguimientoTaskAreaOption[];
+}
+export interface SeguimientoOperationalGeography {
+  areaId: string;
+  farms: Array<{
+    id: string;
+    name: string;
+    boundary: SeguimientoZoneGeometry | null;
+    roadNetwork: SeguimientoLineGeometry | null;
+  }>;
+  shelters: Array<{
+    id: string;
+    name: string;
+    boundary: SeguimientoZoneGeometry | null;
+    routePoint: SeguimientoCoordinates | null;
+  }>;
+}
+export interface SeguimientoMapConfiguration {
+  latitude: number;
+  longitude: number;
+  zoom: number;
+}
+export interface ConfiguracionInicialTrackersDto {
+  areas: Array<{
+    area_id: string;
+    area_nombre: string;
+    grupos_tracker: Array<{ group_id: number }>;
+  }>;
 }
 
 /** DTO JSON de public.obtener_tarea_detalle_v2. */
@@ -143,15 +180,24 @@ export interface TareaSeguimientoListItem {
 }
 
 export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
+  companionName: string | null;
   controlLine: SeguimientoLineGeometry | null;
   controlZones: SeguimientoZoneGeometry[];
   operationalStatusLabel: string | null;
+  time: TareaRastreoDetalleDto["tiempo"];
+  visits: TareaRastreoDetalleDto["visitas"];
+  route: TareaRastreoDetalleDto["ruta"];
+  permissions: TareaRastreoDetalleDto["permisos"];
   updatedAt: string;
 }
 
 export interface TareaSeguimientoWorkspaceData {
   tasks: TareaSeguimientoListItem[];
   trackers: SeguimientoTracker[];
+  trackerLoadObservations: string[];
+  catalog: SeguimientoTaskCatalog;
+  geography: SeguimientoOperationalGeography[];
+  mapConfiguration: SeguimientoMapConfiguration | null;
 }
 export interface SeguimientoMapToolState {
   tool: SeguimientoMapTool;

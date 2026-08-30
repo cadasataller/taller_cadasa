@@ -3,9 +3,11 @@ import { computed, reactive, watch } from "vue";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
 import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
 import type { TareasSeguimientoFilters } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
+import type { SeguimientoTaskCatalog } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 interface Props {
   filters: TareasSeguimientoFilters;
   trackers: SeguimientoTracker[];
+  catalog: SeguimientoTaskCatalog;
   loading: boolean;
   disabled: boolean;
   showTrackers: boolean;
@@ -18,15 +20,21 @@ const emit = defineEmits<{
 const draft = reactive({
   scheduledDate: props.filters.scheduledDate ?? "",
   assignedUserId: props.filters.assignedUserId ?? "",
+  areaId: props.filters.areaId ?? "",
   sourceId: props.filters.sourceId?.toString() ?? "",
   coordinates: "",
 });
 const trackerOptions = computed(() => props.trackers);
+const workerOptions = computed(
+  () =>
+    props.catalog.areas.find((area) => area.id === draft.areaId)?.workers ?? [],
+);
 watch(
   () => props.filters,
   (filters) => {
     draft.scheduledDate = filters.scheduledDate ?? "";
     draft.assignedUserId = filters.assignedUserId ?? "";
+    draft.areaId = filters.areaId ?? "";
     draft.sourceId = filters.sourceId?.toString() ?? "";
   },
   { deep: true },
@@ -34,6 +42,7 @@ watch(
 function apply(): void {
   emit("apply", {
     scheduledDate: draft.scheduledDate || null,
+    areaId: draft.areaId || null,
     assignedUserId: draft.assignedUserId || null,
     sourceId: draft.sourceId ? Number(draft.sourceId) : null,
   });
@@ -57,22 +66,45 @@ function focusCoordinates(): void {
   >
     <label
       class="grid min-w-32 flex-1 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-gray-600"
+      ><span>Área</span
+      ><select
+        v-model="draft.areaId"
+        :disabled="disabled"
+        class="h-11 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+      >
+        <option value="">Todas</option>
+        <option v-for="area in catalog.areas" :key="area.id" :value="area.id">
+          {{ area.label }}
+        </option>
+      </select></label
+    >
+    <label
+      class="grid min-w-32 flex-1 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-gray-600"
       ><span>Fecha operativa</span
       ><input
         v-model="draft.scheduledDate"
         :disabled="disabled"
-        class="h-10 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        class="h-11 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
         type="date"
     /></label>
     <label
       class="grid min-w-32 flex-1 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-gray-600"
       ><span>Trabajador</span
-      ><input
+      ><select
         v-model="draft.assignedUserId"
         :disabled="disabled"
-        class="h-10 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
-        placeholder="ID de trabajador"
-    /></label>
+        class="h-11 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+      >
+        <option value="">Todos</option>
+        <option
+          v-for="worker in workerOptions"
+          :key="worker.id"
+          :value="worker.id"
+        >
+          {{ worker.label }}
+        </option>
+      </select></label
+    >
     <label
       v-if="showTrackers"
       class="grid min-w-32 flex-1 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-gray-600"
@@ -80,7 +112,7 @@ function focusCoordinates(): void {
       ><select
         v-model="draft.sourceId"
         :disabled="disabled"
-        class="h-10 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        class="h-11 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
       >
         <option value="">Todos</option>
         <option
@@ -98,12 +130,12 @@ function focusCoordinates(): void {
       ><input
         v-model="draft.coordinates"
         :disabled="disabled"
-        class="h-10 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
+        class="h-11 rounded-md border border-gray-300 bg-white px-2 text-sm font-medium normal-case text-gray-700 outline-none focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
         placeholder="8.43, -82.51"
         @keyup.enter.prevent="focusCoordinates"
     /></label>
     <button
-      class="h-10 rounded-md bg-second-dark px-3 text-sm font-bold text-main transition hover:bg-second-deep disabled:cursor-not-allowed disabled:opacity-55"
+      class="h-11 rounded-md bg-second-dark px-3 text-sm font-bold text-main transition hover:bg-second-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main disabled:cursor-not-allowed disabled:opacity-55"
       :disabled="disabled"
       type="button"
       @click="focusCoordinates"
@@ -111,7 +143,7 @@ function focusCoordinates(): void {
       Ir
     </button>
     <button
-      class="h-10 rounded-md bg-main px-3 text-sm font-bold text-white transition hover:bg-main-light disabled:cursor-not-allowed disabled:opacity-55"
+      class="h-11 rounded-md bg-main px-3 text-sm font-bold text-white transition hover:bg-main-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main disabled:cursor-not-allowed disabled:opacity-55"
       :disabled="disabled || loading"
       type="submit"
     >

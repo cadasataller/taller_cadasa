@@ -22,7 +22,7 @@ const labels: Record<SeguimientoMapTool, string> = {
     aria-label="Herramientas del mapa"
   >
     <button
-      class="grid size-9 place-items-center rounded-md text-lg font-extrabold text-main transition hover:bg-second disabled:cursor-not-allowed disabled:opacity-45"
+      class="grid size-11 place-items-center rounded-md text-lg font-extrabold text-main transition hover:bg-second focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main disabled:cursor-not-allowed disabled:opacity-45"
       :disabled="disabled"
       title="Restablecer vista"
       type="button"
@@ -30,7 +30,7 @@ const labels: Record<SeguimientoMapTool, string> = {
     >
       ⌖</button
     ><button
-      class="grid size-9 place-items-center rounded-md text-lg font-extrabold text-main transition hover:bg-second disabled:cursor-not-allowed disabled:opacity-45"
+      class="grid size-11 place-items-center rounded-md text-lg font-extrabold text-main transition hover:bg-second focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main disabled:cursor-not-allowed disabled:opacity-45"
       :disabled="disabled"
       title="Enfocar tarea seleccionada"
       type="button"
@@ -45,7 +45,7 @@ const labels: Record<SeguimientoMapTool, string> = {
       :class="
         item.enabled ? 'bg-main/10 text-main' : 'text-gray-600 hover:bg-second'
       "
-      class="grid size-9 place-items-center rounded-md font-extrabold transition disabled:cursor-not-allowed disabled:opacity-45"
+      class="grid size-11 place-items-center rounded-md font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main disabled:cursor-not-allowed disabled:opacity-45"
       :disabled="disabled"
       :title="`${item.enabled ? 'Ocultar' : 'Mostrar'} ${labels[item.tool]}`"
       type="button"
