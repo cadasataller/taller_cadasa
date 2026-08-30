@@ -77,39 +77,77 @@ const creationDraftSchema = z
       context.addIssue({
         code: "custom",
         path: ["type"],
-        message: "Selecciona el área y el tipo de tarea.",
+        message: "Selecciona un tipo de tarea.",
       });
     }
-    if (!draft.worker || !draft.tracker) {
+    if (!draft.worker) {
       context.addIssue({
         code: "custom",
         path: ["worker"],
-        message: "Selecciona un trabajador y un tracker válidos.",
+        message: "Selecciona un trabajador válido.",
+      });
+    }
+    if (!draft.tracker) {
+      context.addIssue({
+        code: "custom",
+        path: ["tracker"],
+        message: "Selecciona un equipo válido.",
+      });
+    }
+    if (!draft.details.instructions.trim()) {
+      context.addIssue({
+        code: "custom",
+        path: ["details", "instructions"],
+        message: "Escribe las indicaciones de la tarea.",
       });
     }
     if (
-      !draft.details.instructions.trim() ||
       !draft.details.scheduledDate ||
-      !isoDateSchema.safeParse(draft.details.scheduledDate).success ||
-      !Number.isInteger(draft.details.priorityId) ||
-      !minutesSchema.safeParse(draft.details.estimatedMinutes).success
+      !isoDateSchema.safeParse(draft.details.scheduledDate).success
     ) {
       context.addIssue({
         code: "custom",
-        path: ["details"],
+        path: ["details", "scheduledDate"],
+        message: "Selecciona una fecha programada válida.",
+      });
+    }
+    if (!Number.isInteger(draft.details.priorityId)) {
+      context.addIssue({
+        code: "custom",
+        path: ["details", "priorityId"],
+        message: "Selecciona una prioridad válida.",
+      });
+    }
+    if (!minutesSchema.safeParse(draft.details.estimatedMinutes).success) {
+      context.addIssue({
+        code: "custom",
+        path: ["details", "estimatedMinutes"],
         message:
-          "Completa indicaciones, fecha, prioridad y duración en intervalos de 15 minutos.",
+          "Indica una duración entre 15 minutos y 7 días, en intervalos de 15 minutos.",
+      });
+    }
+    if (draft.type === "finca" && !draft.geometry.locationId) {
+      context.addIssue({
+        code: "custom",
+        path: ["geometry", "locationId"],
+        message: "Selecciona una finca activa.",
+      });
+    }
+    if (!isValidRoutePoint(draft.geometry.routePoint)) {
+      context.addIssue({
+        code: "custom",
+        path: ["geometry", "routePoint"],
+        message: "Selecciona un punto de enrutado.",
       });
     }
     if (
       draft.type === "finca" &&
-      (!draft.geometry.locationId ||
-        !isValidControlLine(draft.geometry.controlLine))
+      !isValidControlLine(draft.geometry.controlLine)
     ) {
       context.addIssue({
         code: "custom",
-        path: ["geometry"],
-        message: "La finca requiere ubicación y línea de control.",
+        path: ["geometry", "controlLine"],
+        message: "Dibuja la línea de control de la finca.",
       });
     }
     if (
@@ -119,15 +157,8 @@ const creationDraftSchema = z
     ) {
       context.addIssue({
         code: "custom",
-        path: ["geometry"],
-        message: "La zona requiere polígono de control y no usa ubicación.",
-      });
-    }
-    if (!isValidRoutePoint(draft.geometry.routePoint)) {
-      context.addIssue({
-        code: "custom",
-        path: ["geometry"],
-        message: "Selecciona un punto de enrutado.",
+        path: ["geometry", "controlZone"],
+        message: "Dibuja el polígono de control de la zona.",
       });
     }
   });
@@ -139,12 +170,38 @@ const initialValidBlocks = (): TareaCreacionBloquesValidos => ({
   geometry: false,
   route: false,
 });
-const fieldForIssue = (path: PropertyKey[]): TareaCreacionCampo => {
-  const [first] = path;
+const errorFieldForIssue = (
+  path: PropertyKey[],
+): TareaCreacionErrorValidacion["field"] => {
+  const [first, second] = path;
   if (first === "areaId" || first === "type") return "type";
-  if (first === "worker" || first === "tracker") return "assignment";
-  if (first === "details") return "details";
+  if (first === "worker") return "worker";
+  if (first === "tracker") return "tracker";
+  if (first === "details") {
+    if (second === "instructions") return "instructions";
+    if (second === "scheduledDate") return "scheduledDate";
+    if (second === "priorityId") return "priority";
+    return "estimatedMinutes";
+  }
   if (first === "route") return "route";
+  if (second === "locationId") return "location";
+  if (second === "routePoint") return "routePoint";
+  if (second === "controlLine") return "controlLine";
+  return "controlZone";
+};
+const blockForErrorField = (
+  field: TareaCreacionErrorValidacion["field"],
+): TareaCreacionCampo => {
+  if (field === "type") return "type";
+  if (field === "worker" || field === "tracker") return "assignment";
+  if (
+    field === "instructions" ||
+    field === "scheduledDate" ||
+    field === "priority" ||
+    field === "estimatedMinutes"
+  )
+    return "details";
+  if (field === "route") return "route";
   return "geometry";
 };
 
@@ -153,18 +210,18 @@ export const validateTareaCreacionDraft = (
 ): TareaCreacionResultadoValidacion => {
   const result = creationDraftSchema.safeParse(draft);
   const validBlocks = initialValidBlocks();
-  const errorsByField = new Map<
-    TareaCreacionCampo,
-    TareaCreacionErrorValidacion
-  >();
+  (Object.keys(validBlocks) as TareaCreacionCampo[]).forEach((field) => {
+    validBlocks[field] = true;
+  });
+  const errorsByField = new Map<string, TareaCreacionErrorValidacion>();
   for (const issue of result.error?.issues ?? []) {
-    const field = fieldForIssue(issue.path);
+    const field = errorFieldForIssue(issue.path);
     if (!errorsByField.has(field))
       errorsByField.set(field, { field, message: issue.message });
   }
-  (Object.keys(validBlocks) as TareaCreacionCampo[]).forEach((field) => {
-    validBlocks[field] = !errorsByField.has(field);
-  });
+  for (const error of errorsByField.values()) {
+    validBlocks[blockForErrorField(error.field)] = false;
+  }
   return {
     isValid: result.success,
     errors: [...errorsByField.values()],

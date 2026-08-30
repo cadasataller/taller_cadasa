@@ -71,7 +71,9 @@ export function mapTareaSeguimientoDetail(
     trackerId: asignacion.tracker_id,
     sourceId: asignacion.source_id,
     trackerLabel: asignacion.tracker_label,
-    companionName: asignacion.acompanante_nombre,
+    companionNames: asignacion.acompanantes.map(
+      (companion) => companion.nombre,
+    ),
     routePoint: mapRoutePoint(tarea.punto_latitud, tarea.punto_longitud),
     routeOrder: tarea.orden_ruta,
     controlLine: tarea.linea_control_geojson,

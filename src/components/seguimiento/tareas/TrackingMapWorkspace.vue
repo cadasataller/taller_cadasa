@@ -48,7 +48,7 @@ let map: any = null;
 let taskMarkers: { marker: any; selected: boolean }[] = [];
 let trackerMarkers: { marker: any; tracker: SeguimientoTracker }[] = [];
 let routeLine: any = null;
-let farmBoundaries: { halo: any; surface: any }[] = [];
+let farmBoundaries: any[] = [];
 let farmRoads: { halo: any; surface: any }[] = [];
 let shelterBoundaries: { halo: any; surface: any }[] = [];
 let shelterMarkers: any[] = [];
@@ -92,10 +92,7 @@ function clearLayers(): void {
   trackerMarkers = [];
   routeLine?.setMap(null);
   routeLine = null;
-  farmBoundaries.forEach(({ halo, surface }) => {
-    halo.setMap(null);
-    surface.setMap(null);
-  });
+  farmBoundaries.forEach((boundary) => boundary.setMap(null));
   farmBoundaries = [];
   farmRoads.forEach(({ halo, surface }) => {
     halo.setMap(null);
@@ -166,19 +163,13 @@ function updateZoomDrivenLayers(): void {
   if (!map) return;
   const profile = resolveSeguimientoMapZoomProfile(map.getZoom() ?? 0);
 
-  farmBoundaries.forEach(({ halo, surface }) => {
-    halo.setOptions({
+  farmBoundaries.forEach((boundary) => {
+    boundary.setOptions({
       visible: true,
-      strokeOpacity: profile.farmHaloOpacity,
-      strokeWeight: profile.farmHaloWeight,
-      zIndex: seguimientoMapZIndex.farm,
-    });
-    surface.setOptions({
-      visible: true,
-      strokeOpacity: profile.farmStrokeOpacity,
-      strokeWeight: profile.farmStrokeWeight,
+      strokeOpacity: 1,
+      strokeWeight: 1,
       fillOpacity: profile.farmFillOpacity,
-      zIndex: seguimientoMapZIndex.farm + 1,
+      zIndex: seguimientoMapZIndex.farm,
     });
   });
   geographyLabels.forEach((label) =>
@@ -234,27 +225,16 @@ function renderLayers(): void {
           })),
         );
         return [
-          {
-            halo: new maps.Polygon({
-              map,
-              paths,
-              strokeColor: "#FFFDF5",
-              strokeOpacity: 0.72,
-              strokeWeight: 6,
-              fillOpacity: 0,
-              zIndex: seguimientoMapZIndex.farm,
-            }),
-            surface: new maps.Polygon({
-              map,
-              paths,
-              strokeColor: "#004643",
-              strokeOpacity: 0.8,
-              strokeWeight: 2,
-              fillColor: "#0F766E",
-              fillOpacity: 0.1,
-              zIndex: seguimientoMapZIndex.farm + 1,
-            }),
-          },
+          new maps.Polygon({
+            map,
+            paths,
+            strokeColor: "#1A6B9A",
+            strokeOpacity: 1,
+            strokeWeight: 1,
+            fillColor: "#1A6B9A",
+            fillOpacity: 0.32,
+            zIndex: seguimientoMapZIndex.farm,
+          }),
         ];
       }),
     );

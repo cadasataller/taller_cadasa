@@ -38,7 +38,7 @@ describe("resolveSeguimientoMapZoomProfile", () => {
     expect(profile.level).toBe("near");
     expect(profile.sheltersVisible).toBe(true);
     expect(profile.zoneFillOpacity).toBeGreaterThan(0);
-    expect(profile.farmStrokeWeight).toBeGreaterThan(2);
+    expect(profile.farmFillOpacity).toBe(0.16);
   });
 
   it("retrasa los resguardos hasta el extremo superior del zoom medio", () => {
@@ -50,5 +50,20 @@ describe("resolveSeguimientoMapZoomProfile", () => {
       resolveSeguimientoMapZoomProfile(seguimientoMapZoomPolicy.shelterZoom)
         .sheltersVisible,
     ).toBe(true);
+  });
+
+  it.each([
+    [10, 0.32],
+    [11, 0.32],
+    [12, 0.28],
+    [13, 0.24],
+    [14, 0.2],
+    [15, 0.16],
+    [16, 0.12],
+    [17, 0.08],
+  ])("ajusta el relleno de finca al zoom %i", (zoom, fillOpacity) => {
+    expect(resolveSeguimientoMapZoomProfile(zoom).farmFillOpacity).toBe(
+      fillOpacity,
+    );
   });
 });

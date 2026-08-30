@@ -31,7 +31,7 @@ const draft = (type: "finca" | "zona"): TareaCreacionBorrador => ({
   type,
   worker: { id: "worker-1", label: "Pedro Hurtado" },
   tracker: { id: 14, sourceId: 22, label: "TRACTOR 84-95" },
-  companion: null,
+  companions: [],
   details: {
     instructions: "  Fertilización  ",
     scheduledDate: "2026-08-26",
@@ -77,6 +77,16 @@ describe("contratos de creación de tarea", () => {
       p_linea_control_geojson: null,
       p_zona_control_geojson: zone,
     });
+  });
+
+  it("serializa todos los acompañantes para crear_tarea_v2", () => {
+    const taskDraft = draft("finca");
+    taskDraft.companions = [{ name: "Carlos Pérez" }, { name: "Juan Gómez" }];
+
+    expect(toCrearTareaV2Params(taskDraft).p_acompanantes).toEqual([
+      "Carlos Pérez",
+      "Juan Gómez",
+    ]);
   });
 
   it("rechaza una duración que no cumple el intervalo del RPC", () => {

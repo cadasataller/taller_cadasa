@@ -1,7 +1,7 @@
 # Arquitectura de datos y RPC de la app de rastreo — V2
 
 **Proyecto Supabase:** `rastreo_tareas`  
-**Estado de referencia:** 2026-08-28  
+**Estado de referencia:** 2026-08-30
 **Objetivo:** documentar los RPC que utilizará la aplicación y el contexto de las tablas que participan en la estrategia actual de geolocalización, tareas, rutas, permanencia, resguardo, zonas y observaciones.
 
 ---
@@ -136,9 +136,7 @@ Carga los datos para selects de personas agrupados por área:
         }
       ],
       "supervisores": [],
-      "acompanantes": [
-        { "nombre": "Nombre histórico" }
-      ]
+      "acompanantes": [{ "nombre": "Nombre histórico" }]
     }
   ]
 }
@@ -330,7 +328,7 @@ public.crear_tarea_v2(
   p_tracker_id bigint,
   p_source_id bigint,
   p_tracker_label text,
-  p_acompanante_nombre text,
+  p_acompanantes text[],
   p_indicaciones text,
   p_fecha_programada date,
   p_prioridad_id smallint,
@@ -401,6 +399,12 @@ minutos % 15 = 0
 
 `prioridad != orden_ruta`. El supervisor define `orden_ruta` explícitamente.
 
+### Acompañantes
+
+`p_acompanantes` recibe cero o más nombres. Para una tarea sin acompañantes,
+Vue debe enviar `[]`. El RPC normaliza espacios, omite valores vacíos y evita
+duplicados sin distinguir mayúsculas/minúsculas.
+
 ### Tablas escritas
 
 - `tareas`
@@ -421,7 +425,7 @@ public.actualizar_tarea_v2(
   p_tracker_id bigint,
   p_source_id bigint,
   p_tracker_label text,
-  p_acompanante_nombre text,
+  p_acompanantes text[],
   p_indicaciones text,
   p_fecha_programada date,
   p_prioridad_id smallint,
@@ -444,7 +448,8 @@ returns jsonb
 - trabajador debe ser operativo del área;
 - finca debe estar disponible para el área;
 - respeta protección de geometría si ya hay ejecución;
-- sincroniza acompañante;
+- sincroniza los acompañantes activos como conjunto: conserva los seleccionados,
+  agrega los nuevos y marca como eliminados los retirados;
 - reorganiza orden sin pisar posiciones.
 
 Una operación puede incrementar `version` más de una vez internamente. Vue debe conservar la **versión final devuelta**.
@@ -584,7 +589,22 @@ Incluye punto, línea GeoJSON, zonas de control GeoJSON, ubicación, orden, fech
 
 ### `asignacion`
 
-Trabajador, tracker, source, label y acompañante activo.
+Trabajador, tracker, source, label y todos los acompañantes activos en
+`asignacion.acompanantes`, con objetos `{ id, nombre }`.
+
+```json
+{
+  "asignacion": {
+    "usuario_id": "uuid",
+    "tracker_id": 123,
+    "source_id": 456,
+    "acompanantes": [
+      { "id": "uuid-1", "nombre": "Carlos Pérez" },
+      { "id": "uuid-2", "nombre": "Juan Gómez" }
+    ]
+  }
+}
+```
 
 ### `tiempo`
 
@@ -928,9 +948,10 @@ source_id + fecha_programada + orden_ruta
 
 Evita desplazar tareas ya ejecutadas.
 
-## `app_privado.sincronizar_acompanante_tarea_v2`
+## `app_privado.sincronizar_acompanantes_tarea_v2`
 
-Mantiene un único acompañante activo por tarea y normaliza duplicados.
+Sincroniza 0..N acompañantes activos por tarea, normaliza nombres y evita
+duplicados por nombre sin distinguir mayúsculas/minúsculas.
 
 ## `app_privado.tarea_ejecutada_v2`
 
@@ -1744,7 +1765,7 @@ sb_v2_abrir_visita_tarea
 sb_v2_cerrar_visita_tarea
 sb_v2_procesar_detencion_tracker
 app_privado.reubicar_orden_tarea_v2
-app_privado.sincronizar_acompanante_tarea_v2
+app_privado.sincronizar_acompanantes_tarea_v2
 app_privado.tarea_ejecutada_v2
 ```
 
@@ -2017,7 +2038,7 @@ sincronizar_estados_operativos_ruta
 ```text
 app_privado.ubicacion_disponible_en_area_v2
 app_privado.reubicar_orden_tarea_v2
-app_privado.sincronizar_acompanante_tarea_v2
+app_privado.sincronizar_acompanantes_tarea_v2
 app_privado.tarea_ejecutada_v2
 app_privado.usuario_tiene_area
 app_privado.usuario_es_trabajador_de_area
@@ -2153,29 +2174,29 @@ source_id
 
 # 49. Fuente de verdad por dato
 
-| Dato | Fuente principal |
-|---|---|
-| Área organizacional | `areas` |
-| Áreas supervisor | `asignaciones_usuario_area` / `supervision` |
-| Áreas trabajador | `asignaciones_usuario_area` / `operacion` |
-| Finca física | `ubicaciones` + `red_vial_enrutable` |
+| Dato                              | Fuente principal                               |
+| --------------------------------- | ---------------------------------------------- |
+| Área organizacional               | `areas`                                        |
+| Áreas supervisor                  | `asignaciones_usuario_area` / `supervision`    |
+| Áreas trabajador                  | `asignaciones_usuario_area` / `operacion`      |
+| Finca física                      | `ubicaciones` + `red_vial_enrutable`           |
 | Disponibilidad de finca/resguardo | `ubicaciones_areas` / `disponible_todas_areas` |
-| Resguardo | `lugares_resguardo_tracker` |
-| Zona de tarea | `tarea_zonas` + `zonas_operativas` |
-| Tarea | `tareas` |
-| Acompañante | `acompanantes_tarea` |
-| Estado administrativo | `tareas.estado_tarea_id` |
-| Estado operativo | `tareas.estado_operativo_tarea_id` |
-| Tiempo real | `visitas_tarea_tracker` |
-| Posición actual | `ubicaciones_actuales_tracker` |
-| Recorrido real | `recorridos_tracker` |
-| Asociación recorrido/tarea | `recorrido_tareas_tracker` |
-| Detención activa | `estado_detencion_tracker` |
-| Observación | `observaciones_tarea` |
-| Ruta actual | `rutas_planificadas` |
-| Paradas calculadas | `paradas_ruta_planificada` |
-| Orden supervisor | `tareas.orden_ruta` |
-| Cola recálculo | `solicitudes_recalculo_ruta` |
+| Resguardo                         | `lugares_resguardo_tracker`                    |
+| Zona de tarea                     | `tarea_zonas` + `zonas_operativas`             |
+| Tarea                             | `tareas`                                       |
+| Acompañante                       | `acompanantes_tarea`                           |
+| Estado administrativo             | `tareas.estado_tarea_id`                       |
+| Estado operativo                  | `tareas.estado_operativo_tarea_id`             |
+| Tiempo real                       | `visitas_tarea_tracker`                        |
+| Posición actual                   | `ubicaciones_actuales_tracker`                 |
+| Recorrido real                    | `recorridos_tracker`                           |
+| Asociación recorrido/tarea        | `recorrido_tareas_tracker`                     |
+| Detención activa                  | `estado_detencion_tracker`                     |
+| Observación                       | `observaciones_tarea`                          |
+| Ruta actual                       | `rutas_planificadas`                           |
+| Paradas calculadas                | `paradas_ruta_planificada`                     |
+| Orden supervisor                  | `tareas.orden_ruta`                            |
+| Cola recálculo                    | `solicitudes_recalculo_ruta`                   |
 
 ---
 

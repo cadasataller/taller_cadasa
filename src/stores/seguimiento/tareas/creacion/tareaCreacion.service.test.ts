@@ -13,7 +13,7 @@ const payload: CrearTareaV2Params = {
   p_tracker_id: 14,
   p_source_id: 22,
   p_tracker_label: "TRACTOR 84-95",
-  p_acompanante_nombre: null,
+  p_acompanantes: [],
   p_indicaciones: "Fertilización",
   p_fecha_programada: "2026-08-26",
   p_prioridad_id: 1,

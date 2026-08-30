@@ -176,12 +176,18 @@ const currentTimeLabel = computed(() =>
               </dd>
             </div>
             <div
-              v-if="isDetail && task.companionName"
-              class="flex justify-between gap-4"
+              v-if="isDetail && task.companionNames.length"
+              class="grid gap-1"
             >
-              <dt class="text-slate-500">Acompañante</dt>
-              <dd class="text-right font-bold text-slate-700">
-                {{ task.companionName }}
+              <dt class="text-slate-500">Acompañantes</dt>
+              <dd class="flex flex-wrap justify-end gap-1">
+                <span
+                  v-for="name in task.companionNames"
+                  :key="name"
+                  class="rounded-full bg-second px-2 py-0.5 text-[11px] font-bold text-main"
+                >
+                  {{ name }}
+                </span>
               </dd>
             </div>
             <div class="flex justify-between gap-4">

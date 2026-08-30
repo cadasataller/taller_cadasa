@@ -2,6 +2,7 @@ import { computed, ref, shallowRef } from "vue";
 import { defineStore } from "pinia";
 import {
   createInitialTareasSeguimientoFilters,
+  getSeguimientoToday,
   toErrorMessage,
 } from "./tareasSeguimiento.helpers";
 import { tareasSeguimientoService } from "./tareasSeguimiento.service";
@@ -222,7 +223,14 @@ export const useTareasSeguimientoStore = defineStore(
     }
 
     function setFilters(next: Partial<TareasSeguimientoFilters>): void {
-      filters.value = { ...filters.value, ...next };
+      filters.value = {
+        ...filters.value,
+        ...next,
+        scheduledDate:
+          next.scheduledDate ||
+          filters.value.scheduledDate ||
+          getSeguimientoToday(),
+      };
       void syncTrackerLocations();
     }
     function setMapReady(): void {

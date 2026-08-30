@@ -116,7 +116,7 @@ describe("tareasSeguimientoService", () => {
                   source_id: null,
                   tracker_id: null,
                   tracker_label: null,
-                  acompanante_nombre: null,
+                  acompanantes: [],
                 },
                 estado: {
                   tarea_codigo: "pendiente",

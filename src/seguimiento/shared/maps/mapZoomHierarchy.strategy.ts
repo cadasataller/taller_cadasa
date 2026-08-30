@@ -23,10 +23,6 @@ export interface SeguimientoMapZoomProfile {
   level: SeguimientoMapZoomLevel;
   farmLabelVisible: boolean;
   farmFillOpacity: number;
-  farmHaloOpacity: number;
-  farmHaloWeight: number;
-  farmStrokeOpacity: number;
-  farmStrokeWeight: number;
   roadsVisible: boolean;
   roadHaloOpacity: number;
   roadHaloWeight: number;
@@ -39,6 +35,19 @@ export interface SeguimientoMapZoomProfile {
   tasksVisible: boolean;
 }
 
+function resolveFarmFillOpacity(zoom: number): number {
+  if (zoom <= 11) return 0.32;
+  if (zoom >= 17) return 0.08;
+
+  return {
+    12: 0.28,
+    13: 0.24,
+    14: 0.2,
+    15: 0.16,
+    16: 0.12,
+  }[Math.floor(zoom)]!;
+}
+
 export function resolveSeguimientoMapZoomProfile(
   zoom: number,
   policy = seguimientoMapZoomPolicy,
@@ -47,11 +56,7 @@ export function resolveSeguimientoMapZoomProfile(
     return {
       level: "far",
       farmLabelVisible: false,
-      farmFillOpacity: 0.1,
-      farmHaloOpacity: 0.72,
-      farmHaloWeight: 6,
-      farmStrokeOpacity: 0.72,
-      farmStrokeWeight: 2,
+      farmFillOpacity: resolveFarmFillOpacity(zoom),
       roadsVisible: false,
       roadHaloOpacity: 0,
       roadHaloWeight: 0,
@@ -69,11 +74,7 @@ export function resolveSeguimientoMapZoomProfile(
     return {
       level: "medium",
       farmLabelVisible: true,
-      farmFillOpacity: 0.13,
-      farmHaloOpacity: 0.78,
-      farmHaloWeight: 6,
-      farmStrokeOpacity: 0.86,
-      farmStrokeWeight: 2,
+      farmFillOpacity: resolveFarmFillOpacity(zoom),
       roadsVisible: true,
       roadHaloOpacity: 0.48,
       roadHaloWeight: 4,
@@ -90,11 +91,7 @@ export function resolveSeguimientoMapZoomProfile(
   return {
     level: "near",
     farmLabelVisible: true,
-    farmFillOpacity: 0.18,
-    farmHaloOpacity: 0.84,
-    farmHaloWeight: 7,
-    farmStrokeOpacity: 1,
-    farmStrokeWeight: 3,
+    farmFillOpacity: resolveFarmFillOpacity(zoom),
     roadsVisible: true,
     roadHaloOpacity: 0.62,
     roadHaloWeight: 5,

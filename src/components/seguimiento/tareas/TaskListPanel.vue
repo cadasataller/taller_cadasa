@@ -135,7 +135,7 @@ const panelMessage = computed(() =>
           type="button"
           @click="emit('clearFilters')"
         >
-          Limpiar filtros
+          Restablecer filtros
         </button>
       </div>
       <div v-else-if="!localTasks.length" class="px-3 py-12 text-center">

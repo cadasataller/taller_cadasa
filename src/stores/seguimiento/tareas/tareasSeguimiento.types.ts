@@ -87,6 +87,7 @@ export interface SeguimientoTaskAreaOption {
   id: string;
   label: string;
   workers: SeguimientoTaskWorkerOption[];
+  companions: string[];
 }
 export interface SeguimientoTaskCatalog {
   areas: SeguimientoTaskAreaOption[];
@@ -143,7 +144,7 @@ export interface TareaRastreoDetalleDto {
     source_id: number | null;
     tracker_id: number | null;
     tracker_label: string | null;
-    acompanante_nombre: string | null;
+    acompanantes: Array<{ id: string; nombre: string }>;
   };
   estado: {
     tarea_codigo: string;
@@ -187,7 +188,7 @@ export interface TareaSeguimientoListItem {
 }
 
 export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
-  companionName: string | null;
+  companionNames: string[];
   controlLine: SeguimientoLineGeometry | null;
   controlZones: SeguimientoZoneGeometry[];
   operationalStatusLabel: string | null;

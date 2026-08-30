@@ -7,17 +7,19 @@ export function useSeguimientoTareaCreacion() {
   const state = storeToRefs(store);
   return {
     ...state,
-    openCreate: (areaId: string | null) => store.open(areaId),
+    openCreate: (areaId: string | null, scheduledDate: string | null = null) =>
+      store.open(areaId, scheduledDate),
     requestCloseCreate: () => store.requestClose(),
     continueCreateEditing: () => store.continueEditing(),
     discardCreate: () => store.discard(),
     updateType: store.updateType,
     updateWorker: store.updateWorker,
     updateTracker: store.updateTracker,
-    updateCompanion: store.updateCompanion,
+    updateCompanions: store.updateCompanions,
     updateDetails: store.updateDetails,
     updateGeometry: store.updateGeometry,
     updateRoute: store.updateRoute,
+    canSubmitCreate: store.canSubmit,
     beginGeometryEdit: store.beginGeometryEdit,
     finishGeometryEdit: store.finishGeometryEdit,
     submitCreate: store.submit,

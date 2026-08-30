@@ -24,16 +24,19 @@ const emptyBlocks = (): TareaCreacionBloquesValidos => ({
   geometry: false,
   route: false,
 });
-const createDraft = (areaId: string | null): TareaCreacionBorrador => ({
+const createDraft = (
+  areaId: string | null,
+  scheduledDate: string | null = null,
+): TareaCreacionBorrador => ({
   areaId,
   type: null,
   worker: null,
   tracker: null,
-  companion: null,
+  companions: [],
   details: {
     instructions: "",
-    scheduledDate: null,
-    priorityId: null,
+    scheduledDate,
+    priorityId: 1,
     estimatedMinutes: 60,
   },
   geometry: {
@@ -64,16 +67,31 @@ export const useTareaCreacionStore = defineStore(
       () => JSON.stringify(draft.value) !== JSON.stringify(originalDraft.value),
     );
     const isSubmitLocked = computed(() => flowState.value === "submitting");
+    const canSubmit = computed(
+      () =>
+        !isSubmitLocked.value &&
+        Object.values(draft.value.validBlocks).every(Boolean),
+    );
     const needsGeometry = computed(
       () => draft.value.type !== null && !draft.value.validBlocks.geometry,
     );
     function refreshValidation(): void {
       const result = validateTareaCreacionDraft(draft.value);
       draft.value.validBlocks = result.validBlocks;
-      validationErrors.value = result.errors;
+      const visibleField = validationErrors.value[0]?.field;
+      if (!visibleField) return;
+      const currentError = result.errors.find(
+        (error) => error.field === visibleField,
+      );
+      validationErrors.value = currentError
+        ? [currentError]
+        : result.errors.slice(0, 1);
     }
-    function open(areaId: string | null): void {
-      draft.value = createDraft(areaId);
+    function open(
+      areaId: string | null,
+      scheduledDate: string | null = null,
+    ): void {
+      draft.value = createDraft(areaId, scheduledDate);
       originalDraft.value = copyDraft(draft.value);
       validationErrors.value = [];
       remoteError.value = null;
@@ -105,8 +123,18 @@ export const useTareaCreacionStore = defineStore(
       draft.value.tracker = tracker;
       refreshValidation();
     }
-    function updateCompanion(name: string | null): void {
-      draft.value.companion = name ? { name } : null;
+    function updateCompanions(names: string[]): void {
+      const seenNames = new Set<string>();
+      draft.value.companions = names.reduce<
+        TareaCreacionBorrador["companions"]
+      >((companions, name) => {
+        const normalizedName = name.trim();
+        const key = normalizedName.toLocaleLowerCase("es");
+        if (!normalizedName || seenNames.has(key)) return companions;
+        seenNames.add(key);
+        companions.push({ name: normalizedName });
+        return companions;
+      }, []);
     }
     function updateDetails(
       next: Partial<TareaCreacionBorrador["details"]>,
@@ -137,11 +165,14 @@ export const useTareaCreacionStore = defineStore(
       refreshValidation();
     }
     async function submit(): Promise<TareaCreacionRespuestaRpc | null> {
-      refreshValidation();
-      if (validationErrors.value.length) {
+      const result = validateTareaCreacionDraft(draft.value);
+      draft.value.validBlocks = result.validBlocks;
+      if (result.errors.length) {
+        validationErrors.value = result.errors.slice(0, 1);
         flowState.value = "editing";
         return null;
       }
+      validationErrors.value = [];
       flowState.value = "submitting";
       draft.value.submitStatus = "submitting";
       remoteError.value = null;
@@ -196,12 +227,13 @@ export const useTareaCreacionStore = defineStore(
       isDiscardConfirmationOpen,
       hasUnsavedChanges,
       isSubmitLocked,
+      canSubmit,
       needsGeometry,
       open,
       updateType,
       updateWorker,
       updateTracker,
-      updateCompanion,
+      updateCompanions,
       updateDetails,
       updateGeometry,
       updateRoute,

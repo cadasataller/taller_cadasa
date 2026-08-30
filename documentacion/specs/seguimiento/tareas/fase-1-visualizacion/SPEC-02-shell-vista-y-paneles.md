@@ -93,6 +93,12 @@ El workspace central debe permitir:
 - foco contextual al seleccionar una tarea;
 - coexistencia con overlays sin bloquear toda la interacción.
 
+### Capas de fincas
+
+- Cada finca se representa con un único polígono: borde azul `#1A6B9A`, opacidad completa y grosor `1`.
+- El relleno azul `#1A6B9A` cambia según el zoom: `<=11` `0.32`, `12` `0.28`, `13` `0.24`, `14` `0.20`, `15` `0.16`, `16` `0.12` y `>=17` `0.08`. La opacidad no afecta el borde.
+- Esta capa es únicamente visual; las consultas del workspace continúan usando `supabaseRastreoTareas` y sus RPCs, nunca tablas directas.
+
 ## Densidad visual
 
 Desktop:

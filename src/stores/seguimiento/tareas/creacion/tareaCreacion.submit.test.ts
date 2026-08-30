@@ -60,6 +60,8 @@ describe("submit de creación", () => {
     const store = completeFarmDraft();
     create.mockResolvedValue({ tarea_id: "task-1" });
 
+    expect(store.canSubmit).toBe(true);
+
     await expect(store.submit()).resolves.toEqual({ tarea_id: "task-1" });
     expect(store.isPanelOpen).toBe(false);
     expect(store.flowState).toBe("success");

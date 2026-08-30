@@ -1,7 +1,10 @@
-import { ALL_SEGUIMIENTO_FEATURES } from '@/seguimiento/shared/seguimiento.permissions';
-import type { FuncionalidadPermitida } from './featureAccess.types';
+import {
+  ALL_SEGUIMIENTO_FEATURES,
+  SEGUIMIENTO_FEATURES,
+} from "@/seguimiento/shared/seguimiento.permissions";
+import type { FuncionalidadPermitida } from "./featureAccess.types";
 
-const DEVELOPMENT_EMAIL = 'erickq@cadasa.com';
+const DEVELOPMENT_EMAIL = "erickq@cadasa.com";
 
 /**
  * Temporary, centralized bridge until Seguimiento is returned by the permissions RPC.
@@ -11,13 +14,18 @@ export const applySeguimientoDevelopmentFallback = (
   features: FuncionalidadPermitida[],
   userEmail: string | null | undefined,
 ): FuncionalidadPermitida[] => {
-  const hasOfficialSeguimientoMatrix = features.some((feature) =>
-    ALL_SEGUIMIENTO_FEATURES.includes(feature as (typeof ALL_SEGUIMIENTO_FEATURES)[number]),
-  );
+  const isDevelopmentUser = userEmail?.toLowerCase() === DEVELOPMENT_EMAIL;
+  const hasPartialSeguimientoAccess =
+    features.includes(SEGUIMIENTO_FEATURES.module) ||
+    features.includes(SEGUIMIENTO_FEATURES.viewTasks);
 
-  if (userEmail?.toLowerCase() !== DEVELOPMENT_EMAIL || hasOfficialSeguimientoMatrix) {
+  if (!isDevelopmentUser && !hasPartialSeguimientoAccess) {
     return features;
   }
 
-  return [...new Set([...features, ...ALL_SEGUIMIENTO_FEATURES])];
+  const fallbackFeatures = isDevelopmentUser
+    ? ALL_SEGUIMIENTO_FEATURES
+    : [SEGUIMIENTO_FEATURES.viewMap];
+
+  return [...new Set([...features, ...fallbackFeatures])];
 };

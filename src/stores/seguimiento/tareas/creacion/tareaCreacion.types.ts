@@ -23,7 +23,7 @@ export interface TareaCreacionTrackerSeleccionado {
   label: string;
 }
 
-/** El RPC persiste el nombre del acompañante; su ausencia se expresa con null. */
+/** Cada nombre se persiste como un acompañante activo de la tarea. */
 export interface TareaCreacionAcompananteSeleccionado {
   name: string;
 }
@@ -64,7 +64,7 @@ export interface TareaCreacionBorrador {
   type: TareaCreacionTipo | null;
   worker: TareaCreacionTrabajadorSeleccionado | null;
   tracker: TareaCreacionTrackerSeleccionado | null;
-  companion: TareaCreacionAcompananteSeleccionado | null;
+  companions: TareaCreacionAcompananteSeleccionado[];
   details: TareaCreacionDetalles;
   geometry: TareaCreacionGeometria;
   route: TareaCreacionRuta;
@@ -74,8 +74,23 @@ export interface TareaCreacionBorrador {
 
 export type TareaCreacionCampo = keyof TareaCreacionBloquesValidos;
 
+/** Campos visibles que pueden informar un error junto a su control. */
+export type TareaCreacionCampoError =
+  | "type"
+  | "worker"
+  | "tracker"
+  | "instructions"
+  | "scheduledDate"
+  | "priority"
+  | "estimatedMinutes"
+  | "location"
+  | "routePoint"
+  | "controlLine"
+  | "controlZone"
+  | "route";
+
 export interface TareaCreacionErrorValidacion {
-  field: TareaCreacionCampo;
+  field: TareaCreacionCampoError;
   message: string;
 }
 
@@ -93,7 +108,7 @@ export interface CrearTareaV2Params {
   p_tracker_id: number;
   p_source_id: number;
   p_tracker_label: string;
-  p_acompanante_nombre: string | null;
+  p_acompanantes: string[];
   p_indicaciones: string;
   p_fecha_programada: string;
   p_prioridad_id: number;

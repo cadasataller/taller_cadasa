@@ -52,6 +52,7 @@ describe("paneles de seguimiento de tareas", () => {
       },
     });
     expect(wrapper.text()).toContain("No hay coincidencias");
+    expect(wrapper.text()).toContain("Restablecer filtros");
     await wrapper.get("button").trigger("click");
     expect(wrapper.emitted("clearFilters")).toHaveLength(1);
     await wrapper.setProps({ hasActiveFilters: false });

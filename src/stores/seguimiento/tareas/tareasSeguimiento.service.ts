@@ -112,6 +112,7 @@ function mapCatalog(data: unknown): SeguimientoTaskCatalog {
           area_id: string;
           area_nombre: string;
           trabajadores?: Array<{ usuario_id: string; nombre: string }>;
+          acompanantes?: Array<{ nombre: string }>;
         }>;
       } | null
     )?.areas ?? [];
@@ -123,6 +124,9 @@ function mapCatalog(data: unknown): SeguimientoTaskCatalog {
         id: worker.usuario_id,
         label: worker.nombre,
       })),
+      companions: (area.acompanantes ?? [])
+        .map((companion) => companion.nombre.trim())
+        .filter(Boolean),
     })),
   };
 }

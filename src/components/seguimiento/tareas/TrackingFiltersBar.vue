@@ -5,6 +5,7 @@ import { VueDatePicker } from "@vuepic/vue-datepicker";
 import { es } from "date-fns/locale";
 import { computed, reactive, shallowRef, watch } from "vue";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
+import { formatSeguimientoDate } from "@/seguimiento/shared/seguimientoDate";
 import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
 import type {
   SeguimientoCrossFilter,
@@ -28,6 +29,7 @@ interface Props {
   loading: boolean;
   disabled: boolean;
   showTrackers: boolean;
+  lockCrossFilters?: boolean;
   mode?: "toolbar" | "panel";
   formId?: string;
 }
@@ -37,6 +39,7 @@ const emit = defineEmits<{
   apply: [filters: Partial<TareasSeguimientoFilters>];
   focus: [coordinates: SeguimientoCoordinates | null];
   "update:crossFilter": [filter: SeguimientoCrossFilter];
+  "attempt:cross-filter-change": [];
 }>();
 const draft = reactive({
   scheduledDate: props.filters.scheduledDate ?? "",
@@ -54,10 +57,7 @@ const scheduledDateModel = computed<Date | null>({
   get: () =>
     draft.scheduledDate ? new Date(`${draft.scheduledDate}T00:00:00`) : null,
   set: (value) => {
-    if (!value) {
-      draft.scheduledDate = "";
-      return;
-    }
+    if (!value) return;
     const year = value.getFullYear();
     const month = String(value.getMonth() + 1).padStart(2, "0");
     const day = String(value.getDate()).padStart(2, "0");
@@ -103,6 +103,12 @@ const secondaryOptions = computed(() => {
 
   return primaryOptions.value.filter((option) => option.type !== primary.type);
 });
+const isPrimaryFilterLocked = computed(() =>
+  Boolean(props.lockCrossFilters && validPrimarySelection.value),
+);
+const isSecondaryFilterLocked = computed(() =>
+  Boolean(props.lockCrossFilters && validSecondarySelection.value),
+);
 watch(
   () => props.filters,
   (filters) => {
@@ -138,7 +144,7 @@ watch(
 
 function apply(): void {
   emit("apply", {
-    scheduledDate: draft.scheduledDate || null,
+    scheduledDate: draft.scheduledDate,
     areaId: draft.areaId || null,
     assignedUserId: null,
     sourceId: null,
@@ -252,6 +258,7 @@ function focusCoordinates(): void {
       {
         'tracking-filters-bar--expanded': validPrimarySelection,
         'tracking-filters-bar--has-area': showAreaSelector,
+        'tracking-filters-bar--cross-filters-locked': lockCrossFilters,
       },
     ]"
     @submit.prevent="apply"
@@ -280,9 +287,11 @@ function focusCoordinates(): void {
         :disabled="disabled"
         :enable-time-picker="false"
         :locale="es"
+        :formats="{ input: formatSeguimientoDate }"
+        :input-attrs="{ clearable: false }"
+        :ui="{ input: 'tracking-date-picker-input' }"
         auto-apply
         class="w-full normal-case"
-        input-class-name="tracking-date-picker-input"
         placeholder="Fecha"
         @update:model-value="displayMode === 'toolbar' && apply()"
     /></label>
@@ -290,71 +299,87 @@ function focusCoordinates(): void {
       class="grid min-w-0 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-slate-600"
       ><span :class="displayMode === 'toolbar' ? 'sr-only' : ''"
         >Trabajador o equipo</span
-      ><AutoComplete
-        v-model="primarySelection"
-        :disabled="disabled"
-        :suggestions="primarySuggestions"
-        option-label="label"
-        force-selection
-        complete-on-focus
-        dropdown
-        input-class="tracking-autocomplete-input"
-        dropdown-class="tracking-autocomplete-dropdown"
-        panel-class="tracking-autocomplete-panel"
-        class="tracking-autocomplete"
-        placeholder="Trabajador o equipo"
-        @complete="completePrimarySearch"
       >
-        <template #option="{ option }">
-          <div class="flex items-center justify-between gap-3 px-1 py-0.5">
-            <span class="truncate">{{ option.label }}</span>
-            <span
-              class="shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400"
-            >
-              {{ option.type === "worker" ? "Trabajador" : "Equipo" }}
-            </span>
-          </div>
-        </template>
-      </AutoComplete></label
-    >
+      <div class="relative">
+        <AutoComplete
+          v-model="primarySelection"
+          :disabled="disabled || isPrimaryFilterLocked"
+          :suggestions="primarySuggestions"
+          option-label="label"
+          force-selection
+          complete-on-focus
+          dropdown
+          input-class="tracking-autocomplete-input"
+          dropdown-class="tracking-autocomplete-dropdown"
+          panel-class="tracking-autocomplete-panel"
+          class="tracking-autocomplete"
+          placeholder="Trabajador o equipo"
+          @complete="completePrimarySearch"
+        >
+          <template #option="{ option }">
+            <div class="flex items-center justify-between gap-3 px-1 py-0.5">
+              <span class="truncate">{{ option.label }}</span>
+              <span
+                class="shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400"
+              >
+                {{ option.type === "worker" ? "Trabajador" : "Equipo" }}
+              </span>
+            </div>
+          </template>
+        </AutoComplete>
+        <button
+          v-if="isPrimaryFilterLocked"
+          class="absolute inset-0 z-10 cursor-not-allowed rounded-[0.55rem] bg-transparent"
+          type="button"
+          aria-label="El filtro de trabajador o equipo está bloqueado durante la edición"
+          @click="emit('attempt:cross-filter-change')"
+        /></div
+    ></label>
     <label
       v-if="validPrimarySelection"
       class="grid min-w-0 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-slate-600"
       ><span :class="displayMode === 'toolbar' ? 'sr-only' : ''">
-        {{
-          validPrimarySelection.type === "worker" ? "Equipo" : "Trabajador"
-        }} </span
-      ><AutoComplete
-        v-model="secondarySelection"
-        :disabled="disabled"
-        :suggestions="secondarySuggestions"
-        option-label="label"
-        force-selection
-        complete-on-focus
-        dropdown
-        input-class="tracking-autocomplete-input"
-        dropdown-class="tracking-autocomplete-dropdown"
-        panel-class="tracking-autocomplete-panel"
-        class="tracking-autocomplete"
-        :placeholder="
-          validPrimarySelection.type === 'worker' ? 'Equipo' : 'Trabajador'
-        "
-        @complete="completeSecondarySearch"
-      >
-        <template #option="{ option }">
-          <div class="flex items-center justify-between gap-3 px-1 py-0.5">
-            <span class="truncate">{{ option.label }}</span>
-            <span
-              class="shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400"
-            >
-              {{ option.type === "worker" ? "Trabajador" : "Equipo" }}
-            </span>
-          </div>
-        </template>
-      </AutoComplete></label
-    >
+        {{ validPrimarySelection.type === "worker" ? "Equipo" : "Trabajador" }}
+      </span>
+      <div class="relative">
+        <AutoComplete
+          v-model="secondarySelection"
+          :disabled="disabled || isSecondaryFilterLocked"
+          :suggestions="secondarySuggestions"
+          option-label="label"
+          force-selection
+          complete-on-focus
+          dropdown
+          input-class="tracking-autocomplete-input"
+          dropdown-class="tracking-autocomplete-dropdown"
+          panel-class="tracking-autocomplete-panel"
+          class="tracking-autocomplete"
+          :placeholder="
+            validPrimarySelection.type === 'worker' ? 'Equipo' : 'Trabajador'
+          "
+          @complete="completeSecondarySearch"
+        >
+          <template #option="{ option }">
+            <div class="flex items-center justify-between gap-3 px-1 py-0.5">
+              <span class="truncate">{{ option.label }}</span>
+              <span
+                class="shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400"
+              >
+                {{ option.type === "worker" ? "Trabajador" : "Equipo" }}
+              </span>
+            </div>
+          </template>
+        </AutoComplete>
+        <button
+          v-if="isSecondaryFilterLocked"
+          class="absolute inset-0 z-10 cursor-not-allowed rounded-[0.55rem] bg-transparent"
+          type="button"
+          aria-label="El filtro de trabajador o equipo está bloqueado durante la edición"
+          @click="emit('attempt:cross-filter-change')"
+        /></div
+    ></label>
     <button
-      v-if="validPrimarySelection"
+      v-if="validPrimarySelection && !lockCrossFilters"
       class="mt-auto grid size-10 place-items-center rounded-[0.55rem] border border-slate-200 bg-slate-50 text-main transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main disabled:cursor-not-allowed disabled:opacity-55"
       :disabled="disabled"
       type="button"
@@ -391,31 +416,48 @@ function focusCoordinates(): void {
   width: auto;
   min-width: 0;
   grid-template-columns:
-    minmax(0, 0.75fr) minmax(0, 1.35fr) minmax(0, 1.2fr)
+    minmax(0, 1.35fr) minmax(0, 1.35fr) minmax(0, 0.6fr)
     2.75rem;
   transition: grid-template-columns 200ms ease;
 }
 
 .tracking-filters-bar--toolbar.tracking-filters-bar--expanded {
   grid-template-columns:
-    minmax(0, 0.65fr) minmax(0, 1fr) minmax(0, 1fr)
-    2.5rem minmax(0, 1.1fr) 2.75rem;
+    minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr)
+    2.5rem minmax(0, 0.55fr) 2.75rem;
+}
+
+.tracking-filters-bar--toolbar.tracking-filters-bar--expanded.tracking-filters-bar--cross-filters-locked {
+  grid-template-columns:
+    minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr)
+    minmax(0, 0.55fr) 2.75rem;
 }
 
 .tracking-filters-bar--toolbar.tracking-filters-bar--has-area {
   grid-template-columns:
-    minmax(0, 0.7fr) minmax(0, 0.7fr) minmax(0, 1.25fr)
-    minmax(0, 1.1fr) 2.75rem;
+    minmax(0, 0.7fr) minmax(0, 1.25fr) minmax(0, 1.25fr)
+    minmax(0, 0.55fr) 2.75rem;
 }
 
 .tracking-filters-bar--toolbar.tracking-filters-bar--has-area.tracking-filters-bar--expanded {
   grid-template-columns:
-    minmax(0, 0.55fr) minmax(0, 0.55fr) minmax(0, 1fr)
-    minmax(0, 1fr) 2.5rem minmax(0, 1.05fr) 2.75rem;
+    minmax(0, 0.55fr) minmax(0, 1.075fr) minmax(0, 1fr)
+    minmax(0, 1fr) 2.5rem minmax(0, 0.525fr) 2.75rem;
+}
+
+.tracking-filters-bar--toolbar.tracking-filters-bar--has-area.tracking-filters-bar--expanded.tracking-filters-bar--cross-filters-locked {
+  grid-template-columns:
+    minmax(0, 0.55fr) minmax(0, 1.075fr) minmax(0, 1fr)
+    minmax(0, 1fr) minmax(0, 0.525fr) 2.75rem;
 }
 
 .tracking-filters-bar--panel {
   width: 100%;
+}
+
+:global(.tracking-date-picker-input) {
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
 }
 
 /* Anula el tema de PrimeVue solamente para los AutoComplete de rastreo. */
@@ -469,6 +511,10 @@ function focusCoordinates(): void {
   border-radius: 0.75rem !important;
   background: white !important;
   box-shadow: 0 16px 30px rgb(15 23 42 / 0.16) !important;
+}
+
+:global(.dp__menu) {
+  z-index: 70 !important;
 }
 
 :global(.tracking-autocomplete-panel .p-autocomplete-list) {

@@ -21,7 +21,7 @@ describe("useTareaCreacionStore", () => {
     expect(store.flowState).toBe("idle");
   });
 
-  it("mantiene los errores locales en Zod por bloque", () => {
+  it("mantiene los errores locales de Zod asociados a cada control", () => {
     const store = useTareaCreacionStore();
     store.open("area-1");
     store.updateType("zona");
@@ -30,10 +30,24 @@ describe("useTareaCreacionStore", () => {
       scheduledDate: "2026-02-31",
     });
 
-    expect(store.validationErrors.map((error) => error.field)).toContain(
-      "details",
-    );
+    expect(store.validationErrors).toEqual([]);
     expect(store.draft.validBlocks.details).toBe(false);
     expect(store.draft.validBlocks.geometry).toBe(false);
+    expect(store.canSubmit).toBe(false);
+  });
+
+  it("muestra solo el primer campo pendiente y avanza según el orden del panel", async () => {
+    const store = useTareaCreacionStore();
+    store.open("area-1");
+
+    await store.submit();
+    expect(store.validationErrors).toEqual([
+      { field: "type", message: "Selecciona un tipo de tarea." },
+    ]);
+
+    store.updateType("zona");
+    expect(store.validationErrors).toEqual([
+      { field: "worker", message: "Selecciona un trabajador válido." },
+    ]);
   });
 });

@@ -31,7 +31,7 @@ export const toCrearTareaV2Params = (
     p_tracker_id: draft.tracker.id,
     p_source_id: draft.tracker.sourceId,
     p_tracker_label: draft.tracker.label,
-    p_acompanante_nombre: draft.companion?.name ?? null,
+    p_acompanantes: draft.companions.map((companion) => companion.name),
     p_indicaciones: draft.details.instructions.trim(),
     p_fecha_programada: draft.details.scheduledDate,
     p_prioridad_id: draft.details.priorityId,

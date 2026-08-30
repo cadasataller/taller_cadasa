@@ -20,12 +20,17 @@ const props = defineProps<{
   draft: TareaCreacionBorrador;
   workers: SeguimientoTaskWorkerOption[];
   trackers: SeguimientoTracker[];
+  companions: string[];
+  totalTasks: number;
   errors: TareaCreacionErrorValidacion[];
   showDiscardConfirmation: boolean;
   geography: SeguimientoOperationalGeography[];
   geometryMode: TareaCreacionModoGeometria;
   remoteError: string | null;
   submitting: boolean;
+  canSubmit: boolean;
+  lockWorker: boolean;
+  lockTracker: boolean;
 }>();
 const emit = defineEmits<{
   close: [];
@@ -34,7 +39,7 @@ const emit = defineEmits<{
   "update:type": [value: TareaCreacionTipo];
   "update:worker": [value: string];
   "update:tracker": [value: number];
-  "update:companion": [value: string | null];
+  "update:companions": [value: string[]];
   "update:details": [value: Partial<TareaCreacionBorrador["details"]>];
   "update:geometry": [value: Partial<TareaCreacionBorrador["geometry"]>];
   "update:route": [value: number | null];
@@ -89,16 +94,21 @@ const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
       /><TaskAssignmentSection
         :workers="workers"
         :trackers="trackers"
+        :companions="companions"
         :worker-id="draft.worker?.id ?? null"
         :tracker-source-id="draft.tracker?.sourceId ?? null"
-        :companion-name="draft.companion?.name ?? null"
-        :error="errorFor('assignment')"
+        :companion-names="draft.companions.map((companion) => companion.name)"
+        :worker-error="errorFor('worker')"
+        :tracker-error="errorFor('tracker')"
+        :lock-worker="lockWorker"
+        :lock-tracker="lockTracker"
         @update:worker="emit('update:worker', $event)"
         @update:tracker="emit('update:tracker', $event)"
-        @update:companion="emit('update:companion', $event)"
+        @update:companions="emit('update:companions', $event)"
       /><TaskDetailsSection
         :details="draft.details"
-        :error="errorFor('details')"
+        :instructions-error="errorFor('instructions')"
+        :estimated-minutes-error="errorFor('estimatedMinutes')"
         @update:details="emit('update:details', $event)"
       />
       <TaskGeometrySection
@@ -107,15 +117,18 @@ const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
         :geography="geography"
         :area-id="draft.areaId"
         :mode="geometryMode"
-        :error="errorFor('geometry')"
+        :location-error="errorFor('location')"
+        :route-point-error="errorFor('routePoint')"
+        :control-line-error="errorFor('controlLine')"
+        :control-zone-error="errorFor('controlZone')"
         @update:location="emit('update:geometry', { locationId: $event })"
         @edit="emit('edit:geometry', $event)"
         @finish="emit('finish:geometry')"
       />
       <TaskRoutePosition
         :order="draft.route.order"
+        :total-tasks="totalTasks"
         :error="errorFor('route')"
-        @update:order="emit('update:route', $event)"
       />
       <p
         v-if="remoteError"
@@ -128,7 +141,7 @@ const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
     <footer class="border-t border-slate-200 bg-white p-3">
       <button
         class="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-main px-3 text-xs font-extrabold text-white transition hover:bg-main-light disabled:cursor-not-allowed disabled:opacity-55"
-        :disabled="submitting"
+        :disabled="!canSubmit"
         type="button"
         @click="emit('submit')"
       >

@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, shallowRef } from "vue";
+import { computed, onBeforeUnmount, onMounted, shallowRef } from "vue";
 import { CheckCircle2 } from "lucide-vue-next";
+import Toast from "primevue/toast";
+import { useToast } from "primevue/usetoast";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 import MapToolsOverlay from "@/components/seguimiento/tareas/MapToolsOverlay.vue";
 import MobileMapActions from "@/components/seguimiento/tareas/MobileMapActions.vue";
@@ -13,6 +15,7 @@ import { useSeguimientoTareasView } from "@/composables/seguimiento/useSeguimien
 import { useSeguimientoTareaCreacion } from "@/composables/seguimiento/useSeguimientoTareaCreacion";
 import { SEGUIMIENTO_FEATURES } from "@/seguimiento/shared/seguimiento.permissions";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
+import { getSeguimientoToday } from "@/stores/seguimiento/tareas/tareasSeguimiento.helpers";
 import type {
   SeguimientoCrossFilter,
   SeguimientoMapTool,
@@ -20,6 +23,7 @@ import type {
 } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 
 const featureAccess = useFeatureAccessStore();
+const toast = useToast();
 const {
   detail,
   detailError,
@@ -59,7 +63,7 @@ const {
   updateType,
   updateWorker,
   updateTracker,
-  updateCompanion,
+  updateCompanions,
   updateDetails,
   updateGeometry,
   updateRoute,
@@ -68,15 +72,28 @@ const {
   finishGeometryEdit,
   remoteError: createRemoteError,
   isSubmitLocked: isCreateSubmitting,
+  canSubmitCreate,
   submitCreate,
 } = useSeguimientoTareaCreacion();
 const mapFocus = shallowRef<SeguimientoCoordinates | null>(null);
 const createSuccessMessage = shallowRef<string | null>(null);
 let createSuccessTimer: ReturnType<typeof setTimeout> | null = null;
+onMounted(() => {
+  if (
+    featureAccess.isLoaded &&
+    !featureAccess.tieneFuncionalidad(SEGUIMIENTO_FEATURES.viewMap)
+  ) {
+    void featureAccess.cargarFuncionalidadesPermitidas(true);
+  }
+});
 onBeforeUnmount(() => {
   if (createSuccessTimer) clearTimeout(createSuccessTimer);
 });
 const crossFilter = shallowRef<SeguimientoCrossFilter>({
+  workerId: null,
+  sourceId: null,
+});
+const creationLockedFilter = shallowRef<SeguimientoCrossFilter>({
   workerId: null,
   sourceId: null,
 });
@@ -98,23 +115,35 @@ const canCreateTasks = computed(
     featureAccess.isLoaded &&
     featureAccess.tieneFuncionalidad(SEGUIMIENTO_FEATURES.createTasks),
 );
+const canStartCreate = computed(
+  () =>
+    canCreateTasks.value &&
+    Boolean(filters.value.scheduledDate) &&
+    Boolean(crossFilter.value.workerId || crossFilter.value.sourceId !== null),
+);
+const crossFilterLockMessage = computed(() =>
+  isCreatePanelOpen.value
+    ? "Cierra el panel de creación para cambiar filtros."
+    : "Cierra el panel de edición para cambiar filtros.",
+);
 const createWorkers = computed(
   () =>
     catalog.value.areas.find((area) => area.id === createDraft.value.areaId)
       ?.workers ?? [],
 );
-const isImplicitAreaSelection = computed(() => {
-  const [onlyArea] = catalog.value.areas;
-
-  return (
-    catalog.value.areas.length === 1 && filters.value.areaId === onlyArea?.id
-  );
-});
+const createCompanions = computed(
+  () =>
+    catalog.value.areas.find((area) => area.id === createDraft.value.areaId)
+      ?.companions ?? [],
+);
+const hasAreaFilter = computed(
+  () => catalog.value.areas.length > 1 && filters.value.areaId !== null,
+);
 const hasActiveFilters = computed(() =>
   Boolean(
     filters.value.search ||
-    filters.value.scheduledDate ||
-    (filters.value.areaId && !isImplicitAreaSelection.value) ||
+    filters.value.scheduledDate !== getSeguimientoToday() ||
+    hasAreaFilter.value ||
     filters.value.assignedUserId ||
     filters.value.sourceId ||
     crossFilter.value.workerId ||
@@ -160,15 +189,33 @@ function closeTaskDetail(): void {
   mobileView.value = "list";
 }
 function startCreate(): void {
-  if (!canCreateTasks.value) return;
+  if (!canStartCreate.value) return;
   closeDetail();
   mobileView.value = "view";
-  openCreate(filters.value.areaId ?? catalog.value.areas[0]?.id ?? null);
+  const selectedWorkerAreaId = crossFilter.value.workerId
+    ? (catalog.value.areas.find((area) =>
+        area.workers.some((worker) => worker.id === crossFilter.value.workerId),
+      )?.id ?? null)
+    : null;
+  creationLockedFilter.value = { ...crossFilter.value };
+  openCreate(
+    filters.value.areaId ??
+      selectedWorkerAreaId ??
+      catalog.value.areas[0]?.id ??
+      null,
+    filters.value.scheduledDate,
+  );
+  updateRoute(tasks.value.length + 1);
+  if (crossFilter.value.workerId)
+    selectCreateWorker(crossFilter.value.workerId);
+  if (crossFilter.value.sourceId !== null)
+    selectCreateTracker(crossFilter.value.sourceId);
 }
 function selectCreateWorker(workerId: string): void {
   updateWorker(
     createWorkers.value.find((worker) => worker.id === workerId) ?? null,
   );
+  crossFilter.value = { ...crossFilter.value, workerId };
 }
 function selectCreateTracker(sourceId: number): void {
   const tracker = trackers.value.find((item) => item.sourceId === sourceId);
@@ -177,6 +224,7 @@ function selectCreateTracker(sourceId: number): void {
       ? { id: tracker.id, sourceId: tracker.sourceId, label: tracker.label }
       : null,
   );
+  crossFilter.value = { ...crossFilter.value, sourceId };
 }
 async function submitTaskCreate(): Promise<void> {
   const result = await submitCreate();
@@ -200,13 +248,21 @@ function reloadMapData(): void {
 function clearFilters(): void {
   crossFilter.value = { workerId: null, sourceId: null };
   applyFilters({
-    scheduledDate: null,
+    scheduledDate: getSeguimientoToday(),
     areaId: null,
     assignedUserId: null,
     sourceId: null,
     types: [],
     statuses: [],
     search: "",
+  });
+}
+function notifyCrossFilterLocked(): void {
+  toast.add({
+    severity: "warn",
+    summary: "Filtros bloqueados",
+    detail: crossFilterLockMessage.value,
+    life: 3200,
   });
 }
 </script>
@@ -216,6 +272,7 @@ function clearFilters(): void {
     class="relative isolate min-h-[calc(100dvh-5rem)] overflow-hidden bg-[#8fa281] pb-4 md:pb-0"
     aria-label="Workspace de seguimiento de tareas"
   >
+    <Toast position="top-right" />
     <TrackingMapWorkspace
       v-if="canViewMap"
       :tasks="locallyFilteredTasks"
@@ -243,6 +300,13 @@ function clearFilters(): void {
       "
     />
     <div
+      v-else
+      class="absolute inset-0 flex items-center justify-center bg-[#e8ece9] text-[#31544d]"
+      role="status"
+    >
+      No tienes acceso al mapa de seguimiento.
+    </div>
+    <div
       v-if="createSuccessMessage"
       class="absolute right-4 top-4 z-[60] flex max-w-[calc(100%-2rem)] items-center gap-2 rounded-xl border border-main/20 bg-white px-3 py-2.5 text-xs font-bold text-main shadow-lg md:right-[24rem]"
       role="status"
@@ -250,15 +314,8 @@ function clearFilters(): void {
       <CheckCircle2 class="size-4 shrink-0" aria-hidden="true" />
       {{ createSuccessMessage }}
     </div>
-    <div
-      v-else
-      class="absolute inset-0 flex items-center justify-center bg-[#e8ece9] text-[#31544d]"
-      role="status"
-    >
-      No tienes acceso al mapa de seguimiento.
-    </div>
     <TrackingFiltersBar
-      class="absolute left-0 right-0 top-0 z-30 hidden min-w-0 transition-[right] duration-200 md:grid md:left-[20.5rem]"
+      class="absolute left-0 right-0 top-0 z-[45] hidden min-w-0 transition-[right] duration-200 md:grid md:left-[20.5rem]"
       :class="desktopFiltersPosition"
       mode="toolbar"
       :filters="filters"
@@ -268,9 +325,11 @@ function clearFilters(): void {
       :loading="loadingInitial"
       :disabled="!canViewMap"
       :show-trackers="canViewTrackers"
+      :lock-cross-filters="isCreatePanelOpen"
       @apply="applyFilters"
       @focus="focusMap"
       @update:cross-filter="crossFilter = $event"
+      @attempt:cross-filter-change="notifyCrossFilterLocked"
     />
     <section
       v-if="mobileView === 'filters'"
@@ -306,9 +365,11 @@ function clearFilters(): void {
           :loading="loadingInitial"
           :disabled="!canViewMap"
           :show-trackers="canViewTrackers"
+          :lock-cross-filters="isCreatePanelOpen"
           @apply="applyFilters"
           @focus="focusMap"
           @update:cross-filter="crossFilter = $event"
+          @attempt:cross-filter-change="notifyCrossFilterLocked"
         />
       </div>
       <footer
@@ -378,7 +439,7 @@ function clearFilters(): void {
       :search="filters.search"
       :has-active-filters="hasActiveFilters"
       :show-back="true"
-      :can-create="canCreateTasks"
+      :can-create="canStartCreate"
       @select="openTask"
       @retry="retry"
       @update-search="updateFilters({ search: $event })"
@@ -404,19 +465,24 @@ function clearFilters(): void {
       :draft="createDraft"
       :workers="createWorkers"
       :trackers="trackers"
+      :companions="createCompanions"
+      :total-tasks="tasks.length"
       :errors="createValidationErrors"
       :show-discard-confirmation="isDiscardConfirmationOpen"
       :geography="geography"
       :geometry-mode="geometryMode"
       :remote-error="createRemoteError?.message ?? null"
       :submitting="isCreateSubmitting"
+      :can-submit="canSubmitCreate"
+      :lock-worker="creationLockedFilter.workerId !== null"
+      :lock-tracker="creationLockedFilter.sourceId !== null"
       @close="requestCloseCreate"
       @continue-editing="continueCreateEditing"
       @discard="discardCreate"
       @update:type="updateType"
       @update:worker="selectCreateWorker"
       @update:tracker="selectCreateTracker"
-      @update:companion="updateCompanion"
+      @update:companions="updateCompanions"
       @update:details="updateDetails"
       @update:geometry="updateGeometry"
       @update:route="updateRoute"

@@ -14,7 +14,10 @@ const props = defineProps<{
   geography: SeguimientoOperationalGeography[];
   areaId: string | null;
   mode: TareaCreacionModoGeometria;
-  error?: string | null;
+  locationError?: string | null;
+  routePointError?: string | null;
+  controlLineError?: string | null;
+  controlZoneError?: string | null;
 }>();
 const emit = defineEmits<{
   "update:location": [value: string | null];
@@ -74,6 +77,7 @@ const editingLabel = computed(() => {
       <select
         class="mt-1.5 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-800 outline-none focus:border-main focus:ring-2 focus:ring-main/15"
         :value="geometry.locationId ?? ''"
+        :aria-invalid="Boolean(locationError)"
         @change="
           emit(
             'update:location',
@@ -87,6 +91,13 @@ const editingLabel = computed(() => {
         </option>
       </select>
     </label>
+    <p
+      v-if="locationError"
+      class="mt-2 text-[11px] font-medium text-danger"
+      role="alert"
+    >
+      {{ locationError }}
+    </p>
     <p
       v-else-if="type === 'zona'"
       class="mt-3 rounded-lg bg-second/40 px-3 py-2 text-[11px] leading-5 text-main"
@@ -110,6 +121,13 @@ const editingLabel = computed(() => {
             <Crosshair class="size-4" />
           </button>
         </div>
+        <p
+          v-if="routePointError"
+          class="mt-2 text-[11px] font-medium text-danger"
+          role="alert"
+        >
+          {{ routePointError }}
+        </p>
       </div>
       <div v-if="type === 'finca'" class="rounded-lg bg-slate-50 p-3">
         <div class="flex items-start justify-between gap-3">
@@ -126,6 +144,13 @@ const editingLabel = computed(() => {
             <PencilLine class="size-4" />
           </button>
         </div>
+        <p
+          v-if="controlLineError"
+          class="mt-2 text-[11px] font-medium text-danger"
+          role="alert"
+        >
+          {{ controlLineError }}
+        </p>
       </div>
       <div v-if="type === 'zona'" class="rounded-lg bg-slate-50 p-3">
         <div class="flex items-start justify-between gap-3">
@@ -142,6 +167,13 @@ const editingLabel = computed(() => {
             <PencilLine class="size-4" />
           </button>
         </div>
+        <p
+          v-if="controlZoneError"
+          class="mt-2 text-[11px] font-medium text-danger"
+          role="alert"
+        >
+          {{ controlZoneError }}
+        </p>
       </div>
     </div>
     <div
@@ -161,12 +193,5 @@ const editingLabel = computed(() => {
         Finalizar geometría
       </button>
     </div>
-    <p
-      v-if="error"
-      class="mt-2 text-[11px] font-medium text-danger"
-      role="alert"
-    >
-      {{ error }}
-    </p>
   </section>
 </template>
