@@ -7,6 +7,7 @@ import { toTareaCreacionRemoteError } from "./tareaCreacion.validation";
 import type {
   TareaCreacionBloquesValidos,
   TareaCreacionBorrador,
+  TareaCreacionCampoError,
   TareaCreacionErrorRemoto,
   TareaCreacionErrorValidacion,
   TareaCreacionEstadoFlujo,
@@ -16,6 +17,19 @@ import type {
   TareaCreacionTrackerSeleccionado,
   TareaCreacionTrabajadorSeleccionado,
 } from "./tareaCreacion.types";
+
+const creationFieldOrder: TareaCreacionCampoError[] = [
+  "type",
+  "worker",
+  "tracker",
+  "instructions",
+  "estimatedMinutes",
+  "location",
+  "routePoint",
+  "controlLine",
+  "controlZone",
+  "route",
+];
 
 const emptyBlocks = (): TareaCreacionBloquesValidos => ({
   type: false,
@@ -83,9 +97,19 @@ export const useTareaCreacionStore = defineStore(
       const currentError = result.errors.find(
         (error) => error.field === visibleField,
       );
-      validationErrors.value = currentError
-        ? [currentError]
-        : result.errors.slice(0, 1);
+      validationErrors.value = currentError ? [currentError] : [];
+    }
+    function reportSkippedField(nextField: TareaCreacionCampoError): void {
+      const result = validateTareaCreacionDraft(draft.value);
+      draft.value.validBlocks = result.validBlocks;
+      const nextFieldIndex = creationFieldOrder.indexOf(nextField);
+      validationErrors.value = result.errors
+        .filter(
+          (error) =>
+            creationFieldOrder.indexOf(error.field) >= 0 &&
+            creationFieldOrder.indexOf(error.field) < nextFieldIndex,
+        )
+        .slice(0, 1);
     }
     function open(
       areaId: string | null,
@@ -245,6 +269,7 @@ export const useTareaCreacionStore = defineStore(
       continueEditing,
       discard,
       refreshValidation,
+      reportSkippedField,
     };
   },
 );

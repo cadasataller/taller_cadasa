@@ -20,6 +20,7 @@ export function useSeguimientoTareaCreacion() {
     updateGeometry: store.updateGeometry,
     updateRoute: store.updateRoute,
     canSubmitCreate: store.canSubmit,
+    reportSkippedCreateField: store.reportSkippedField,
     beginGeometryEdit: store.beginGeometryEdit,
     finishGeometryEdit: store.finishGeometryEdit,
     submitCreate: store.submit,

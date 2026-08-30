@@ -73,6 +73,7 @@ const {
   remoteError: createRemoteError,
   isSubmitLocked: isCreateSubmitting,
   canSubmitCreate,
+  reportSkippedCreateField,
   submitCreate,
 } = useSeguimientoTareaCreacion();
 const mapFocus = shallowRef<SeguimientoCoordinates | null>(null);
@@ -488,6 +489,7 @@ function notifyCrossFilterLocked(): void {
       @update:route="updateRoute"
       @edit:geometry="beginGeometryEdit"
       @finish:geometry="finishGeometryEdit"
+      @skip:field="reportSkippedCreateField"
       @submit="submitTaskCreate"
     />
   </section>

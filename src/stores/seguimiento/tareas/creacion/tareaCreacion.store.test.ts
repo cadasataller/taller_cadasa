@@ -46,6 +46,9 @@ describe("useTareaCreacionStore", () => {
     ]);
 
     store.updateType("zona");
+    expect(store.validationErrors).toEqual([]);
+
+    store.reportSkippedField("instructions");
     expect(store.validationErrors).toEqual([
       { field: "worker", message: "Selecciona un trabajador válido." },
     ]);

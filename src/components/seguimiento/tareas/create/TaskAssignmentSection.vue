@@ -4,6 +4,7 @@ import AutoComplete from "primevue/autocomplete";
 import { computed, shallowRef, watch } from "vue";
 import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
 import type { SeguimientoTaskWorkerOption } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
+import type { TareaCreacionCampoError } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
 
 const props = defineProps<{
   workers: SeguimientoTaskWorkerOption[];
@@ -21,6 +22,7 @@ const emit = defineEmits<{
   "update:worker": [value: string];
   "update:tracker": [value: number];
   "update:companions": [value: string[]];
+  "skip:field": [field: Extract<TareaCreacionCampoError, "worker" | "tracker">];
 }>();
 type Option = { id: string | number; label: string };
 const workerSelection = shallowRef<Option | null>(null);
@@ -172,6 +174,7 @@ watch(
         placeholder="Selecciona un trabajador"
         @complete="completeWorkers"
         :invalid="Boolean(workerError)"
+        @focus="emit('skip:field', 'worker')"
         @update:model-value="selectWorker($event)"
       />
     </label>
@@ -197,6 +200,7 @@ watch(
         placeholder="Selecciona un equipo"
         @complete="completeTrackers"
         :invalid="Boolean(trackerError)"
+        @focus="emit('skip:field', 'tracker')"
         @update:model-value="selectTracker($event)"
       />
     </label>

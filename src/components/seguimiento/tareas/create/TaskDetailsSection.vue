@@ -2,6 +2,7 @@
 import { ClipboardPenLine } from "lucide-vue-next";
 import DurationStepper from "./DurationStepper.vue";
 import type { TareaCreacionDetalles } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
+import type { TareaCreacionCampoError } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
 const props = defineProps<{
   details: TareaCreacionDetalles;
   instructionsError?: string | null;
@@ -9,6 +10,12 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{
   "update:details": [value: Partial<TareaCreacionDetalles>];
+  "skip:field": [
+    field: Extract<
+      TareaCreacionCampoError,
+      "instructions" | "estimatedMinutes"
+    >,
+  ];
 }>();
 </script>
 
@@ -29,6 +36,7 @@ const emit = defineEmits<{
         class="mt-1.5 min-h-24 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs leading-5 text-slate-800 outline-none focus:border-main focus:ring-2 focus:ring-main/15"
         :value="details.instructions"
         :aria-invalid="Boolean(instructionsError)"
+        @focus="emit('skip:field', 'instructions')"
         placeholder="Describe el trabajo a realizar"
         @input="
           emit('update:details', {
@@ -44,7 +52,10 @@ const emit = defineEmits<{
     >
       {{ instructionsError }}
     </p>
-    <label class="mt-3 block text-xs font-bold text-slate-700"
+    <label
+      class="mt-3 block text-xs font-bold text-slate-700"
+      @focusin="emit('skip:field', 'estimatedMinutes')"
+    >
       >Duración estimada <span class="text-danger">*</span
       ><DurationStepper
         :model-value="details.estimatedMinutes"

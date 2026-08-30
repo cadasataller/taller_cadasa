@@ -4,6 +4,7 @@ import { Crosshair, MapPinned, PencilLine, Route } from "lucide-vue-next";
 import type { SeguimientoOperationalGeography } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 import type {
   TareaCreacionGeometria,
+  TareaCreacionCampoError,
   TareaCreacionModoGeometria,
   TareaCreacionTipo,
 } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
@@ -23,6 +24,12 @@ const emit = defineEmits<{
   "update:location": [value: string | null];
   edit: [mode: Exclude<TareaCreacionModoGeometria, null>];
   finish: [];
+  "skip:field": [
+    field: Extract<
+      TareaCreacionCampoError,
+      "location" | "routePoint" | "controlLine" | "controlZone"
+    >,
+  ];
 }>();
 const farms = computed(
   () =>
@@ -78,6 +85,7 @@ const editingLabel = computed(() => {
         class="mt-1.5 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-800 outline-none focus:border-main focus:ring-2 focus:ring-main/15"
         :value="geometry.locationId ?? ''"
         :aria-invalid="Boolean(locationError)"
+        @focus="emit('skip:field', 'location')"
         @change="
           emit(
             'update:location',
@@ -116,7 +124,10 @@ const editingLabel = computed(() => {
             class="grid size-9 place-items-center rounded-md text-main hover:bg-second focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
             type="button"
             aria-label="Capturar punto de enrutado"
-            @click="emit('edit', 'point')"
+            @click="
+              emit('skip:field', 'routePoint');
+              emit('edit', 'point');
+            "
           >
             <Crosshair class="size-4" />
           </button>
@@ -139,7 +150,10 @@ const editingLabel = computed(() => {
             class="grid size-9 place-items-center rounded-md text-main hover:bg-second focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
             type="button"
             aria-label="Editar línea de control"
-            @click="emit('edit', 'line')"
+            @click="
+              emit('skip:field', 'controlLine');
+              emit('edit', 'line');
+            "
           >
             <PencilLine class="size-4" />
           </button>
@@ -162,7 +176,10 @@ const editingLabel = computed(() => {
             class="grid size-9 place-items-center rounded-md text-main hover:bg-second focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
             type="button"
             aria-label="Editar zona de control"
-            @click="emit('edit', 'zone')"
+            @click="
+              emit('skip:field', 'controlZone');
+              emit('edit', 'zone');
+            "
           >
             <PencilLine class="size-4" />
           </button>

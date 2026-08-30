@@ -12,6 +12,7 @@ import type {
 } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 import type {
   TareaCreacionBorrador,
+  TareaCreacionCampoError,
   TareaCreacionErrorValidacion,
   TareaCreacionTipo,
   TareaCreacionModoGeometria,
@@ -45,6 +46,7 @@ const emit = defineEmits<{
   "update:route": [value: number | null];
   "edit:geometry": [value: Exclude<TareaCreacionModoGeometria, null>];
   "finish:geometry": [];
+  "skip:field": [field: TareaCreacionCampoError];
   submit: [];
 }>();
 const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
@@ -105,11 +107,13 @@ const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
         @update:worker="emit('update:worker', $event)"
         @update:tracker="emit('update:tracker', $event)"
         @update:companions="emit('update:companions', $event)"
+        @skip:field="emit('skip:field', $event)"
       /><TaskDetailsSection
         :details="draft.details"
         :instructions-error="errorFor('instructions')"
         :estimated-minutes-error="errorFor('estimatedMinutes')"
         @update:details="emit('update:details', $event)"
+        @skip:field="emit('skip:field', $event)"
       />
       <TaskGeometrySection
         :type="draft.type"
@@ -124,6 +128,7 @@ const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
         @update:location="emit('update:geometry', { locationId: $event })"
         @edit="emit('edit:geometry', $event)"
         @finish="emit('finish:geometry')"
+        @skip:field="emit('skip:field', $event)"
       />
       <TaskRoutePosition
         :order="draft.route.order"
