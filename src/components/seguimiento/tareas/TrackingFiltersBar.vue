@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { BrushCleaning } from "lucide-vue-next";
 import AutoComplete from "primevue/autocomplete";
+import { VueDatePicker } from "@vuepic/vue-datepicker";
+import { es } from "date-fns/locale";
 import { computed, reactive, shallowRef, watch } from "vue";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
 import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
@@ -48,6 +50,20 @@ const secondarySelection = shallowRef<TrackingSearchOption | string | null>(
 const primarySuggestions = shallowRef<TrackingSearchOption[]>([]);
 const secondarySuggestions = shallowRef<TrackingSearchOption[]>([]);
 const displayMode = computed(() => props.mode ?? "toolbar");
+const scheduledDateModel = computed<Date | null>({
+  get: () =>
+    draft.scheduledDate ? new Date(`${draft.scheduledDate}T00:00:00`) : null,
+  set: (value) => {
+    if (!value) {
+      draft.scheduledDate = "";
+      return;
+    }
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    const day = String(value.getDate()).padStart(2, "0");
+    draft.scheduledDate = `${year}-${month}-${day}`;
+  },
+});
 const showAreaSelector = computed(() => props.catalog.areas.length > 1);
 const selectedWorkers = computed(() =>
   props.catalog.areas
@@ -259,12 +275,16 @@ function focusCoordinates(): void {
     <label
       class="grid min-w-0 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-slate-600"
       ><span :class="displayMode === 'toolbar' ? 'sr-only' : ''">Fecha</span
-      ><input
-        v-model="draft.scheduledDate"
+      ><VueDatePicker
+        v-model="scheduledDateModel"
         :disabled="disabled"
-        class="h-10 w-full min-w-0 rounded-[0.55rem] border border-slate-200 bg-white px-2.5 text-xs font-medium normal-case text-slate-700 outline-none transition focus:border-main focus:ring-2 focus:ring-main/20 disabled:cursor-not-allowed disabled:opacity-55"
-        type="date"
-        @change="displayMode === 'toolbar' && apply()"
+        :enable-time-picker="false"
+        :locale="es"
+        auto-apply
+        class="w-full normal-case"
+        input-class-name="tracking-date-picker-input"
+        placeholder="Fecha"
+        @update:model-value="displayMode === 'toolbar' && apply()"
     /></label>
     <label
       class="grid min-w-0 gap-1 text-[0.68rem] font-bold uppercase tracking-wider text-slate-600"

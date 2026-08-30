@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, shallowRef } from "vue";
+import { computed, onBeforeUnmount, shallowRef } from "vue";
+import { CheckCircle2 } from "lucide-vue-next";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 import MapToolsOverlay from "@/components/seguimiento/tareas/MapToolsOverlay.vue";
 import MobileMapActions from "@/components/seguimiento/tareas/MobileMapActions.vue";
@@ -70,6 +71,11 @@ const {
   submitCreate,
 } = useSeguimientoTareaCreacion();
 const mapFocus = shallowRef<SeguimientoCoordinates | null>(null);
+const createSuccessMessage = shallowRef<string | null>(null);
+let createSuccessTimer: ReturnType<typeof setTimeout> | null = null;
+onBeforeUnmount(() => {
+  if (createSuccessTimer) clearTimeout(createSuccessTimer);
+});
 const crossFilter = shallowRef<SeguimientoCrossFilter>({
   workerId: null,
   sourceId: null,
@@ -172,14 +178,18 @@ function selectCreateTracker(sourceId: number): void {
       : null,
   );
 }
-function submitTaskCreate(): void {
-  void submitCreate().then((result) => {
-    if (!result) return;
-    finishGeometryEdit();
-    const taskId = typeof result.tarea_id === "string" ? result.tarea_id : null;
-    if (taskId) void selectTask(taskId);
-    else void retry();
-  });
+async function submitTaskCreate(): Promise<void> {
+  const result = await submitCreate();
+  if (!result) return;
+  finishGeometryEdit();
+  createSuccessMessage.value = "La tarea se creó correctamente.";
+  if (createSuccessTimer) clearTimeout(createSuccessTimer);
+  createSuccessTimer = setTimeout(() => {
+    createSuccessMessage.value = null;
+  }, 4000);
+  await retry();
+  const taskId = typeof result.tarea_id === "string" ? result.tarea_id : null;
+  if (taskId) await selectTask(taskId);
 }
 function resetMap(): void {
   mapFocus.value = null;
@@ -232,6 +242,14 @@ function clearFilters(): void {
         })
       "
     />
+    <div
+      v-if="createSuccessMessage"
+      class="absolute right-4 top-4 z-[60] flex max-w-[calc(100%-2rem)] items-center gap-2 rounded-xl border border-main/20 bg-white px-3 py-2.5 text-xs font-bold text-main shadow-lg md:right-[24rem]"
+      role="status"
+    >
+      <CheckCircle2 class="size-4 shrink-0" aria-hidden="true" />
+      {{ createSuccessMessage }}
+    </div>
     <div
       v-else
       class="absolute inset-0 flex items-center justify-center bg-[#e8ece9] text-[#31544d]"
