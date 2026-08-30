@@ -5,7 +5,8 @@ import type {
 } from "@/seguimiento/shared/seguimiento.types";
 import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
 
-export type SeguimientoTaskPanelMode = "closed" | "view";
+/** `create` comparte el panel derecho del workspace; no abre una pantalla aislada. */
+export type SeguimientoTaskPanelMode = "closed" | "view" | "create";
 export type SeguimientoMapStatus = "idle" | "ready" | "error";
 export type SeguimientoMapTool = "tasks" | "trackers" | "zones" | "route";
 export type TareaRastreoTipoCodigo = "finca" | "zona" | "duda_automatica";
