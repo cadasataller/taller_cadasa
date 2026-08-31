@@ -5,9 +5,9 @@ import {
   mapTareaSeguimientoDetail,
   mapTareaSeguimientoListItem,
 } from "./tareasSeguimiento.mappers";
+import { tareaRastreoDetalleSchema } from "./tareasSeguimiento.schemas";
 import type {
   ListarTareasRastreoV2Params,
-  TareaRastreoDetalleDto,
   TareaRastreoListadoDto,
   TareaSeguimientoDetail,
   TareasSeguimientoFilters,
@@ -100,7 +100,7 @@ export const tareasSeguimientoService = {
       },
     );
     if (error) throw error;
-    return mapTareaSeguimientoDetail(data as TareaRastreoDetalleDto);
+    return mapTareaSeguimientoDetail(tareaRastreoDetalleSchema.parse(data));
   },
 };
 

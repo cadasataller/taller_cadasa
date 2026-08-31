@@ -745,7 +745,7 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
       @back="mobileView = 'map'"
     />
     <TaskDetailPanel
-      v-if="panelMode === 'view' && !isCreatePanelOpen"
+      v-show="panelMode === 'view' && !isCreatePanelOpen"
       class="fixed inset-0 z-50 max-h-none md:absolute md:inset-y-0 md:left-auto md:right-0 md:z-40 md:w-[23rem]"
       :class="mobileView === 'view' ? '' : 'max-md:hidden'"
       :task="detail"

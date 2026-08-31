@@ -128,28 +128,30 @@ export interface TareaRastreoDetalleDto {
     area_id: string;
     fecha_programada: string;
     indicaciones: string | null;
-    tipo_tarea: TareaRastreoTipoCodigo;
+    tipo_codigo: TareaRastreoTipoCodigo;
     ubicacion_id: string | null;
-    prioridad_id: number | null;
     tiempo_estimado_minutos: number | null;
     orden_ruta: number | null;
-    punto_latitud: number | null;
-    punto_longitud: number | null;
-    linea_control_geojson: SeguimientoLineGeometry | null;
-    zonas_control_geojson: SeguimientoZoneGeometry[];
+    punto_enrutado: { lat: number; lng: number } | null;
+    linea_control: SeguimientoLineGeometry | null;
+    zonas_control: Array<{
+      id: string;
+      geom: SeguimientoZoneGeometry;
+    }>;
     actualizado_en: string;
   };
   asignacion: {
-    usuario_asignado_id: string | null;
+    usuario_id: string | null;
     source_id: number | null;
     tracker_id: number | null;
     tracker_label: string | null;
     acompanantes: Array<{ id: string; nombre: string }>;
   };
   estado: {
-    tarea_codigo: string;
-    operativo_codigo: TareaRastreoEstadoOperativoCodigo | null;
-    operativo_nombre: string | null;
+    prioridad_id: number | null;
+    estado_tarea_codigo: string;
+    estado_operativo_codigo: TareaRastreoEstadoOperativoCodigo | null;
+    estado_operativo_nombre: string | null;
   };
   tiempo: {
     cantidad_visitas: number;

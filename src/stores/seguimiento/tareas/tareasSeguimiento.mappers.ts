@@ -6,6 +6,7 @@ import type {
   SeguimientoTracker,
   TrackerOperationalStatus,
 } from "@/seguimiento/shared/trackers/tracker.types";
+import { z } from "zod";
 import type {
   TareaRastreoDetalleDto,
   TareaRastreoListadoDto,
@@ -28,8 +29,17 @@ const mapTaskStatus = (
   return "pendiente";
 };
 
-const mapRoutePoint = (latitude: number | null, longitude: number | null) =>
-  latitude === null || longitude === null ? null : { latitude, longitude };
+const coordinateSchema = z.number().finite();
+
+const mapRoutePoint = (latitude: unknown, longitude: unknown) => {
+  const parsedLatitude = coordinateSchema.safeParse(latitude);
+  const parsedLongitude = coordinateSchema.safeParse(longitude);
+  if (!parsedLatitude.success || !parsedLongitude.success) return null;
+  return {
+    latitude: parsedLatitude.data,
+    longitude: parsedLongitude.data,
+  };
+};
 
 export function mapTareaSeguimientoListItem(
   row: TareaRastreoListadoDto,
@@ -57,16 +67,20 @@ export function mapTareaSeguimientoDetail(
   response: TareaRastreoDetalleDto,
 ): TareaSeguimientoDetail {
   const { tarea, asignacion, estado } = response;
+  const routePoint = tarea.punto_enrutado;
   return {
     id: tarea.id,
-    type: mapTaskType(tarea.tipo_tarea),
-    status: mapTaskStatus(estado.operativo_codigo, estado.tarea_codigo),
+    type: mapTaskType(tarea.tipo_codigo),
+    status: mapTaskStatus(
+      estado.estado_operativo_codigo,
+      estado.estado_tarea_codigo,
+    ),
     areaId: tarea.area_id,
-    assignedUserId: asignacion.usuario_asignado_id,
+    assignedUserId: asignacion.usuario_id,
     locationId: tarea.ubicacion_id,
     scheduledDate: tarea.fecha_programada,
     instructions: tarea.indicaciones,
-    priorityId: tarea.prioridad_id,
+    priorityId: estado.prioridad_id,
     estimatedMinutes: tarea.tiempo_estimado_minutos,
     trackerId: asignacion.tracker_id,
     sourceId: asignacion.source_id,
@@ -74,11 +88,11 @@ export function mapTareaSeguimientoDetail(
     companionNames: asignacion.acompanantes.map(
       (companion) => companion.nombre,
     ),
-    routePoint: mapRoutePoint(tarea.punto_latitud, tarea.punto_longitud),
+    routePoint: mapRoutePoint(routePoint?.lat, routePoint?.lng),
     routeOrder: tarea.orden_ruta,
-    controlLine: tarea.linea_control_geojson,
-    controlZones: tarea.zonas_control_geojson,
-    operationalStatusLabel: estado.operativo_nombre,
+    controlLine: tarea.linea_control,
+    controlZones: tarea.zonas_control.map((zone) => zone.geom),
+    operationalStatusLabel: estado.estado_operativo_nombre,
     time: response.tiempo,
     visits: response.visitas,
     route: response.ruta ?? { id: null, estado_calculo: null },

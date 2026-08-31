@@ -52,28 +52,27 @@ const taskDetail = (
     area_id: "area-1",
     fecha_programada: "2026-08-29",
     indicaciones: "Visitar ubicación",
-    tipo_tarea: "zona",
+    tipo_codigo: "zona",
     ubicacion_id: null,
-    prioridad_id: 1,
     tiempo_estimado_minutos: 60,
     orden_ruta: 1,
-    punto_latitud: 8.4,
-    punto_longitud: -82.5,
-    linea_control_geojson: null,
-    zonas_control_geojson: [],
+    punto_enrutado: { lat: 8.4, lng: -82.5 },
+    linea_control: null,
+    zonas_control: [],
     actualizado_en: "2026-08-29T12:00:00Z",
   },
   asignacion: {
-    usuario_asignado_id: "user-1",
+    usuario_id: "user-1",
     source_id: 45,
     tracker_id: 12,
     tracker_label: "Tracker 12",
     acompanantes: [],
   },
   estado: {
-    tarea_codigo: "pendiente",
-    operativo_codigo: "sin_iniciar",
-    operativo_nombre: "Sin iniciar",
+    prioridad_id: 1,
+    estado_tarea_codigo: "pendiente",
+    estado_operativo_codigo: "sin_iniciar",
+    estado_operativo_nombre: "Sin iniciar",
   },
   tiempo: {
     cantidad_visitas: 0,
@@ -112,6 +111,14 @@ describe("tareasSeguimiento mappers", () => {
     ).toBe("duda");
   });
 
+  it("descarta un punto incompleto del RPC para que el detalle no falle al renderizar", () => {
+    expect(
+      mapTareaSeguimientoListItem(
+        taskRow({ punto_latitud: undefined as unknown as number }),
+      ).routePoint,
+    ).toBeNull();
+  });
+
   it("derives one visible tracker from the listing DTO", () => {
     expect(mapSeguimientoTracker(taskRow())).toMatchObject({
       id: 12,
@@ -126,6 +133,31 @@ describe("tareasSeguimiento mappers", () => {
     expect(mapTareaSeguimientoDetail(taskDetail()).route).toEqual({
       id: null,
       estado_calculo: null,
+    });
+  });
+
+  it("mapea la geometría y asignación del payload real del detalle", () => {
+    const zone = {
+      type: "MultiPolygon" as const,
+      coordinates: [[[[-82.558293339, 8.399123039]]]],
+    };
+
+    expect(
+      mapTareaSeguimientoDetail(
+        taskDetail({
+          tarea: {
+            ...taskDetail().tarea,
+            zonas_control: [{ id: "zone-1", geom: zone }],
+          },
+        }),
+      ),
+    ).toMatchObject({
+      type: "zona",
+      assignedUserId: "user-1",
+      priorityId: 1,
+      routePoint: { latitude: 8.4, longitude: -82.5 },
+      controlZones: [zone],
+      operationalStatusLabel: "Sin iniciar",
     });
   });
 });
