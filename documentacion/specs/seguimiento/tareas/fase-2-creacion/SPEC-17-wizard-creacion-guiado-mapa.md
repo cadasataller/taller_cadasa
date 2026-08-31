@@ -52,6 +52,12 @@ geometría en pausa y la persona decide cuándo definir los detalles.
   vértices, y emite `action` o `cancel`; no muta el borrador.
 - `SeguimientoTareasView.vue` coordina el mapa, tarjetas, panel y navegación
   móvil mediante props descendentes y eventos ascendentes.
+- Cada zona de una finca puede editarse directamente en el mapa (vértices
+  arrastrables, insertables o eliminables) y eliminarse de forma individual
+  desde el panel. La validación Zod impide guardar una finca sin zonas.
+- `persistDraftOnNavigation` prepara la persistencia del borrador entre vistas;
+  queda en `false`, por lo que al salir de Seguimiento/Tareas el borrador se
+  descarta. Al activarlo en el futuro, el store Pinia conservará el estado.
 - La UI usa Vue 3, TypeScript, Tailwind y los iconos Lucide. Su disposición de
   mapa con capas flotantes sigue los mockups de `rastreo_tarea`.
 

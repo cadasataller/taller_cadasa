@@ -14,6 +14,7 @@ import type {
 } from "@/seguimiento/shared/seguimiento.types";
 import type { SeguimientoOperationalGeography } from "../tareasSeguimiento.types";
 
+const MAX_CONTROL_POINT_ROAD_DISTANCE_KM = 0.055;
 const MAX_FARM_ROAD_DISTANCE_KM = 0.1;
 const CONTROL_LINE_HALF_LENGTH_METERS = 14;
 
@@ -131,7 +132,7 @@ export function snapToAreaRoads(
   clicked: SeguimientoCoordinates,
   geography: SeguimientoOperationalGeography[],
 ): TareaCreacionSnapResult | null {
-  return (
+  const snap =
     geography
       .flatMap((area) => area.farms)
       .flatMap((farm) =>
@@ -140,8 +141,10 @@ export function snapToAreaRoads(
       .filter((candidate): candidate is TareaCreacionSnapResult =>
         Boolean(candidate),
       )
-      .sort((left, right) => left.distanceKm - right.distanceKm)[0] ?? null
-  );
+      .sort((left, right) => left.distanceKm - right.distanceKm)[0] ?? null;
+  return snap && snap.distanceKm <= MAX_CONTROL_POINT_ROAD_DISTANCE_KM
+    ? snap
+    : null;
 }
 
 export function snapToFarmRoads(

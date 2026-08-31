@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { Crosshair, MapPinned, PencilLine, Route } from "lucide-vue-next";
+import {
+  Crosshair,
+  MapPinned,
+  PencilLine,
+  Route,
+  Trash2,
+} from "lucide-vue-next";
 import type { SeguimientoOperationalGeography } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 import type {
   TareaCreacionGeometria,
@@ -23,6 +29,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   "update:location": [value: string | null];
   edit: [mode: Exclude<TareaCreacionModoGeometria, null>];
+  "edit:zone": [index: number];
+  "remove:zone": [index: number];
   finish: [];
   "skip:field": [
     field: Extract<
@@ -184,13 +192,40 @@ const editingLabel = computed(() => {
                 ? 'Agregar zona de control'
                 : 'Editar zona de control'
             "
-            @click="
-              emit('skip:field', 'controlZone');
-              emit('edit', 'zone');
-            "
+            @click="emit('edit:zone', 0)"
           >
             <PencilLine class="size-4" />
           </button>
+        </div>
+        <div
+          v-if="type === 'finca' && geometry.controlZones.length"
+          class="mt-2 grid gap-1"
+        >
+          <div
+            v-for="(_, index) in geometry.controlZones"
+            :key="index"
+            class="flex items-center justify-between rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-slate-600"
+          >
+            <span>Zona {{ index + 1 }}</span>
+            <span class="flex gap-1">
+              <button
+                type="button"
+                class="text-main"
+                :aria-label="`Editar zona ${index + 1}`"
+                @click="emit('edit:zone', index)"
+              >
+                <PencilLine class="size-3.5" />
+              </button>
+              <button
+                type="button"
+                class="text-danger"
+                :aria-label="`Eliminar zona ${index + 1}`"
+                @click="emit('remove:zone', index)"
+              >
+                <Trash2 class="size-3.5" />
+              </button>
+            </span>
+          </div>
         </div>
         <p
           v-if="controlZoneError"

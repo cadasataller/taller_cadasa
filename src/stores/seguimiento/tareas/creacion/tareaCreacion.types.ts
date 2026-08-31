@@ -43,7 +43,8 @@ export interface TareaCreacionGeometria {
   controlZones: SeguimientoControlZone[];
 }
 
-export type TareaCreacionModoGeometria = "point" | "line" | "zone" | null;
+export type TareaCreacionModoGeometria =
+  "point" | "line" | "zone" | "zone-edit" | null;
 export type TareaCreacionEstadoEspacial =
   | "idle"
   | "selecting-route-point"

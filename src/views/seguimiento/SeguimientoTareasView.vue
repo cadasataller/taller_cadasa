@@ -78,14 +78,19 @@ const {
   updateCompanions,
   updateDetails,
   updateGeometry,
+  updateControlZone,
   captureSpatialRoute,
   completeSpatialSelection,
   updateRoute,
   geometryMode,
+  editingControlZoneIndex,
+  persistDraftOnNavigation,
   spatialState,
   wizardStep,
   lockedFarmId,
   beginGeometryEdit,
+  beginControlZoneEdit,
+  removeControlZone,
   finishGeometryEdit,
   remoteError: createRemoteError,
   isSubmitLocked: isCreateSubmitting,
@@ -114,6 +119,7 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   if (createSuccessTimer) clearTimeout(createSuccessTimer);
+  if (!persistDraftOnNavigation.value) discardCreate();
 });
 const crossFilter = shallowRef<SeguimientoCrossFilter>({
   workerId: null,
@@ -306,11 +312,13 @@ function captureRoutePoint(clicked: SeguimientoCoordinates): void {
   const snap = snapToAreaRoads(clicked, geography.value);
   if (!snap) {
     toast.add({
-      severity: "warn",
-      summary: "Sin vía enrutable",
-      detail: "No se encontró una vía enrutable para el punto seleccionado.",
+      severity: "info",
+      summary: "Punto para tarea zona",
+      detail:
+        "No hay vía enrutable a menos de 5 m. Dibuja una zona fuera de las fincas para crear una tarea zona.",
       life: 4200,
     });
+    captureSpatialRoute(clicked, null);
     return;
   }
   captureSpatialRoute(snap.routePoint, snap.controlLine);
@@ -333,7 +341,7 @@ function notifyBlockedZoneCapture(): void {
     severity: "warn",
     summary: "Área bloqueada",
     detail:
-      "Esta tarea quedó contenida en una finca; dibuja dentro de su límite.",
+      "La zona está fuera de la finca. Corrige primero el punto de control y vuelve a dibujar la zona.",
     life: 3200,
   });
 }
@@ -360,6 +368,17 @@ function finishCreateGeometry(): void {
   if (spatialState.value === "drawing-first-zone") {
     const dominant = resolveDominantFarm([zone], farms);
     const originalRoutePoint = createDraft.value.geometry.routePoint;
+    if (!createDraft.value.geometry.controlLine && dominant?.isFullyContained) {
+      toast.add({
+        severity: "warn",
+        summary: "Zona dentro de una finca",
+        detail:
+          "Para crear una tarea finca, mueve el punto de control a una vía enrutable y vuelve a dibujar la zona.",
+        life: 4800,
+      });
+      pendingControlZone.value = null;
+      return;
+    }
     const farmSnap =
       dominant && originalRoutePoint
         ? snapToFarmRoads(originalRoutePoint, dominant.farm)
@@ -472,6 +491,7 @@ function notifyCrossFilterLocked(): void {
       :geography="geography"
       :creation-geometry-mode="geometryMode"
       :creation-geometry="creationGeometryPreview"
+      :creation-editing-zone-index="editingControlZoneIndex"
       :creation-locked-boundary="lockedFarmBoundary"
       :creation-sketch-reset-key="creationSketchResetKey"
       @ready="setMapReady"
@@ -485,6 +505,13 @@ function notifyCrossFilterLocked(): void {
       @capture:control-zone="
         captureControlZone({ type: 'MultiPolygon', coordinates: $event })
       "
+      @update:control-zone="
+        updateControlZone($event[0], {
+          type: 'MultiPolygon',
+          coordinates: $event[1],
+        })
+      "
+      @select:control-zone="beginControlZoneEdit"
       @capture:blocked="notifyBlockedZoneCapture"
     />
     <div
@@ -514,7 +541,9 @@ function notifyCrossFilterLocked(): void {
       @cancel="clearSpatialZoneVertices"
     />
     <TaskCreationWizardCard
-      v-else-if="wizardStep === 'details-pending'"
+      v-else-if="
+        wizardStep === 'details-pending' && geometryMode !== 'zone-edit'
+      "
       class="absolute bottom-5 left-1/2 z-30 -translate-x-1/2"
       :step="wizardStep"
       :show-add-zone="createDraft.type === 'finca'"
@@ -528,6 +557,31 @@ function notifyCrossFilterLocked(): void {
       :step="wizardStep"
       @cancel="cancelAdditionalControlZone"
     />
+    <div
+      v-else-if="
+        geometryMode === 'zone-edit' && editingControlZoneIndex !== null
+      "
+      class="absolute bottom-5 left-1/2 z-[70] flex -translate-x-1/2 items-center gap-1 rounded-lg border border-white/75 bg-white/95 px-2 py-1.5 text-[11px] font-extrabold text-slate-800 shadow-md backdrop-blur"
+    >
+      Editar zona
+      <button
+        class="h-7 rounded-md border border-slate-200 px-2 text-slate-600"
+        type="button"
+        @click="finishGeometryEdit"
+      >
+        Cancelar
+      </button>
+      <button
+        class="h-7 rounded-md bg-danger px-2 text-white"
+        type="button"
+        @click="
+          removeControlZone(editingControlZoneIndex);
+          finishGeometryEdit();
+        "
+      >
+        Eliminar
+      </button>
+    </div>
     <TaskCreationWizardCard
       v-else-if="
         wizardStep === 'editing-details' &&
@@ -715,6 +769,8 @@ function notifyCrossFilterLocked(): void {
       @update:companions="updateCompanions"
       @update:details="updateDetails"
       @update:geometry="updateGeometry"
+      @edit:zone="beginControlZoneEdit"
+      @remove:zone="removeControlZone"
       @update:route="updateRoute"
       @edit:geometry="beginGeometryEdit"
       @finish:geometry="finishCreateGeometry"

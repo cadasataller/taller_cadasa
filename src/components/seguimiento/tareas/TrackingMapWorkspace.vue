@@ -40,6 +40,7 @@ const props = defineProps<{
   geography: SeguimientoOperationalGeography[];
   creationGeometryMode?: TareaCreacionModoGeometria;
   creationGeometry?: TareaCreacionGeometria;
+  creationEditingZoneIndex?: number | null;
   creationLockedBoundary?: SeguimientoOperationalGeography["farms"][number]["boundary"];
   creationSketchResetKey?: number;
 }>();
@@ -49,6 +50,8 @@ const emit = defineEmits<{
   "capture:route-point": [coordinates: SeguimientoCoordinates];
   "capture:control-line": [coordinates: number[][][]];
   "capture:control-zone": [coordinates: number[][][][]];
+  "update:control-zone": [index: number, coordinates: number[][][][]];
+  "select:control-zone": [index: number];
   "capture:blocked": [];
   "creation:vertices-change": [count: number];
 }>();
@@ -272,16 +275,17 @@ function updateZoomDrivenLayers(): void {
   geographyLabels.forEach((label) =>
     label.setVisible(profile.farmLabelVisible),
   );
+  const showingCreationRoads = Boolean(props.creationGeometryMode);
   farmRoads.forEach(({ halo, surface }) => {
     halo.setOptions({
-      visible: profile.roadsVisible,
-      strokeOpacity: profile.roadHaloOpacity,
+      visible: profile.roadsVisible || showingCreationRoads,
+      strokeOpacity: showingCreationRoads ? 0.75 : profile.roadHaloOpacity,
       strokeWeight: profile.roadHaloWeight,
       zIndex: seguimientoMapZIndex.road,
     });
     surface.setOptions({
-      visible: profile.roadsVisible,
-      strokeOpacity: profile.roadOpacity,
+      visible: profile.roadsVisible || showingCreationRoads,
+      strokeOpacity: showingCreationRoads ? 1 : profile.roadOpacity,
       strokeWeight: profile.roadWeight,
       zIndex: seguimientoMapZIndex.road + 1,
     });
@@ -556,26 +560,52 @@ function renderLayers(): void {
       );
     });
   }
-  props.creationGeometry?.controlZones.forEach((zone) => {
+  props.creationGeometry?.controlZones.forEach((zone, zoneIndex) => {
     const paths = zone.coordinates.map((polygon) =>
       polygon[0].map(([longitude, latitude]) => ({
         lat: latitude,
         lng: longitude,
       })),
     );
-    creationOverlays.push(
-      new maps.Polygon({
-        map,
-        paths,
-        clickable: false,
-        strokeColor: "#D4A853",
-        strokeOpacity: 1,
-        strokeWeight: 2,
-        fillColor: "#D4A853",
-        fillOpacity: 0.22,
-        zIndex: seguimientoMapZIndex.selected + 1,
-      }),
-    );
+    const polygon = new maps.Polygon({
+      map,
+      paths,
+      clickable: true,
+      editable:
+        props.creationGeometryMode === "zone-edit" &&
+        props.creationEditingZoneIndex === zoneIndex,
+      strokeColor: "#D4A853",
+      strokeOpacity: 1,
+      strokeWeight: 2,
+      fillColor: "#D4A853",
+      fillOpacity: 0.22,
+      zIndex: seguimientoMapZIndex.selected + 1,
+    });
+    if (
+      props.creationGeometryMode === "zone-edit" &&
+      props.creationEditingZoneIndex === zoneIndex
+    ) {
+      const emitZoneUpdate = () =>
+        emit(
+          "update:control-zone",
+          zoneIndex,
+          polygon
+            .getPaths()
+            .getArray()
+            .map((path: any) => [
+              path
+                .getArray()
+                .map((position: any) => [position.lng(), position.lat()]),
+            ]),
+        );
+      polygon.getPaths().forEach((path: any) => {
+        path.addListener("set_at", emitZoneUpdate);
+        path.addListener("insert_at", emitZoneUpdate);
+        path.addListener("remove_at", emitZoneUpdate);
+      });
+    }
+    polygon.addListener("click", () => emit("select:control-zone", zoneIndex));
+    creationOverlays.push(polygon);
   });
   updateZoomDrivenLayers();
 }
@@ -612,7 +642,12 @@ async function initializeMap(): Promise<void> {
     zoomListener = map.addListener("zoom_changed", updateZoomDrivenLayers);
     creationClickListener = map.addListener("click", (event: any) => {
       const latLng = event.latLng;
-      if (!latLng || !props.creationGeometryMode) return;
+      if (
+        !latLng ||
+        !props.creationGeometryMode ||
+        props.creationGeometryMode === "zone-edit"
+      )
+        return;
       const coordinate = [latLng.lng(), latLng.lat()];
       if (
         props.creationGeometryMode === "zone" &&
@@ -673,6 +708,7 @@ watch(
     props.mapTools,
     props.selectedTaskId,
     props.creationGeometry,
+    props.creationEditingZoneIndex,
     props.creationLockedBoundary,
   ],
   renderLayers,

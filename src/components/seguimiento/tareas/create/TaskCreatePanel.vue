@@ -45,6 +45,8 @@ const emit = defineEmits<{
   "update:geometry": [value: Partial<TareaCreacionBorrador["geometry"]>];
   "update:route": [value: number | null];
   "edit:geometry": [value: Exclude<TareaCreacionModoGeometria, null>];
+  "edit:zone": [index: number];
+  "remove:zone": [index: number];
   "finish:geometry": [];
   "skip:field": [field: TareaCreacionCampoError];
   submit: [];
@@ -127,6 +129,8 @@ const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
         :control-zone-error="errorFor('controlZone')"
         @update:location="emit('update:geometry', { locationId: $event })"
         @edit="emit('edit:geometry', $event)"
+        @edit:zone="emit('edit:zone', $event)"
+        @remove:zone="emit('remove:zone', $event)"
         @finish="emit('finish:geometry')"
         @skip:field="emit('skip:field', $event)"
       />

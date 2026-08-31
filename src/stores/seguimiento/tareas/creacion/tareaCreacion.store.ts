@@ -78,6 +78,8 @@ export const useTareaCreacionStore = defineStore(
     const validationErrors = ref<TareaCreacionErrorValidacion[]>([]);
     const remoteError = shallowRef<TareaCreacionErrorRemoto | null>(null);
     const geometryMode = shallowRef<TareaCreacionModoGeometria>(null);
+    const editingControlZoneIndex = shallowRef<number | null>(null);
+    const persistDraftOnNavigation = shallowRef(false);
     const spatialState = shallowRef<TareaCreacionEstadoEspacial>("idle");
     const wizardStep = shallowRef<TareaCreacionPasoWizard>("ready");
     const lockedFarmId = shallowRef<string | null>(null);
@@ -262,6 +264,30 @@ export const useTareaCreacionStore = defineStore(
       remoteError.value = null;
       refreshValidation();
     }
+    function beginControlZoneEdit(index: number): void {
+      if (!draft.value.geometry.controlZones[index]) return;
+      editingControlZoneIndex.value = index;
+      geometryMode.value = "zone-edit";
+      remoteError.value = null;
+    }
+    function updateControlZone(
+      index: number,
+      zone: TareaCreacionBorrador["geometry"]["controlZones"][number],
+    ): void {
+      if (!draft.value.geometry.controlZones[index]) return;
+      const controlZones = [...draft.value.geometry.controlZones];
+      controlZones[index] = zone;
+      updateGeometry({ controlZones });
+    }
+    function removeControlZone(index: number): void {
+      if (!draft.value.geometry.controlZones[index]) return;
+      updateGeometry({
+        controlZones: draft.value.geometry.controlZones.filter(
+          (_, zoneIndex) => zoneIndex !== index,
+        ),
+      });
+      if (editingControlZoneIndex.value === index) finishGeometryEdit();
+    }
     function updateRoute(order: number | null): void {
       draft.value.route = { order };
       remoteError.value = null;
@@ -275,6 +301,7 @@ export const useTareaCreacionStore = defineStore(
     }
     function finishGeometryEdit(): void {
       geometryMode.value = null;
+      editingControlZoneIndex.value = null;
       refreshValidation();
     }
     async function submit(): Promise<TareaCreacionRespuestaRpc | null> {
@@ -343,6 +370,8 @@ export const useTareaCreacionStore = defineStore(
       validationErrors,
       remoteError,
       geometryMode,
+      editingControlZoneIndex,
+      persistDraftOnNavigation,
       spatialState,
       wizardStep,
       lockedFarmId,
@@ -365,6 +394,9 @@ export const useTareaCreacionStore = defineStore(
       updateCompanions,
       updateDetails,
       updateGeometry,
+      beginControlZoneEdit,
+      updateControlZone,
+      removeControlZone,
       updateRoute,
       beginGeometryEdit,
       finishGeometryEdit,
