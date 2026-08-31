@@ -81,7 +81,7 @@ export function mapTareaSeguimientoDetail(
     operationalStatusLabel: estado.operativo_nombre,
     time: response.tiempo,
     visits: response.visitas,
-    route: response.ruta,
+    route: response.ruta ?? { id: null, estado_calculo: null },
     permissions: response.permisos,
     updatedAt: tarea.actualizado_en,
   };

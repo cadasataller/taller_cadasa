@@ -32,7 +32,8 @@ Este spec cubre las tres primeras y deja geometría/ruta para el siguiente spec.
 
 ## Tipo de tarea
 
-El selector debe ofrecer:
+El tipo se detecta durante la clasificación espacial y se muestra como un
+indicador de solo lectura:
 
 ```txt
 Finca
@@ -42,8 +43,10 @@ Zona
 Reglas:
 
 - `Duda` no aparece;
-- la selección condiciona los bloques geométricos posteriores;
-- el tipo debe mostrarse con semántica clara y no como dropdown ambiguo si el diseño del mockup usa botones segmentados.
+- el usuario no puede cambiar el tipo desde el panel de detalles;
+- no se muestran descripciones redundantes por tipo;
+- conservar la geometría detectada tiene prioridad sobre ofrecer una selección
+  manual posterior.
 
 ## Asignación
 

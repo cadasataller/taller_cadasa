@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
+import { useSeguimientoTareaCreacion } from "@/composables/seguimiento/useSeguimientoTareaCreacion";
 import { useTareaCreacionStore } from "./tareaCreacion.store";
 
 describe("useTareaCreacionStore", () => {
@@ -107,5 +108,97 @@ describe("useTareaCreacionStore", () => {
 
     store.finishAdditionalControlZone();
     expect(store.wizardStep).toBe("details-pending");
+  });
+
+  it.each([
+    {
+      type: "zona" as const,
+      locationId: null,
+      controlLine: null,
+    },
+    {
+      type: "finca" as const,
+      locationId: "farm-1",
+      controlLine: {
+        type: "MultiLineString" as const,
+        coordinates: [
+          [
+            [-80.5, 8.5],
+            [-80.49, 8.51],
+          ],
+        ],
+      },
+    },
+  ])(
+    "habilita Guardar para una tarea $type completa",
+    ({ type, locationId, controlLine }) => {
+      const store = useTareaCreacionStore();
+      const { canSubmitCreate } = useSeguimientoTareaCreacion();
+      store.open("area-1", "2026-08-31");
+      store.updateType(type);
+      store.updateWorker({ id: "worker-1", label: "Trabajador" });
+      store.updateTracker({ id: 1, sourceId: 2, label: "Equipo" });
+      store.updateDetails({ instructions: "Inspeccionar el área" });
+      store.updateGeometry({
+        locationId,
+        routePoint: { latitude: 8.5, longitude: -80.5 },
+        controlLine,
+        controlZones: [
+          {
+            type: "MultiPolygon",
+            coordinates: [
+              [
+                [
+                  [-80.5, 8.5],
+                  [-80.49, 8.5],
+                  [-80.49, 8.51],
+                  [-80.5, 8.5],
+                ],
+              ],
+            ],
+          },
+        ],
+      });
+      store.updateRoute(1);
+
+      expect(store.canSubmit).toBe(true);
+      expect(canSubmitCreate.value).toBe(true);
+    },
+  );
+
+  it("expone todos los motivos que bloquean Guardar", () => {
+    const store = useTareaCreacionStore();
+    store.open("area-1", "2026-08-31");
+
+    expect(store.submitBlockReasons).toEqual([
+      "Selecciona un tipo de tarea.",
+      "Selecciona un trabajador válido.",
+      "Selecciona un equipo válido.",
+      "Escribe las indicaciones de la tarea.",
+      "Selecciona un punto de enrutado.",
+    ]);
+  });
+
+  it("detalla los campos pendientes de una tarea zona", () => {
+    const store = useTareaCreacionStore();
+    store.open("area-1", "2026-08-31");
+    store.updateType("zona");
+
+    expect(store.revealSubmitRequirements()).toEqual([
+      { field: "worker", message: "Selecciona un trabajador válido." },
+      { field: "tracker", message: "Selecciona un equipo válido." },
+      {
+        field: "instructions",
+        message: "Escribe las indicaciones de la tarea.",
+      },
+      {
+        field: "routePoint",
+        message: "Selecciona un punto de enrutado.",
+      },
+      {
+        field: "controlZone",
+        message: "Dibuja el polígono de control de la zona.",
+      },
+    ]);
   });
 });

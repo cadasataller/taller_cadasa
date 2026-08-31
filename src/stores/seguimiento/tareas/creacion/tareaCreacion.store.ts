@@ -66,7 +66,7 @@ const createDraft = (
   submitStatus: "idle",
 });
 const copyDraft = (draft: TareaCreacionBorrador): TareaCreacionBorrador =>
-  structuredClone(toRaw(draft));
+  JSON.parse(JSON.stringify(toRaw(draft))) as TareaCreacionBorrador;
 
 export const useTareaCreacionStore = defineStore(
   "seguimiento_tareas_creacion",
@@ -91,8 +91,19 @@ export const useTareaCreacionStore = defineStore(
     const canSubmit = computed(
       () =>
         !isSubmitLocked.value &&
-        Object.values(draft.value.validBlocks).every(Boolean),
+        validateTareaCreacionDraft(draft.value).isValid,
     );
+    const submitBlockReasons = computed(() => {
+      console.log(draft.value);
+
+      if (isSubmitLocked.value) return ["La tarea se está guardando."];
+      const errors = validateTareaCreacionDraft(draft.value).errors.map(
+        (error) => error.message,
+      );
+      return errors.length
+        ? errors
+        : ["Completa los datos obligatorios antes de guardar."];
+    });
     const needsGeometry = computed(
       () => draft.value.type !== null && !draft.value.validBlocks.geometry,
     );
@@ -117,6 +128,12 @@ export const useTareaCreacionStore = defineStore(
             creationFieldOrder.indexOf(error.field) < nextFieldIndex,
         )
         .slice(0, 1);
+    }
+    function revealSubmitRequirements(): TareaCreacionErrorValidacion[] {
+      const result = validateTareaCreacionDraft(draft.value);
+      draft.value.validBlocks = result.validBlocks;
+      validationErrors.value = result.errors;
+      return result.errors;
     }
     function open(
       areaId: string | null,
@@ -379,6 +396,7 @@ export const useTareaCreacionStore = defineStore(
       hasUnsavedChanges,
       isSubmitLocked,
       canSubmit,
+      submitBlockReasons,
       needsGeometry,
       open,
       openSpatial,
@@ -407,6 +425,7 @@ export const useTareaCreacionStore = defineStore(
       discard,
       refreshValidation,
       reportSkippedField,
+      revealSubmitRequirements,
     };
   },
 );

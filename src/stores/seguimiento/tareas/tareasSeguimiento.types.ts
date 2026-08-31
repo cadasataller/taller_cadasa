@@ -157,7 +157,7 @@ export interface TareaRastreoDetalleDto {
     visita_abierta: boolean;
   };
   visitas: Array<{ id: string; entrada_en: string; salida_en: string | null }>;
-  ruta: { id: string | null; estado_calculo: string | null };
+  ruta: { id: string | null; estado_calculo: string | null } | null;
   permisos: {
     puede_editar: boolean;
     puede_editar_punto: boolean;

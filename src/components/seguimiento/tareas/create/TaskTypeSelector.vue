@@ -3,23 +3,6 @@ import { MapPinned, ScanLine } from "lucide-vue-next";
 import type { TareaCreacionTipo } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
 
 defineProps<{ modelValue: TareaCreacionTipo | null; error?: string | null }>();
-const emit = defineEmits<{ "update:modelValue": [value: TareaCreacionTipo] }>();
-const types: Array<{
-  value: TareaCreacionTipo;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: "finca",
-    label: "Finca",
-    description: "Punto de ruta + línea de control",
-  },
-  {
-    value: "zona",
-    label: "Zona",
-    description: "Punto de ruta + zona de control",
-  },
-];
 </script>
 
 <template>
@@ -31,37 +14,21 @@ const types: Array<{
       id="create-task-type"
       class="text-[11px] font-extrabold uppercase tracking-[0.1em] text-slate-600"
     >
-      Tipo de tarea
+      Tipo detectado
     </h3>
     <div
-      class="mt-3 grid grid-cols-2 gap-2"
-      role="radiogroup"
-      aria-label="Tipo de tarea"
+      class="mt-3 flex min-h-12 items-center gap-3 rounded-xl border border-main/20 bg-second/45 px-3 text-main"
+      role="status"
+      aria-live="polite"
     >
-      <button
-        v-for="type in types"
-        :key="type.value"
-        class="min-h-20 rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
-        :class="
-          modelValue === type.value
-            ? 'border-main bg-second text-main shadow-sm'
-            : 'border-slate-200 bg-white text-slate-600 hover:border-main/50'
-        "
-        type="button"
-        role="radio"
-        :aria-checked="modelValue === type.value"
-        @click="emit('update:modelValue', type.value)"
-      >
-        <component
-          :is="type.value === 'finca' ? MapPinned : ScanLine"
-          class="size-4"
-          aria-hidden="true"
-        />
-        <span class="mt-2 block text-xs font-extrabold">{{ type.label }}</span>
-        <span class="mt-0.5 block text-[10px] leading-4 text-slate-500">{{
-          type.description
-        }}</span>
-      </button>
+      <component
+        :is="modelValue === 'finca' ? MapPinned : ScanLine"
+        class="size-4 shrink-0"
+        aria-hidden="true"
+      />
+      <span class="text-xs font-extrabold">
+        {{ modelValue === "finca" ? "Finca" : "Zona" }}
+      </span>
     </div>
     <p
       v-if="error"

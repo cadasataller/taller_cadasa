@@ -62,7 +62,7 @@ describe("paneles de seguimiento de tareas", () => {
   it("ofrece recuperación independiente cuando falla el detalle", async () => {
     const wrapper = mount(TaskDetailPanel, {
       props: {
-        task: task(),
+        task: null,
         loading: false,
         error: "No se pudo cargar el detalle.",
       },

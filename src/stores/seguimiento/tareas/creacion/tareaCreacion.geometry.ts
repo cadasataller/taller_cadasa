@@ -1,3 +1,4 @@
+import { kinks } from "@turf/turf";
 import type {
   SeguimientoControlLine,
   SeguimientoControlZone,
@@ -32,7 +33,7 @@ export const isValidControlLine = (
     ),
   );
 
-export const isValidControlZone = (
+const hasValidControlZoneStructure = (
   geometry: SeguimientoControlZone | null,
 ): geometry is SeguimientoControlZone =>
   Boolean(
@@ -47,3 +48,15 @@ export const isValidControlZone = (
       ),
     ),
   );
+
+/** Detecta segmentos que se cruzan dentro de una zona antes de enviarla al RPC. */
+export const hasControlZoneSelfIntersections = (
+  geometry: SeguimientoControlZone | null,
+): boolean =>
+  hasValidControlZoneStructure(geometry) && kinks(geometry).features.length > 0;
+
+export const isValidControlZone = (
+  geometry: SeguimientoControlZone | null,
+): geometry is SeguimientoControlZone =>
+  hasValidControlZoneStructure(geometry) &&
+  !hasControlZoneSelfIntersections(geometry);

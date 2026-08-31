@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panel de visualización de tarea</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<!--
+  PANEL-VISUALIZACION-TAREA.HTML
+  =============================
+  PROPÓSITO: panel read-only. No incluye mapa, listado ni filtros.
+
+  Vue:
+    TaskViewPanel.vue
+      ├─ TaskStatusSummary.vue
+      ├─ TaskAssignmentReadonly.vue
+      ├─ TaskDetailsReadonly.vue
+      ├─ TaskTimeSummary.vue
+      ├─ TaskVisitsHistory.vue
+      ├─ TaskGeometryReadonly.vue
+      ├─ TaskRoutePositionReadonly.vue
+      ├─ TaskObservationsHistory.vue
+      └─ TaskClarificationForm.vue
+
+  Fuentes V2:
+  - tareas + estados_tarea + estados_operativos_tarea
+  - visitas_tarea_tracker
+  - public.obtener_resumen_tiempo_tarea(task.id)
+  - public.obtener_visitas_tracker_tarea(task.id)
+  - observaciones_tarea + tipos_observacion_tarea
+  - public.agregar_aclaracion_observacion(...)
+
+  No confundir tiempo_estimado_minutos con tiempo real medido.
+  Las aclaraciones son observaciones hijas por observacion_origen_id.
+-->
+<style>
+:root{
+  --color-main:#004643;
+  --color-main-light:#006B65;
+  --color-main-dark:#002E2C;
+  --color-main-muted:#004643CC;
+  --color-second:#F0EDE5;
+  --color-second-dark:#E2DDD3;
+  --color-second-deep:#C9C3B4;
+  --color-accent:#D4A853;
+  --color-accent-light:#E8C47A;
+  --color-accent-dark:#B8892F;
+  --color-success:#2D8A4E;
+  --color-success-bg:#E8F5ED;
+  --color-warning:#C97B2F;
+  --color-warning-bg:#FDF3E3;
+  --color-danger:#C0392B;
+  --color-danger-bg:#FDECEA;
+  --color-info:#1A6B9A;
+  --color-info-bg:#E3F0FA;
+  --color-white:#FFFFFF;
+  --color-gray-50:#F8F7F4;
+  --color-gray-100:#EFEDE7;
+  --color-gray-200:#D8D4CA;
+  --color-gray-300:#B8B3A7;
+  --color-gray-400:#8F8A7F;
+  --color-gray-500:#6B6660;
+  --color-gray-600:#4A4640;
+  --color-gray-700:#2E2B26;
+  --color-gray-900:#1A1917;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 12px rgba(0,0,0,.10),0 2px 6px rgba(0,0,0,.07);
+  --shadow-lg:0 10px 30px rgba(0,0,0,.12),0 4px 12px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:"DM Sans","Segoe UI",sans-serif;color:var(--color-gray-900)}
+body{background:var(--color-gray-50)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.demo-shell{min-height:100vh;display:grid;place-items:center;padding:24px}
+.panel{
+  width:400px;
+  height:min(760px,calc(100vh - 48px));
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:1px solid var(--color-gray-200);
+  border-radius:0;
+  background:var(--color-white);
+  box-shadow:var(--shadow-lg);
+}
+.panel__header{
+  flex:0 0 auto;display:flex;align-items:flex-start;gap:10px;
+  padding:14px;border-bottom:1px solid var(--color-gray-100);background:var(--color-white)
+}
+.panel__icon{
+  width:34px;height:34px;flex:0 0 auto;display:grid;place-items:center;
+  border-radius:9px;background:var(--color-second);color:var(--color-main);font-weight:800
+}
+.panel__heading{flex:1;min-width:0}
+.panel__heading h1{margin:0;font-size:17px;line-height:1.2;letter-spacing:-.02em}
+.panel__heading p{margin:4px 0 0;color:var(--color-gray-500);font-size:10px;line-height:1.35}
+.panel__close{
+  width:28px;height:28px;border:0;border-radius:7px;background:var(--color-gray-100);
+  color:var(--color-gray-500);font-size:17px
+}
+.panel__scroll{
+  flex:1 1 auto;min-height:0;overflow:auto;padding:10px;background:var(--color-gray-50);
+  scrollbar-width:thin;scrollbar-color:var(--color-gray-300) transparent
+}
+.panel__footer{
+  flex:0 0 auto;display:grid;grid-template-columns:1fr 1.3fr;gap:8px;
+  padding:10px;border-top:1px solid var(--color-gray-100);background:var(--color-white)
+}
+.section{
+  margin:0 0 9px;padding:11px;border:1px solid var(--color-gray-100);
+  border-radius:10px;background:var(--color-white)
+}
+.section:last-child{margin-bottom:0}
+.section__title{
+  display:flex;align-items:center;gap:7px;margin:0 0 9px;
+  color:var(--color-main);font-size:11px;font-weight:800
+}
+.label{
+  display:block;margin:8px 0 4px;color:var(--color-gray-500);font-size:9px;
+  font-weight:800;letter-spacing:.04em;text-transform:uppercase
+}
+.label:first-of-type{margin-top:0}
+.required{color:var(--color-danger)}
+.input,.select,.textarea{
+  width:100%;min-height:36px;padding:8px 9px;border:1px solid var(--color-gray-200);
+  border-radius:7px;background:var(--color-white);color:var(--color-gray-700);font-size:11px;outline:none
+}
+.input:focus,.select:focus,.textarea:focus{
+  border-color:var(--color-main-light);box-shadow:0 0 0 3px rgba(0,107,101,.08)
+}
+.textarea{min-height:70px;resize:vertical;line-height:1.4}
+.helper{margin-top:4px;color:var(--color-gray-400);font-size:8px;line-height:1.35}
+.btn{min-height:38px;border-radius:7px;font-size:11px;font-weight:800}
+.btn--ghost{border:1px solid var(--color-main);background:var(--color-white);color:var(--color-main)}
+.btn--primary{border:1px solid var(--color-main);background:var(--color-main);color:var(--color-white)}
+.btn--danger{border:1px solid var(--color-danger);background:var(--color-white);color:var(--color-danger)}
+.badge{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;
+  font-size:9px;font-weight:800;white-space:nowrap
+}
+.badge::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.badge--admin{color:var(--color-gray-600);background:var(--color-gray-100)}
+.badge--route{color:var(--color-info);background:var(--color-info-bg)}
+.badge--active{color:var(--color-success);background:var(--color-success-bg)}
+.badge--warning{color:var(--color-warning);background:var(--color-warning-bg)}
+@media(max-width:480px){
+  .demo-shell{padding:0}
+  .panel{width:100%;height:100vh;border:0;box-shadow:none}
+}
+.panel__footer{grid-template-columns:1fr 1fr 1fr}
+.summary-strip{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px}
+.read-grid{display:grid;gap:7px}.read-row{display:grid;grid-template-columns:112px 1fr;gap:8px;align-items:start}
+.read-label{color:var(--color-gray-400);font-size:8px;font-weight:800;text-transform:uppercase}
+.read-value{color:var(--color-gray-700);font-size:10px;font-weight:700;line-height:1.35}
+.state-grid,.time-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.metric{padding:8px 9px;border:1px solid var(--color-gray-100);border-radius:8px;background:var(--color-gray-50)}
+.metric__label{color:var(--color-gray-400);font-size:8px;font-weight:800;text-transform:uppercase}
+.metric__value{margin-top:5px;color:var(--color-gray-700);font-size:10px;font-weight:800}.metric--time .metric__value{font-family:"JetBrains Mono";font-size:11px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}.section-head .section__title{margin:0}
+.count{padding:3px 7px;border-radius:999px;background:var(--color-info-bg);color:var(--color-info);font-size:8px;font-weight:800}
+.visits{position:relative;display:grid;gap:7px;padding-left:14px}.visits::before{content:"";position:absolute;left:4px;top:8px;bottom:8px;width:1px;background:var(--color-gray-200)}
+.visit{position:relative;padding:9px;border:1px solid var(--color-gray-100);border-radius:8px;background:white}
+.visit::before{content:"";position:absolute;left:-14px;top:14px;width:7px;height:7px;border:2px solid var(--color-info);border-radius:50%;background:white}
+.visit__head{display:flex;align-items:center;justify-content:space-between;gap:7px}.visit__head strong{font-size:10px}
+.visit__grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:8px}.visit__grid span{display:block;color:var(--color-gray-400);font-size:7px;text-transform:uppercase}.visit__grid b{display:block;margin-top:2px;color:var(--color-gray-700);font-family:"JetBrains Mono";font-size:8px}
+.geo-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px;border:1px solid var(--color-gray-100);border-radius:8px;background:var(--color-gray-50)}
+.geo-row + .geo-row{margin-top:7px}.geo-row strong{display:block;font-size:10px}.geo-row small{display:block;margin-top:2px;color:var(--color-gray-400);font-size:8px}
+.link{border:0;background:transparent;color:var(--color-main-light);font-size:8px;font-weight:800}
+.observations{display:grid;gap:8px}.observation{padding:9px;border:1px solid var(--color-gray-100);border-radius:9px;background:var(--color-gray-50)}
+.obs-head{display:flex;align-items:flex-start;gap:8px}.avatar{width:25px;height:25px;display:grid;place-items:center;border-radius:50%;background:#E3EEEB;color:var(--color-main);font-size:9px;font-weight:800}
+.obs-title{font-size:10px;font-weight:800}.obs-meta{margin-top:2px;color:var(--color-gray-400);font-size:8px}.obs-text{margin-top:8px;color:var(--color-gray-700);font-size:10px;line-height:1.4}
+.obs-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.tag{padding:3px 6px;border-radius:999px;background:var(--color-second);color:var(--color-gray-500);font-size:8px;font-weight:800}
+.obs-actions{display:flex;gap:10px;margin-top:8px}.clarifications{display:grid;gap:6px;margin-top:8px;padding-left:12px;border-left:2px solid var(--color-gray-200)}
+.clarification{padding:8px;border:1px solid var(--color-gray-100);border-radius:8px;background:white}.clarification strong{font-size:9px}.clarification small{display:block;margin-top:2px;color:var(--color-gray-400);font-size:7px}.clarification p{margin:6px 0 0;font-size:9px;line-height:1.35}
+.clarification-form{display:none;margin-top:8px;padding:8px;border:1px solid var(--color-gray-200);border-radius:8px;background:white}.clarification-form.open{display:block}
+.clarification-form textarea{width:100%;min-height:58px;padding:8px;border:1px solid var(--color-gray-200);border-radius:7px;resize:vertical;font-size:9px}
+.form-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:6px}.form-actions button{height:27px;padding:0 8px;border-radius:7px;font-size:8px;font-weight:800}
+</style>
+</head>
+<body>
+<div class="demo-shell">
+  <aside class="panel" data-mode="view">
+    <header class="panel__header">
+      <div class="panel__icon">⌖</div>
+      <div class="panel__heading">
+        <h1>DESPACHO DE COMBUSTIBLE Y MANTENIMIENTO</h1>
+        <p>Detalle operativo y trazabilidad de la tarea seleccionada.</p>
+        <div class="summary-strip"><span class="badge badge--admin">Asignada</span><span class="badge badge--active">En ubicación</span><span class="badge badge--warning">Normal</span></div>
+      </div>
+      <button class="panel__close" type="button">×</button>
+    </header>
+
+    <main class="panel__scroll">
+      <section class="section">
+        <div class="section__title">Asignación</div>
+        <div class="read-grid">
+          <div class="read-row"><span class="read-label">Trabajador</span><span class="read-value">Pedro Hurtado</span></div>
+          <div class="read-row"><span class="read-label">Tracker</span><span class="read-value">TopFlyTech SolarGuardX 100</span></div>
+          <div class="read-row"><span class="read-label">Acompañante</span><span class="read-value">ALEXANDER ARCIA</span></div>
+          <div class="read-row"><span class="read-label">Tipo</span><span class="read-value">Finca · solo lectura</span></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section__title">Detalles</div>
+        <div class="read-grid">
+          <div class="read-row"><span class="read-label">Indicaciones</span><span class="read-value">DESPACHO EN CASO DE BARRO</span></div>
+          <div class="read-row"><span class="read-label">Fecha</span><span class="read-value">26/08/2026</span></div>
+          <div class="read-row"><span class="read-label">Duración estimada</span><span class="read-value">60 min</span></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section__title">Estado de la tarea</div>
+        <div class="state-grid">
+          <div class="metric"><div class="metric__label">Administrativo</div><div class="metric__value">Asignada</div></div>
+          <div class="metric"><div class="metric__label">Operativo</div><div class="metric__value">En ubicación</div></div>
+          <div class="metric"><div class="metric__label">Prioridad</div><div class="metric__value">Normal</div></div>
+          <div class="metric"><div class="metric__label">Visita actual</div><div class="metric__value">Activa</div></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section__title">Tiempo en la tarea</div>
+        <div class="time-grid">
+          <div class="metric metric--time"><div class="metric__label">Tiempo total</div><div class="metric__value">38 min</div></div>
+          <div class="metric metric--time"><div class="metric__label">Visita actual</div><div class="metric__value">24 min</div></div>
+          <div class="metric metric--time"><div class="metric__label">Número de visitas</div><div class="metric__value">2</div></div>
+          <div class="metric metric--time"><div class="metric__label">Sin datos</div><div class="metric__value">0 s</div></div>
+          <div class="metric metric--time"><div class="metric__label">Primera entrada</div><div class="metric__value">10:14</div></div>
+          <div class="metric metric--time"><div class="metric__label">Última salida</div><div class="metric__value">10:28</div></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div class="section__title">Historial de visitas</div><span class="count">2 visitas</span></div>
+        <div class="visits">
+          <article class="visit"><div class="visit__head"><strong>Visita 2</strong><span class="badge badge--active">En curso</span></div><div class="visit__grid"><div><span>Entrada</span><b>11:02</b></div><div><span>Salida</span><b>—</b></div><div><span>Duración</span><b>24 min</b></div></div></article>
+          <article class="visit"><div class="visit__head"><strong>Visita 1</strong><span class="badge badge--admin">Cerrada</span></div><div class="visit__grid"><div><span>Entrada</span><b>10:14</b></div><div><span>Salida</span><b>10:28</b></div><div><span>Duración</span><b>14 min</b></div></div></article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section__title">Ubicación y geometría</div>
+        <div class="geo-row"><div><strong>Punto de enrutado</strong><small>8.43008, -82.50821</small></div><button class="link" type="button">Ver</button></div>
+        <div class="geo-row"><div><strong>Línea de control</strong><small>2 puntos · protegida por historial</small></div><button class="link" type="button">Ver</button></div>
+      </section>
+
+      <section class="section">
+        <div class="section__title">Posición en ruta</div>
+        <div class="read-row"><span class="read-label">Orden</span><span class="read-value">4 · definida por supervisor</span></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><div class="section__title">Historial de observaciones</div><span class="count">1</span></div>
+        <div class="observations">
+          <article class="observation">
+            <div class="obs-head"><div class="avatar">P</div><div><div class="obs-title">Avance</div><div class="obs-meta">Pedro Hurtado · 26/08/2026, 10:41 a. m.</div></div></div>
+            <div class="obs-text">Se completó la primera parte del trabajo.</div>
+            <div class="obs-tags"><span class="tag">En ubicación</span><span class="tag">Ubicación disponible</span></div>
+            <div class="obs-actions"><button class="link" type="button">Ver ubicación</button><button class="link" type="button" data-open-clarification>Aclarar</button></div>
+            <div class="clarifications"><div class="clarification"><strong>Aclaración</strong><small>26/08/2026, 10:52 a. m.</small><p>La aplicación se realizó primero en el lote norte.</p></div></div>
+            <div class="clarification-form" data-clarification-form>
+              <textarea placeholder="Escribe una aclaración..."></textarea>
+              <div class="form-actions"><button type="button" data-cancel style="border:1px solid var(--color-gray-200);background:white;color:var(--color-gray-600)">Cancelar</button><button type="button" data-save style="border:1px solid var(--color-main);background:var(--color-main);color:white">Guardar</button></div>
+              <div class="helper">El backend actual permite aclarar únicamente al autor de la observación.</div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="panel__footer"><button class="btn btn--primary" type="button">Editar</button><button class="btn btn--ghost" type="button">Cancelar tarea</button><button class="btn btn--danger" type="button">Eliminar</button></footer>
+  </aside>
+</div>
+<script>
+const form=document.querySelector('[data-clarification-form]');
+document.querySelector('[data-open-clarification]').addEventListener('click',()=>form.classList.toggle('open'));
+document.querySelector('[data-cancel]').addEventListener('click',()=>form.classList.remove('open'));
+document.querySelector('[data-save]').addEventListener('click',()=>{
+  const input=form.querySelector('textarea');
+  if(!input.value.trim()) return;
+  const card=document.createElement('div');
+  card.className='clarification';
+  card.innerHTML='<strong>Aclaración</strong><small>Ahora · simulación</small><p></p>';
+  card.querySelector('p').textContent=input.value.trim();
+  document.querySelector('.clarifications').appendChild(card);
+  input.value='';form.classList.remove('open');
+});
+</script>
+</body>
+</html>

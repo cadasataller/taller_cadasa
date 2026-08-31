@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  hasControlZoneSelfIntersections,
   isValidControlLine,
   isValidControlZone,
   isValidRoutePoint,
@@ -40,5 +41,25 @@ describe("geometría del borrador de creación", () => {
         ],
       }),
     ).toBe(true);
+  });
+
+  it("rechaza una zona cuyos segmentos se cruzan entre sí", () => {
+    const selfIntersectingZone = {
+      type: "MultiPolygon" as const,
+      coordinates: [
+        [
+          [
+            [-82.55, 8.39],
+            [-82.54, 8.4],
+            [-82.55, 8.4],
+            [-82.54, 8.39],
+            [-82.55, 8.39],
+          ],
+        ],
+      ],
+    };
+
+    expect(hasControlZoneSelfIntersections(selfIntersectingZone)).toBe(true);
+    expect(isValidControlZone(selfIntersectingZone)).toBe(false);
   });
 });

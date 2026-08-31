@@ -12,13 +12,10 @@ import {
 import TaskDoubtSection from "./TaskDetailSections/TaskDoubtSection.vue";
 import TaskGeometrySection from "./TaskDetailSections/TaskGeometrySection.vue";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
-import type {
-  TareaSeguimientoDetail,
-  TareaSeguimientoListItem,
-} from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
+import type { TareaSeguimientoDetail } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 
 const props = defineProps<{
-  task: TareaSeguimientoDetail | TareaSeguimientoListItem | null;
+  task: TareaSeguimientoDetail | null;
   loading: boolean;
   error: string | null;
 }>();
@@ -27,9 +24,6 @@ const emit = defineEmits<{
   focus: [coordinates: SeguimientoCoordinates | null];
   retry: [];
 }>();
-const isDetail = computed((): props is { task: TareaSeguimientoDetail } =>
-  Boolean(props.task && "time" in props.task),
-);
 const isDoubt = computed(() => props.task?.type === "duda");
 const typeLabel = computed(() =>
   isDoubt.value
@@ -57,7 +51,7 @@ const durationLabel = computed(() =>
     : "Sin estimación",
 );
 const currentTimeLabel = computed(() =>
-  isDetail.value
+  props.task
     ? `${Math.round(props.task.time.segundos_totales / 60)} min acumulados`
     : null,
 );
@@ -152,7 +146,7 @@ const currentTimeLabel = computed(() =>
         </button>
       </div>
       <template v-else-if="task">
-        <TaskDoubtSection v-if="isDoubt && isDetail" :task="task" />
+        <TaskDoubtSection v-if="isDoubt" :task="task" />
         <section class="border-b border-slate-100 py-4">
           <h3
             class="text-[11px] font-extrabold uppercase tracking-[0.1em] text-slate-600"
@@ -175,10 +169,7 @@ const currentTimeLabel = computed(() =>
                 {{ task.trackerLabel || "Sin asignar" }}
               </dd>
             </div>
-            <div
-              v-if="isDetail && task.companionNames.length"
-              class="grid gap-1"
-            >
+            <div v-if="task.companionNames.length" class="grid gap-1">
               <dt class="text-slate-500">Acompañantes</dt>
               <dd class="flex flex-wrap justify-end gap-1">
                 <span
@@ -200,7 +191,7 @@ const currentTimeLabel = computed(() =>
               <dt class="text-slate-500">Duración estimada</dt>
               <dd class="font-bold text-slate-700">{{ durationLabel }}</dd>
             </div>
-            <div v-if="isDetail" class="flex justify-between gap-4">
+            <div class="flex justify-between gap-4">
               <dt class="text-slate-500">Visitas</dt>
               <dd class="font-bold text-slate-700">
                 {{ task.time.cantidad_visitas
@@ -210,12 +201,11 @@ const currentTimeLabel = computed(() =>
           </dl>
         </section>
         <TaskGeometrySection
-          v-if="isDetail"
           class="py-4"
           :task="task"
           @focus="emit('focus', $event)"
         />
-        <section v-if="isDetail && !isDoubt" class="py-4">
+        <section v-if="!isDoubt" class="py-4">
           <h3
             class="text-[11px] font-extrabold uppercase tracking-[0.1em] text-slate-600"
           >
@@ -228,7 +218,7 @@ const currentTimeLabel = computed(() =>
             >
             <p class="text-xs text-slate-600">
               {{
-                task.route.id
+                task.route?.id
                   ? `Posición en ruta (${task.route.estado_calculo || "sin estado"})`
                   : "Sin ruta planificada asociada"
               }}

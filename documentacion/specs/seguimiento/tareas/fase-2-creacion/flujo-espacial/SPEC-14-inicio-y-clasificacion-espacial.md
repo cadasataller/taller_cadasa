@@ -25,8 +25,8 @@ area(intersección de zonas y finca) / area(total de zonas)
 5. Sólo se crea `finca` si esa finca tiene un acceso vial compatible. En otro
    caso se crea `zona`.
 6. Tras clasificar, se muestra el panel derecho con el tipo y la geometría
-   prellenados. El usuario puede cambiar tipo, con la consecuencia explícita de
-   reiniciar el contexto geométrico incompatible.
+   prellenados. El tipo es informativo y no se puede cambiar: así se conserva
+   el contexto geométrico detectado.
 
 ## Interacción de vértices
 

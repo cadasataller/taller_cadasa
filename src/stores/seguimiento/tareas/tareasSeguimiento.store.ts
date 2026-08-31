@@ -202,7 +202,14 @@ export const useTareasSeguimientoStore = defineStore(
       const requestId = ++detailRequestId;
       loadingDetail.value = true;
       try {
-        detail.value = await tareasSeguimientoService.loadDetail(taskId);
+        const loadedDetail = await tareasSeguimientoService.loadDetail(taskId);
+        if (requestId !== detailRequestId) return;
+        if (loadedDetail.id !== selectedTaskId.value) {
+          detailError.value =
+            "El detalle recibido no corresponde a la tarea seleccionada.";
+          return;
+        }
+        detail.value = loadedDetail;
       } catch (error) {
         if (requestId === detailRequestId)
           detailError.value = toErrorMessage(

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { AlertTriangle, MapPin, Save, X } from "lucide-vue-next";
+import { toRaw } from "vue";
 import TaskAssignmentSection from "./TaskAssignmentSection.vue";
 import TaskDetailsSection from "./TaskDetailsSection.vue";
 import TaskTypeSelector from "./TaskTypeSelector.vue";
@@ -14,7 +15,6 @@ import type {
   TareaCreacionBorrador,
   TareaCreacionCampoError,
   TareaCreacionErrorValidacion,
-  TareaCreacionTipo,
   TareaCreacionModoGeometria,
 } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
 const props = defineProps<{
@@ -30,6 +30,7 @@ const props = defineProps<{
   remoteError: string | null;
   submitting: boolean;
   canSubmit: boolean;
+  submitBlockReasons: string[];
   lockWorker: boolean;
   lockTracker: boolean;
 }>();
@@ -37,7 +38,6 @@ const emit = defineEmits<{
   close: [];
   continueEditing: [];
   discard: [];
-  "update:type": [value: TareaCreacionTipo];
   "update:worker": [value: string];
   "update:tracker": [value: number];
   "update:companions": [value: string[]];
@@ -49,10 +49,22 @@ const emit = defineEmits<{
   "remove:zone": [index: number];
   "finish:geometry": [];
   "skip:field": [field: TareaCreacionCampoError];
+  "submit:blocked": [reasons: string[]];
   submit: [];
 }>();
 const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
   props.errors.find((error) => error.field === field)?.message ?? null;
+function requestSubmit(): void {
+  if (!props.canSubmit) {
+    console.info("[Seguimiento tareas] Guardar bloqueado", {
+      draft: toRaw(props.draft),
+      reasons: props.submitBlockReasons,
+    });
+    emit("submit:blocked", props.submitBlockReasons);
+    return;
+  }
+  emit("submit");
+}
 </script>
 
 <template>
@@ -94,7 +106,6 @@ const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
       <TaskTypeSelector
         :model-value="draft.type"
         :error="errorFor('type')"
-        @update:model-value="emit('update:type', $event)"
       /><TaskAssignmentSection
         :workers="workers"
         :trackers="trackers"
@@ -150,9 +161,10 @@ const errorFor = (field: TareaCreacionErrorValidacion["field"]) =>
     <footer class="border-t border-slate-200 bg-white p-3">
       <button
         class="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-main px-3 text-xs font-extrabold text-white transition hover:bg-main-light disabled:cursor-not-allowed disabled:opacity-55"
-        :disabled="!canSubmit"
+        :class="!canSubmit && 'cursor-not-allowed opacity-55'"
+        :aria-disabled="!canSubmit"
         type="button"
-        @click="emit('submit')"
+        @click="requestSubmit"
       >
         <Save class="size-4" />{{ submitting ? "Guardando…" : "Guardar tarea" }}
       </button>

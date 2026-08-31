@@ -8,6 +8,7 @@ import type {
   TareaCreacionResultadoValidacion,
 } from "./tareaCreacion.types";
 import {
+  hasControlZoneSelfIntersections,
   isValidControlLine,
   isValidControlZone,
   isValidRoutePoint,
@@ -150,6 +151,9 @@ const creationDraftSchema = z
         message: "Dibuja la línea de control de la finca.",
       });
     }
+    const hasSelfIntersectingControlZone = draft.geometry.controlZones.some(
+      hasControlZoneSelfIntersections,
+    );
     if (
       draft.type === "finca" &&
       (!draft.geometry.controlZones.length ||
@@ -158,7 +162,9 @@ const creationDraftSchema = z
       context.addIssue({
         code: "custom",
         path: ["geometry", "controlZones"],
-        message: "Dibuja al menos una zona de control dentro de la finca.",
+        message: hasSelfIntersectingControlZone
+          ? "La zona tiene líneas que se cruzan. Ajusta los vértices."
+          : "Dibuja al menos una zona de control dentro de la finca.",
       });
     }
     if (
@@ -170,7 +176,9 @@ const creationDraftSchema = z
       context.addIssue({
         code: "custom",
         path: ["geometry", "controlZones"],
-        message: "Dibuja el polígono de control de la zona.",
+        message: hasSelfIntersectingControlZone
+          ? "La zona tiene líneas que se cruzan. Ajusta los vértices."
+          : "Dibuja el polígono de control de la zona.",
       });
     }
   });

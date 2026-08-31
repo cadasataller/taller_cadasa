@@ -72,7 +72,6 @@ const {
   requestCloseCreate,
   continueCreateEditing,
   discardCreate,
-  updateType,
   updateWorker,
   updateTracker,
   updateCompanions,
@@ -95,7 +94,9 @@ const {
   remoteError: createRemoteError,
   isSubmitLocked: isCreateSubmitting,
   canSubmitCreate,
+  submitBlockReasons,
   reportSkippedCreateField,
+  revealCreateSubmitRequirements,
   submitCreate,
 } = useSeguimientoTareaCreacion();
 const mapFocus = shallowRef<SeguimientoCoordinates | null>(null);
@@ -336,6 +337,12 @@ function captureControlZone(
   pendingControlZone.value = zone;
   finishCreateGeometry();
 }
+function handleControlZoneUpdate(
+  index: number,
+  coordinates: number[][][][],
+): void {
+  updateControlZone(index, { type: "MultiPolygon", coordinates });
+}
 function notifyBlockedZoneCapture(): void {
   toast.add({
     severity: "warn",
@@ -470,11 +477,22 @@ function notifyCrossFilterLocked(): void {
     life: 3200,
   });
 }
+function notifyCreateSubmitBlocked(reasons: string[]): void {
+  const currentReasons = revealCreateSubmitRequirements().map(
+    (error) => error.message,
+  );
+  toast.add({
+    severity: "warn",
+    summary: "Faltan datos obligatorios",
+    detail: (currentReasons.length ? currentReasons : reasons).join(" · "),
+    life: 5000,
+  });
+}
 </script>
 
 <template>
   <section
-    class="relative isolate min-h-[calc(100dvh-5rem)] overflow-hidden bg-[#8fa281] pb-4 md:pb-0"
+    class="relative isolate min-h-[calc(100dvh-3rem)] overflow-hidden bg-[#8fa281] pb-4 md:pb-0"
     aria-label="Workspace de seguimiento de tareas"
   >
     <Toast position="top-right" />
@@ -505,12 +523,7 @@ function notifyCrossFilterLocked(): void {
       @capture:control-zone="
         captureControlZone({ type: 'MultiPolygon', coordinates: $event })
       "
-      @update:control-zone="
-        updateControlZone($event[0], {
-          type: 'MultiPolygon',
-          coordinates: $event[1],
-        })
-      "
+      @update:control-zone="handleControlZoneUpdate"
       @select:control-zone="beginControlZoneEdit"
       @capture:blocked="notifyBlockedZoneCapture"
     />
@@ -735,7 +748,7 @@ function notifyCrossFilterLocked(): void {
       v-if="panelMode === 'view' && !isCreatePanelOpen"
       class="fixed inset-0 z-50 max-h-none md:absolute md:inset-y-0 md:left-auto md:right-0 md:z-40 md:w-[23rem]"
       :class="mobileView === 'view' ? '' : 'max-md:hidden'"
-      :task="detail ?? selectedTask"
+      :task="detail"
       :loading="loadingDetail"
       :error="detailError"
       @close="closeTaskDetail"
@@ -758,12 +771,12 @@ function notifyCrossFilterLocked(): void {
       :remote-error="createRemoteError?.message ?? null"
       :submitting="isCreateSubmitting"
       :can-submit="canSubmitCreate"
+      :submit-block-reasons="submitBlockReasons"
       :lock-worker="creationLockedFilter.workerId !== null"
       :lock-tracker="creationLockedFilter.sourceId !== null"
       @close="requestCloseCreate"
       @continue-editing="continueCreateEditing"
       @discard="discardCreate"
-      @update:type="updateType"
       @update:worker="selectCreateWorker"
       @update:tracker="selectCreateTracker"
       @update:companions="updateCompanions"
@@ -775,6 +788,7 @@ function notifyCrossFilterLocked(): void {
       @edit:geometry="beginGeometryEdit"
       @finish:geometry="finishCreateGeometry"
       @skip:field="reportSkippedCreateField"
+      @submit:blocked="notifyCreateSubmitBlocked"
       @submit="submitTaskCreate"
     />
   </section>

@@ -31,6 +31,7 @@ El frontend debe validar antes de enviar:
 - duración estimada válida;
 - punto de enrutado presente;
 - geometría requerida según tipo;
+- zona de control cerrada y sin auto-intersecciones;
 - posición de ruta cuando sea obligatoria por el flujo definido.
 
 ## Validaciones remotas esperables
