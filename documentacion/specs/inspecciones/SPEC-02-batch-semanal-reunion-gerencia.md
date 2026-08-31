@@ -238,7 +238,7 @@ Usando la configuracion actual:
 - `ivanp@cadasa.com`
 - `joseim@cadasa.com`
 - `sergioq@cadasa.com`
-- `erickq@cadasa.com`
+- `testjl@cadasa.com`
 - `eladiop@cadasa.com`
 
 =====================================================================

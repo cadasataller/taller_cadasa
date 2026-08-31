@@ -6,7 +6,7 @@ export const MEETING_WEEKDAY_BY_EMAIL: Record<string, string> = {
   'ivanp@cadasa.com': 'Lunes',
   'joseim@cadasa.com': 'Martes',
   'equipop@cadasa.com': 'Miercoles',
-  'erickq@cadasa.com': 'Jueves',
+  'testjl@cadasa.com': 'Jueves',
   'eladiop@cadasa.com': 'Viernes',
 };
 

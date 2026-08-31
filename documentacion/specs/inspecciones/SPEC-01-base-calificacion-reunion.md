@@ -67,7 +67,7 @@ Configuracion actual:
 - `ivanp@cadasa.com` -> `Lunes`
 - `joseim@cadasa.com` -> `Martes`
 - `sergioq@cadasa.com` -> `Miercoles`
-- `erickq@cadasa.com` -> `Jueves`
+- `testjl@cadasa.com` -> `Jueves`
 - `eladiop@cadasa.com` -> `Viernes`
 
 Reglas:

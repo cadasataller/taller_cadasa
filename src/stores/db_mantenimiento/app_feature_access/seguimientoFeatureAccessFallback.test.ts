@@ -6,7 +6,7 @@ describe("applySeguimientoDevelopmentFallback", () => {
   it("grants only Seguimiento features to the documented development user when the matrix is absent", () => {
     const result = applySeguimientoDevelopmentFallback(
       ["module_dashboard"],
-      "erickq@cadasa.com",
+      "testjl@cadasa.com",
     );
 
     expect(result).toContain("module_dashboard");
@@ -21,7 +21,7 @@ describe("applySeguimientoDevelopmentFallback", () => {
     expect(
       applySeguimientoDevelopmentFallback(
         [SEGUIMIENTO_FEATURES.viewTasks],
-        "erickq@cadasa.com",
+        "testjl@cadasa.com",
       ),
     ).toContain(SEGUIMIENTO_FEATURES.viewMap);
   });
