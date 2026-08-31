@@ -53,11 +53,7 @@ const panelMessage = computed(() =>
       </button>
       <div class="flex items-center justify-between gap-3">
         <div>
-          <p
-            class="text-[10px] font-extrabold uppercase tracking-[0.16em] text-warning"
-          >
-            Seguimiento
-          </p>
+          
           <h1 class="mt-0.5 text-xl font-bold text-main">Tareas</h1>
         </div>
         <div class="flex items-center gap-2">
@@ -67,9 +63,7 @@ const panelMessage = computed(() =>
           >
         </div>
       </div>
-      <p class="mt-1 text-xs leading-5 text-slate-500">
-        Explora tareas, su contexto y estado operativo.
-      </p>
+      
       <label class="relative mt-3 block"
         ><span class="sr-only">Buscar tareas</span
         ><input

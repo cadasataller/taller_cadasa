@@ -58,6 +58,9 @@ export function mapTareaSeguimientoListItem(
     trackerId: row.tracker_id,
     sourceId: row.source_id,
     trackerLabel: row.tracker_label,
+    elapsedSeconds: row.segundos_totales,
+    currentVisitSeconds: row.segundos_visita_actual,
+    hasOpenVisit: row.visita_abierta,
     routePoint: mapRoutePoint(row.punto_latitud, row.punto_longitud),
     routeOrder: row.orden_ruta,
   };
@@ -85,6 +88,9 @@ export function mapTareaSeguimientoDetail(
     trackerId: asignacion.tracker_id,
     sourceId: asignacion.source_id,
     trackerLabel: asignacion.tracker_label,
+    elapsedSeconds: response.tiempo.segundos_totales,
+    currentVisitSeconds: 0,
+    hasOpenVisit: response.tiempo.visita_abierta,
     assignedUserName: asignacion.usuario_nombre,
     companionNames: asignacion.acompanantes.map(
       (companion) => companion.nombre,

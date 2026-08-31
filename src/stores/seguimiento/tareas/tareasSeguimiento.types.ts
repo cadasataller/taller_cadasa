@@ -186,6 +186,9 @@ export interface TareaSeguimientoListItem {
   trackerId: number | null;
   sourceId: number | null;
   trackerLabel: string | null;
+  elapsedSeconds: number;
+  currentVisitSeconds: number;
+  hasOpenVisit: boolean;
   routePoint: SeguimientoCoordinates | null;
   routeOrder: number | null;
 }

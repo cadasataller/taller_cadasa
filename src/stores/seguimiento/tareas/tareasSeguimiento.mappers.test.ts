@@ -100,6 +100,9 @@ describe("tareasSeguimiento mappers", () => {
       id: "task-1",
       type: "zona",
       status: "activa",
+      elapsedSeconds: 300,
+      currentVisitSeconds: 300,
+      hasOpenVisit: true,
       routeOrder: 3,
       routePoint: { latitude: 8.98, longitude: -79.52 },
     });
