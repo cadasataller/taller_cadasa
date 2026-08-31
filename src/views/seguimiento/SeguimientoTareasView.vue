@@ -92,6 +92,7 @@ const {
   removeControlZone,
   finishGeometryEdit,
   remoteError: createRemoteError,
+  routeProcessingWarning,
   isSubmitLocked: isCreateSubmitting,
   canSubmitCreate,
   submitBlockReasons,
@@ -296,14 +297,14 @@ async function submitTaskCreate(): Promise<void> {
   const result = await submitCreate();
   if (!result) return;
   finishGeometryEdit();
-  createSuccessMessage.value = "La tarea se creó correctamente.";
+  createSuccessMessage.value =
+    routeProcessingWarning.value ?? "La tarea se creó correctamente.";
   if (createSuccessTimer) clearTimeout(createSuccessTimer);
   createSuccessTimer = setTimeout(() => {
     createSuccessMessage.value = null;
   }, 4000);
   await retry();
-  const taskId = typeof result.tarea_id === "string" ? result.tarea_id : null;
-  if (taskId) await selectTask(taskId);
+  await selectTask(result.id);
 }
 function captureRoutePoint(clicked: SeguimientoCoordinates): void {
   if (spatialState.value !== "selecting-route-point") {

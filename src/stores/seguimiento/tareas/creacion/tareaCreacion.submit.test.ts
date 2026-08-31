@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 
 const create = vi.hoisted(() => vi.fn());
+const processPendingRoute = vi.hoisted(() => vi.fn());
 vi.mock("./tareaCreacion.service", () => ({
-  tareaCreacionService: { create },
+  tareaCreacionService: { create, processPendingRoute },
 }));
 
 import { useTareaCreacionStore } from "./tareaCreacion.store";
@@ -55,6 +56,7 @@ describe("submit de creación", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     create.mockReset();
+    processPendingRoute.mockReset();
   });
 
   it("conserva el borrador y expone el error remoto para corregirlo", async () => {
@@ -73,12 +75,38 @@ describe("submit de creación", () => {
 
   it("cierra únicamente después de recibir éxito del RPC", async () => {
     const store = completeFarmDraft();
-    create.mockResolvedValue({ tarea_id: "task-1" });
+    create.mockResolvedValue({
+      id: "task-1",
+      requiere_procesar_ruta: false,
+      solicitud_recalculo_ruta_id: null,
+    });
 
     expect(store.canSubmit).toBe(true);
 
-    await expect(store.submit()).resolves.toEqual({ tarea_id: "task-1" });
+    await expect(store.submit()).resolves.toMatchObject({ id: "task-1" });
     expect(store.isPanelOpen).toBe(false);
     expect(store.flowState).toBe("success");
+  });
+
+  it("conserva el éxito de creación cuando falla el procesamiento de ruta", async () => {
+    const store = completeFarmDraft();
+    create.mockResolvedValue({
+      id: "task-1",
+      requiere_procesar_ruta: true,
+      solicitud_recalculo_ruta_id: "request-1",
+    });
+    processPendingRoute.mockRejectedValue(
+      new Error("OpenRouteService no disponible"),
+    );
+
+    await expect(store.submit()).resolves.toMatchObject({ id: "task-1" });
+
+    expect(processPendingRoute).toHaveBeenCalledWith({
+      solicitud_id: "request-1",
+    });
+    expect(store.flowState).toBe("success");
+    expect(store.routeProcessingWarning).toBe(
+      "La tarea fue creada correctamente, pero no se pudo actualizar la ruta.",
+    );
   });
 });

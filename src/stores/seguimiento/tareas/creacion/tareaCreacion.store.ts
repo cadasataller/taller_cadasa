@@ -77,6 +77,7 @@ export const useTareaCreacionStore = defineStore(
     const flowState = shallowRef<TareaCreacionEstadoFlujo>("idle");
     const validationErrors = ref<TareaCreacionErrorValidacion[]>([]);
     const remoteError = shallowRef<TareaCreacionErrorRemoto | null>(null);
+    const routeProcessingWarning = shallowRef<string | null>(null);
     const geometryMode = shallowRef<TareaCreacionModoGeometria>(null);
     const editingControlZoneIndex = shallowRef<number | null>(null);
     const persistDraftOnNavigation = shallowRef(false);
@@ -143,6 +144,7 @@ export const useTareaCreacionStore = defineStore(
       originalDraft.value = copyDraft(draft.value);
       validationErrors.value = [];
       remoteError.value = null;
+      routeProcessingWarning.value = null;
       isDiscardConfirmationOpen.value = false;
       isPanelOpen.value = true;
       flowState.value = "editing";
@@ -157,6 +159,7 @@ export const useTareaCreacionStore = defineStore(
       originalDraft.value = copyDraft(draft.value);
       validationErrors.value = [];
       remoteError.value = null;
+      routeProcessingWarning.value = null;
       isDiscardConfirmationOpen.value = false;
       isPanelOpen.value = false;
       flowState.value = "editing";
@@ -333,10 +336,28 @@ export const useTareaCreacionStore = defineStore(
       flowState.value = "submitting";
       draft.value.submitStatus = "submitting";
       remoteError.value = null;
+      routeProcessingWarning.value = null;
       try {
         const result = await tareaCreacionService.create(
           toCrearTareaV2Params(draft.value),
         );
+        if (
+          result.requiere_procesar_ruta &&
+          result.solicitud_recalculo_ruta_id
+        ) {
+          try {
+            await tareaCreacionService.processPendingRoute({
+              solicitud_id: result.solicitud_recalculo_ruta_id,
+            });
+          } catch (error) {
+            console.error(
+              "La tarea fue creada, pero la ruta no pudo procesarse.",
+              error,
+            );
+            routeProcessingWarning.value =
+              "La tarea fue creada correctamente, pero no se pudo actualizar la ruta.";
+          }
+        }
         flowState.value = "success";
         draft.value.submitStatus = "success";
         originalDraft.value = copyDraft(draft.value);
@@ -378,6 +399,7 @@ export const useTareaCreacionStore = defineStore(
       originalDraft.value = copyDraft(draft.value);
       validationErrors.value = [];
       remoteError.value = null;
+      routeProcessingWarning.value = null;
       close();
     }
     return {
@@ -386,6 +408,7 @@ export const useTareaCreacionStore = defineStore(
       flowState,
       validationErrors,
       remoteError,
+      routeProcessingWarning,
       geometryMode,
       editingControlZoneIndex,
       persistDraftOnNavigation,

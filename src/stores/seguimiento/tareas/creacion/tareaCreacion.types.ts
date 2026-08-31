@@ -136,12 +136,41 @@ export interface CrearTareaV2Params {
   p_orden_ruta: number | null;
 }
 
-/**
- * `crear_tarea_v2` devuelve jsonb y la documentación no fija su forma interna.
- * Se conserva el resultado sin inventar columnas; el spec de integración decidirá
- * cómo incorporarlo al workspace una vez confirmado el payload real del RPC.
- */
-export type TareaCreacionRespuestaRpc = Record<string, unknown>;
+/** Respuesta de `crear_tarea_v2` después de persistir la tarea y encolar su ruta. */
+export interface TareaCreacionRespuestaRpc {
+  id: string;
+  version: number;
+  area_id: string;
+  tipo: TareaCreacionTipo;
+  usuario_asignado_id: string;
+  tracker_id: number;
+  source_id: number;
+  tracker_label: string;
+  fecha_programada: string;
+  ubicacion_id: string | null;
+  zona_control_ids: string[];
+  orden_ruta: number;
+  estado_tarea_id: number;
+  estado_operativo_tarea_id: number;
+  requiere_procesar_ruta: boolean;
+  solicitud_recalculo_ruta_id: string | null;
+  creado_en: string;
+  actualizado_en: string;
+}
+
+/** Único contrato que Vue envía a `procesar-ruta-pendiente`. */
+export interface ProcesarRutaPendientePayload {
+  solicitud_id: string;
+}
+
+export interface ProcesarRutaPendienteRespuesta {
+  solicitud_id: string;
+  ruta_id?: string | null;
+  paradas?: number;
+  codigo?:
+    "ruta_eliminada_sin_tareas" | "sin_tareas_activas" | "origen_no_disponible";
+  motor?: "v2" | "v2_orden_supervisor";
+}
 
 export interface TareaCreacionErrorRemoto {
   message: string;
