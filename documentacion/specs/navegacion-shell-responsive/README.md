@@ -78,6 +78,10 @@ La lista de módulos se desplaza internamente. La sesión queda fija al fondo y
 no forma parte del scroll. Gradientes en el borde superior o inferior indican
 que existen módulos fuera del área visible en la dirección correspondiente.
 
+El navbar mide `48px` y se organiza en una sola fila: fecha actual a la
+izquierda (`dom, 30 agos 2026`), `Bienvenido {nombre}` al centro y área con
+avatar de perfil a la derecha.
+
 ## Engrase
 
 `Engrase` es un agrupador, no una ruta. No se debe añadir una pantalla ni una

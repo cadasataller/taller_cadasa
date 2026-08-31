@@ -56,6 +56,8 @@ const isSidebarNavAtTop = shallowRef(true);
 const isSidebarNavAtBottom = shallowRef(true);
 const desktopFloatingGroup = shallowRef<"engrase" | "seguimiento" | null>(null);
 const desktopFloatingPanelTop = shallowRef(0);
+const sidebarTooltipLabel = shallowRef<string | null>(null);
+const sidebarTooltipTop = shallowRef(0);
 const isPreparingSolicitudCompraCreate = ref(false);
 const { dashboardHeaderNavState, selectDashboardHeaderSlide } =
   useDashboardHeaderNav();
@@ -176,6 +178,8 @@ const toggleDesktopNavigationGroup = (
   group: "engrase" | "seguimiento",
   event: MouseEvent,
 ): void => {
+  sidebarTooltipLabel.value = null;
+
   if (!isSidebarOpen.value) {
     const trigger = event.currentTarget as HTMLElement;
     const sidebar = document.getElementById("desktop-sidebar-container");
@@ -203,6 +207,24 @@ const toggleDesktopNavigationGroup = (
 
 const closeDesktopFloatingGroup = (): void => {
   desktopFloatingGroup.value = null;
+};
+
+const showSidebarTooltip = (label: string, event: Event): void => {
+  if (isSidebarOpen.value) return;
+
+  const trigger = event.currentTarget as HTMLElement;
+  const sidebar = document.getElementById("desktop-sidebar-container");
+  if (!sidebar) return;
+
+  sidebarTooltipLabel.value = label;
+  sidebarTooltipTop.value =
+    trigger.getBoundingClientRect().top -
+    sidebar.getBoundingClientRect().top +
+    trigger.getBoundingClientRect().height / 2;
+};
+
+const hideSidebarTooltip = (): void => {
+  sidebarTooltipLabel.value = null;
 };
 
 const menuItems = computed(() =>
@@ -265,6 +287,20 @@ const viewTitle = computed(() => {
   if (route.path.startsWith("/seguimiento")) return "SEGUIMIENTO";
   return menuItems.value.find((i) => isActive(i.path))?.name || "Dashboard";
 });
+const currentUserName = computed(
+  () => userProfile.value?.nombre || userEmail.value.split("@")[0] || "Usuario",
+);
+const todayLabel = computed(() =>
+  new Intl.DateTimeFormat("es-MX", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+    .format(new Date())
+    .replaceAll(".", "")
+    .replace("ago", "agos"),
+);
 
 const isSolicitudCompraCreateRoute = computed(
   () => route.name === "SolicitudCompraCrear",
@@ -443,9 +479,14 @@ const isActive = (path: string) =>
       :class="isSidebarOpen ? 'w-56 p-5' : 'w-14 p-2'"
     >
       <div
-        class="mb-4 flex"
-        :class="isSidebarOpen ? 'justify-end' : 'justify-center'"
+        class="mb-4 flex items-center"
+        :class="isSidebarOpen ? 'justify-between' : 'justify-center'"
       >
+        <span
+          v-if="isSidebarOpen"
+          class="font-display text-xl tracking-[0.16em] text-accent"
+          >CADASA</span
+        >
         <button
           type="button"
           class="rounded-lg p-2 text-accent transition-colors hover:bg-white/10 hover:text-white"
@@ -453,6 +494,7 @@ const isActive = (path: string) =>
           @click="
             isSidebarOpen = !isSidebarOpen;
             closeDesktopFloatingGroup();
+            hideSidebarTooltip();
           "
         >
           <Menu class="h-5 w-5" />
@@ -477,8 +519,9 @@ const isActive = (path: string) =>
               v-for="item in dashboardMenuItems"
               :key="item.path"
               :to="item.path"
-              :title="item.name"
               class="group relative flex items-center rounded-xl transition-all"
+              @mouseenter="showSidebarTooltip(item.name, $event)"
+              @mouseleave="hideSidebarTooltip"
               :class="[
                 isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
                 isActive(item.path)
@@ -510,8 +553,9 @@ const isActive = (path: string) =>
               v-for="item in operationMenuItems"
               :key="item.path"
               :to="item.path"
-              :title="item.name"
               class="group relative flex items-center rounded-xl transition-all"
+              @mouseenter="showSidebarTooltip(item.name, $event)"
+              @mouseleave="hideSidebarTooltip"
               :class="[
                 isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
                 isActive(item.path)
@@ -528,8 +572,9 @@ const isActive = (path: string) =>
             <div v-if="canSeeEngrase" class="relative space-y-1">
               <button
                 type="button"
-                title="Engrase"
                 class="group relative flex w-full items-center rounded-xl transition-all"
+                @mouseenter="showSidebarTooltip('Engrase', $event)"
+                @mouseleave="hideSidebarTooltip"
                 :class="[
                   isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
                   isEngraseRoute
@@ -585,8 +630,9 @@ const isActive = (path: string) =>
             <div v-if="canSeeSeguimiento" class="relative space-y-1">
               <button
                 type="button"
-                title="Seguimiento"
                 class="group relative flex w-full items-center rounded-xl transition-all"
+                @mouseenter="showSidebarTooltip('Seguimiento', $event)"
+                @mouseleave="hideSidebarTooltip"
                 :class="[
                   isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
                   isSeguimientoRoute
@@ -640,8 +686,9 @@ const isActive = (path: string) =>
               v-for="item in managementMenuItems"
               :key="item.path"
               :to="item.path"
-              :title="item.name"
               class="group relative flex items-center rounded-xl transition-all"
+              @mouseenter="showSidebarTooltip(item.name, $event)"
+              @mouseleave="hideSidebarTooltip"
               :class="[
                 isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
                 isActive(item.path)
@@ -668,8 +715,9 @@ const isActive = (path: string) =>
               v-for="item in systemMenuItems"
               :key="item.path"
               :to="item.path"
-              :title="item.name"
               class="group relative flex items-center rounded-xl transition-all"
+              @mouseenter="showSidebarTooltip(item.name, $event)"
+              @mouseleave="hideSidebarTooltip"
               :class="[
                 isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
                 isActive(item.path)
@@ -692,6 +740,15 @@ const isActive = (path: string) =>
         >
           <ChevronDown class="h-4 w-4" />
         </div>
+      </div>
+
+      <div
+        v-if="sidebarTooltipLabel"
+        class="pointer-events-none absolute left-full z-[60] ml-3 -translate-y-1/2 rounded-lg border border-accent/30 bg-main-dark px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-second shadow-xl"
+        :style="{ top: `${sidebarTooltipTop}px` }"
+        role="tooltip"
+      >
+        {{ sidebarTooltipLabel }}
       </div>
 
       <div
@@ -739,7 +796,9 @@ const isActive = (path: string) =>
         class="group relative mt-3 flex shrink-0 items-center rounded-xl text-gray-400 hover:bg-danger hover:text-white transition-all"
         :class="isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3'"
       >
-        <LogOut class="w-5 h-5 text-danger" />
+        <LogOut
+          class="w-5 h-5 text-danger transition-colors group-hover:text-white"
+        />
         <span v-if="isSidebarOpen" class="font-medium text-sm"
           >Cerrar Sesión</span
         >
@@ -754,70 +813,35 @@ const isActive = (path: string) =>
       <!-- Top Header (Desktop) -->
       <header
         v-if="!hideDefaultLayout"
-        class="hidden lg:flex items-center gap-6 px-8 h-16 bg-white border-b border-gray-200 shadow-md relative z-10 transition-all duration-300"
+        class="relative z-10 hidden h-12 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center border-b border-gray-200 bg-white px-6 shadow-sm lg:grid"
       >
-        <div class="flex min-w-0 items-center">
-          <div class="flex items-center gap-2">
-            <span
-              class="text-[10px] text-gray-400 uppercase tracking-widest font-bold"
-              >Módulo /
-            </span>
-            <h2 class="font-bold text-sm text-gray-700 uppercase tracking-wide">
-              {{ viewTitle }}
-            </h2>
-          </div>
-        </div>
-
         <div
-          v-if="showDashboardHeaderNav"
-          class="flex-1 min-w-0 flex justify-center"
+          class="flex min-w-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.08em] text-gray-500"
         >
-          <div
-            class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shadow-inner border border-gray-200/20 overflow-x-auto hide-scrollbar max-w-full"
-          >
-            <button
-              v-for="(slide, index) in dashboardHeaderNavState.slides"
-              :key="slide.id"
-              @click="selectDashboardHeaderSlide(index)"
-              class="px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center text-center whitespace-nowrap"
-              :class="
-                index === dashboardHeaderNavState.currentSlideIndex
-                  ? 'bg-white text-main shadow-md'
-                  : 'text-gray-400 hover:text-gray-600'
-              "
-            >
-              {{ slide.label }}
-            </button>
-          </div>
+          <Calendar class="h-3.5 w-3.5 text-main" />
+          <time :datetime="new Date().toISOString().slice(0, 10)">{{
+            todayLabel
+          }}</time>
         </div>
 
-        <div v-else class="flex-1"></div>
+        <p class="text-xs font-normal text-gray-500">
+          Bienvenido
+          <span class="font-medium text-main">{{ currentUserName }}</span>
+        </p>
 
-        <div class="flex items-center gap-6">
-          <div class="h-8 w-px bg-gray-100 italic"></div>
-          <div
-            class="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-100"
+        <div class="flex items-center justify-self-end gap-2">
+          <span
+            class="text-[9px] font-medium uppercase tracking-[0.1em] text-gray-500"
+            >{{ userProfile?.area || "Sin área" }}</span
+          >
+          <button
+            type="button"
+            class="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-main-dark transition-transform hover:scale-105"
+            aria-label="Ir al perfil"
             @click="router.push('/perfil')"
           >
-            <div class="text-right">
-              <p
-                class="text-[10px] font-bold text-gray-700 uppercase tracking-tight"
-              >
-                {{ userProfile?.nombre || userEmail.split("@")[0] }}
-              </p>
-              <p class="text-[9px] text-gray-400 uppercase font-medium">
-                {{ userProfile?.role || "Configurar Perfil" }}
-                <span v-if="userProfile?.area">• {{ userProfile.area }}</span>
-              </p>
-            </div>
-            <div
-              class="w-9 h-9 rounded-full bg-accent flex items-center justify-center font-bold text-xs text-main-dark"
-            >
-              {{
-                (userProfile?.nombre || userEmail).substring(0, 2).toUpperCase()
-              }}
-            </div>
-          </div>
+            {{ currentUserName.substring(0, 2).toUpperCase() }}
+          </button>
         </div>
       </header>
 
