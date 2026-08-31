@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { booleanPointInPolygon, multiPolygon, point } from "@turf/turf";
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from "vue";
 import { mapsProviderLoader } from "@/seguimiento/shared/maps/mapsProvider.loader";
 import {
@@ -6,7 +7,10 @@ import {
   seguimientoMapZIndex,
 } from "@/seguimiento/shared/maps/mapZoomHierarchy.strategy";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
-import type { TareaCreacionModoGeometria } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
+import type {
+  TareaCreacionGeometria,
+  TareaCreacionModoGeometria,
+} from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
 import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
 import {
   createTrackerMarkerIcon,
@@ -35,6 +39,9 @@ const props = defineProps<{
   } | null;
   geography: SeguimientoOperationalGeography[];
   creationGeometryMode?: TareaCreacionModoGeometria;
+  creationGeometry?: TareaCreacionGeometria;
+  creationLockedBoundary?: SeguimientoOperationalGeography["farms"][number]["boundary"];
+  creationSketchResetKey?: number;
 }>();
 const emit = defineEmits<{
   ready: [];
@@ -42,6 +49,8 @@ const emit = defineEmits<{
   "capture:route-point": [coordinates: SeguimientoCoordinates];
   "capture:control-line": [coordinates: number[][][]];
   "capture:control-zone": [coordinates: number[][][][]];
+  "capture:blocked": [];
+  "creation:vertices-change": [count: number];
 }>();
 const mapCanvas = useTemplateRef<HTMLDivElement>("mapCanvas");
 let map: any = null;
@@ -56,7 +65,12 @@ let geographyLabels: any[] = [];
 let shelterInfoWindow: any = null;
 let zoomListener: any = null;
 let creationClickListener: any = null;
+let creationMoveListener: any = null;
 let creationVertices: number[][] = [];
+let creationOverlays: any[] = [];
+let creationSketchLine: any = null;
+let creationVertexMarkers: any[] = [];
+let creationHoverCoordinate: number[] | null = null;
 
 const isToolEnabled = (tool: SeguimientoMapToolState["tool"]): boolean =>
   props.mapTools.find((item) => item.tool === tool)?.enabled ?? false;
@@ -85,6 +99,87 @@ const geometryCenter = (
   };
 };
 
+function clearCreationSketch(): void {
+  creationSketchLine?.setMap(null);
+  creationSketchLine = null;
+  creationVertexMarkers.forEach((marker) => marker.setMap(null));
+  creationVertexMarkers = [];
+}
+
+function completeCreationZone(): void {
+  if (creationVertices.length < 3) return;
+  emit("capture:control-zone", [[[...creationVertices, creationVertices[0]]]]);
+  creationVertices = [];
+  creationHoverCoordinate = null;
+  emit("creation:vertices-change", 0);
+  clearCreationSketch();
+}
+
+function renderCreationSketch(): void {
+  if (
+    !map ||
+    !window.google?.maps ||
+    !props.creationGeometryMode ||
+    !creationVertices.length
+  )
+    return;
+  const maps = window.google.maps;
+  const path = [
+    ...creationVertices,
+    ...(creationHoverCoordinate ? [creationHoverCoordinate] : []),
+  ].map(([longitude, latitude]) => ({ lat: latitude, lng: longitude }));
+  if (!creationSketchLine) {
+    creationSketchLine = new maps.Polyline({
+      map,
+      path,
+      clickable: false,
+      strokeColor: "#D4A853",
+      strokeOpacity: 1,
+      strokeWeight: 3,
+      zIndex: seguimientoMapZIndex.selected + 2,
+    });
+  } else {
+    creationSketchLine.setPath(path);
+  }
+  creationVertices.forEach(([longitude, latitude], index) => {
+    if (creationVertexMarkers[index]) return;
+    const marker = new maps.Marker({
+      map,
+      position: { lat: latitude, lng: longitude },
+      clickable: index === 0 && props.creationGeometryMode === "zone",
+      title:
+        index === 0 && props.creationGeometryMode === "zone"
+          ? "Haz clic aquí para cerrar el polígono"
+          : "Vértice de la zona",
+      zIndex: seguimientoMapZIndex.selected + 3,
+      icon: {
+        path: maps.SymbolPath.CIRCLE,
+        scale: index === 0 ? 6 : 4.5,
+        fillColor: index === 0 ? "#004643" : "#D4A853",
+        fillOpacity: 1,
+        strokeColor: "#ffffff",
+        strokeWeight: 2,
+      },
+    });
+    if (index === 0 && props.creationGeometryMode === "zone") {
+      marker.addListener("click", completeCreationZone);
+    }
+    creationVertexMarkers.push(marker);
+  });
+}
+
+function isCloseToFirstVertex(coordinate: number[]): boolean {
+  const [firstLongitude, firstLatitude] = creationVertices[0] ?? [];
+  if (!Number.isFinite(firstLongitude) || !Number.isFinite(firstLatitude))
+    return false;
+  const longitudeMeters =
+    (coordinate[0] - firstLongitude) *
+    111_320 *
+    Math.cos((firstLatitude * Math.PI) / 180);
+  const latitudeMeters = (coordinate[1] - firstLatitude) * 111_320;
+  return Math.hypot(longitudeMeters, latitudeMeters) <= 18;
+}
+
 function clearLayers(): void {
   taskMarkers.forEach(({ marker }) => marker.setMap(null));
   trackerMarkers.forEach(({ marker }) => marker.setMap(null));
@@ -110,6 +205,8 @@ function clearLayers(): void {
   geographyLabels = [];
   shelterInfoWindow?.close();
   shelterInfoWindow = null;
+  creationOverlays.forEach((overlay) => overlay.setMap(null));
+  creationOverlays = [];
 }
 
 const escapeXml = (value: string): string =>
@@ -228,6 +325,7 @@ function renderLayers(): void {
           new maps.Polygon({
             map,
             paths,
+            clickable: false,
             strokeColor: "#1A6B9A",
             strokeOpacity: 1,
             strokeWeight: 1,
@@ -249,6 +347,7 @@ function renderLayers(): void {
             halo: new maps.Polyline({
               map,
               path,
+              clickable: false,
               strokeColor: "#0F172A",
               strokeOpacity: 0,
               strokeWeight: 4,
@@ -257,6 +356,7 @@ function renderLayers(): void {
             surface: new maps.Polyline({
               map,
               path,
+              clickable: false,
               strokeColor: "#FACC15",
               strokeOpacity: 0,
               strokeWeight: 2,
@@ -280,6 +380,7 @@ function renderLayers(): void {
             halo: new maps.Polygon({
               map,
               paths,
+              clickable: false,
               strokeColor: "#FFFDF5",
               strokeOpacity: 0,
               strokeWeight: 6,
@@ -289,6 +390,7 @@ function renderLayers(): void {
             surface: new maps.Polygon({
               map,
               paths,
+              clickable: false,
               strokeColor: "#1A6B9A",
               strokeOpacity: 1,
               strokeWeight: 2.5,
@@ -310,6 +412,7 @@ function renderLayers(): void {
               new maps.Marker({
                 map,
                 position: toLatLng(center),
+                clickable: false,
                 title: farm.name,
                 icon: createFarmLabelIcon(farm.name, maps),
                 zIndex: seguimientoMapZIndex.farmLabel,
@@ -360,6 +463,7 @@ function renderLayers(): void {
           marker: new maps.Marker({
             map,
             position: toLatLng(task.routePoint!),
+            clickable: false,
             title: task.instructions ?? "Tarea",
             label: task.routeOrder?.toString(),
             zIndex: selected
@@ -387,6 +491,7 @@ function renderLayers(): void {
         marker: new maps.Marker({
           map,
           position: toLatLng(tracker.position!),
+          clickable: false,
           title: getTrackerMarkerTitle(tracker),
           zIndex: seguimientoMapZIndex.tracker,
           visible: false,
@@ -414,6 +519,64 @@ function renderLayers(): void {
         zIndex: seguimientoMapZIndex.route,
       });
   }
+  if (props.creationGeometry?.routePoint) {
+    creationOverlays.push(
+      new maps.Marker({
+        map,
+        position: toLatLng(props.creationGeometry.routePoint),
+        clickable: false,
+        title: "Punto de enrutado de la nueva tarea",
+        zIndex: seguimientoMapZIndex.selected + 1,
+        icon: {
+          path: maps.SymbolPath.CIRCLE,
+          scale: 7,
+          fillColor: "#D4A853",
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 2,
+        },
+      }),
+    );
+  }
+  if (props.creationGeometry?.controlLine) {
+    props.creationGeometry.controlLine.coordinates.forEach((line) => {
+      creationOverlays.push(
+        new maps.Polyline({
+          map,
+          path: line.map(([longitude, latitude]) => ({
+            lat: latitude,
+            lng: longitude,
+          })),
+          clickable: false,
+          strokeColor: "#D4A853",
+          strokeOpacity: 1,
+          strokeWeight: 3,
+          zIndex: seguimientoMapZIndex.selected + 1,
+        }),
+      );
+    });
+  }
+  props.creationGeometry?.controlZones.forEach((zone) => {
+    const paths = zone.coordinates.map((polygon) =>
+      polygon[0].map(([longitude, latitude]) => ({
+        lat: latitude,
+        lng: longitude,
+      })),
+    );
+    creationOverlays.push(
+      new maps.Polygon({
+        map,
+        paths,
+        clickable: false,
+        strokeColor: "#D4A853",
+        strokeOpacity: 1,
+        strokeWeight: 2,
+        fillColor: "#D4A853",
+        fillOpacity: 0.22,
+        zIndex: seguimientoMapZIndex.selected + 1,
+      }),
+    );
+  });
   updateZoomDrivenLayers();
 }
 
@@ -448,9 +611,20 @@ async function initializeMap(): Promise<void> {
     });
     zoomListener = map.addListener("zoom_changed", updateZoomDrivenLayers);
     creationClickListener = map.addListener("click", (event: any) => {
-      const point = event.latLng;
-      if (!point || !props.creationGeometryMode) return;
-      const coordinate = [point.lng(), point.lat()];
+      const latLng = event.latLng;
+      if (!latLng || !props.creationGeometryMode) return;
+      const coordinate = [latLng.lng(), latLng.lat()];
+      if (
+        props.creationGeometryMode === "zone" &&
+        props.creationLockedBoundary &&
+        !booleanPointInPolygon(
+          point([coordinate[0], coordinate[1]]),
+          multiPolygon(props.creationLockedBoundary.coordinates),
+        )
+      ) {
+        emit("capture:blocked");
+        return;
+      }
       if (props.creationGeometryMode === "point") {
         emit("capture:route-point", {
           latitude: coordinate[1],
@@ -458,16 +632,30 @@ async function initializeMap(): Promise<void> {
         });
         return;
       }
+      if (
+        props.creationGeometryMode === "zone" &&
+        creationVertices.length >= 3 &&
+        isCloseToFirstVertex(coordinate)
+      ) {
+        completeCreationZone();
+        return;
+      }
       creationVertices = [...creationVertices, coordinate];
+      creationHoverCoordinate = null;
+      emit("creation:vertices-change", creationVertices.length);
       if (props.creationGeometryMode === "line")
         emit("capture:control-line", [creationVertices]);
-      if (props.creationGeometryMode === "zone") {
-        const ring =
-          creationVertices.length >= 3
-            ? [...creationVertices, creationVertices[0]]
-            : creationVertices;
-        emit("capture:control-zone", [[ring]]);
-      }
+      renderCreationSketch();
+    });
+    creationMoveListener = map.addListener("mousemove", (event: any) => {
+      if (
+        !event.latLng ||
+        !props.creationGeometryMode ||
+        !creationVertices.length
+      )
+        return;
+      creationHoverCoordinate = [event.latLng.lng(), event.latLng.lat()];
+      renderCreationSketch();
     });
     renderLayers();
     focusMap();
@@ -484,6 +672,8 @@ watch(
     props.geography,
     props.mapTools,
     props.selectedTaskId,
+    props.creationGeometry,
+    props.creationLockedBoundary,
   ],
   renderLayers,
   { deep: true },
@@ -491,8 +681,25 @@ watch(
 watch(() => props.focus, focusMap);
 watch(
   () => props.creationGeometryMode,
+  (mode) => {
+    creationVertices = [];
+    creationHoverCoordinate = null;
+    emit("creation:vertices-change", 0);
+    clearCreationSketch();
+    if (map) {
+      map.setOptions({
+        draggableCursor: mode ? "crosshair" : null,
+      });
+    }
+  },
+);
+watch(
+  () => props.creationSketchResetKey,
   () => {
     creationVertices = [];
+    creationHoverCoordinate = null;
+    emit("creation:vertices-change", 0);
+    clearCreationSketch();
   },
 );
 watch(
@@ -510,6 +717,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   zoomListener?.remove();
   creationClickListener?.remove();
+  creationMoveListener?.remove();
+  clearCreationSketch();
   clearLayers();
 });
 </script>

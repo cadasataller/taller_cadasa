@@ -50,6 +50,7 @@ documentacion/rastreo_tarea/rpcs_funciones_bd.md
 5. [SPEC-11 — Geometría, mapa y posición en ruta](SPEC-11-geometria-mapa-posicion-ruta.md)
 6. [SPEC-12 — Validaciones, payload y frontera RPC](SPEC-12-validaciones-payload-frontera-rpc.md)
 7. [SPEC-13 — Integración UI, estados y pruebas](SPEC-13-integracion-estados-pruebas-creacion.md)
+8. [Subespecificaciones — Flujo espacial](flujo-espacial/README.md)
 
 ## Reglas transversales
 

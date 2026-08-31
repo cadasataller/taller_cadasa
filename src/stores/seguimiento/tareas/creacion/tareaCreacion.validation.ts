@@ -61,14 +61,14 @@ const creationDraftSchema = z
           coordinates: z.array(z.array(z.tuple([z.number(), z.number()]))),
         })
         .nullable(),
-      controlZone: z
-        .object({
+      controlZones: z.array(
+        z.object({
           type: z.literal("MultiPolygon"),
           coordinates: z.array(
             z.array(z.array(z.tuple([z.number(), z.number()]))),
           ),
-        })
-        .nullable(),
+        }),
+      ),
     }),
     route: z.object({ order: z.number().int().positive().nullable() }),
   })
@@ -151,13 +151,25 @@ const creationDraftSchema = z
       });
     }
     if (
+      draft.type === "finca" &&
+      (!draft.geometry.controlZones.length ||
+        !draft.geometry.controlZones.every(isValidControlZone))
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["geometry", "controlZones"],
+        message: "Dibuja al menos una zona de control dentro de la finca.",
+      });
+    }
+    if (
       draft.type === "zona" &&
-      (!isValidControlZone(draft.geometry.controlZone) ||
+      (draft.geometry.controlZones.length !== 1 ||
+        !isValidControlZone(draft.geometry.controlZones[0] ?? null) ||
         draft.geometry.locationId !== null)
     ) {
       context.addIssue({
         code: "custom",
-        path: ["geometry", "controlZone"],
+        path: ["geometry", "controlZones"],
         message: "Dibuja el polígono de control de la zona.",
       });
     }

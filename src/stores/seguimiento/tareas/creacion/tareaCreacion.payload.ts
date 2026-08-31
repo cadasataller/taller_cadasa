@@ -42,7 +42,9 @@ export const toCrearTareaV2Params = (
     p_linea_control_geojson:
       draft.type === "finca" ? draft.geometry.controlLine : null,
     p_zona_control_geojson:
-      draft.type === "zona" ? draft.geometry.controlZone : null,
+      draft.type === "finca"
+        ? draft.geometry.controlZones
+        : draft.geometry.controlZones[0]!,
     p_orden_ruta: draft.route.order,
   };
 };

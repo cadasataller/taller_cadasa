@@ -366,13 +366,20 @@ Requiere:
 - `ubicacion_id`;
 - punto enrutado;
 - línea de control;
+- una o más zonas de control;
 - orden opcional.
+
+`p_zona_control_geojson` acepta un arreglo de geometrías para `finca`. Cada
+elemento crea una `zonas_operativas` y una relación `tarea_zonas` con
+`rol = 'control'` independiente; por ello cada una conserva sus propias
+visitas y tiempo. La respuesta incluye `zona_control_ids`.
 
 La finca debe estar activa, con límite, disponible para el área, con red vial y no ser resguardo.
 
 ### Zona
 
-Requiere zona de control GeoJSON y punto enrutado. En el formulario normal:
+Requiere exactamente una zona lógica GeoJSON (`Polygon` o `MultiPolygon`) y
+punto enrutado. En el formulario normal:
 
 ```text
 p_ubicacion_id = NULL

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, shallowRef } from "vue";
-import { CheckCircle2 } from "lucide-vue-next";
+import { CheckCircle2, MapPinPlus } from "lucide-vue-next";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
@@ -15,6 +15,13 @@ import { useSeguimientoTareasView } from "@/composables/seguimiento/useSeguimien
 import { useSeguimientoTareaCreacion } from "@/composables/seguimiento/useSeguimientoTareaCreacion";
 import { SEGUIMIENTO_FEATURES } from "@/seguimiento/shared/seguimiento.permissions";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
+import { isValidControlZone } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.geometry";
+import {
+  resolveDominantFarm,
+  snapToAreaRoads,
+  snapToFarmRoads,
+} from "@/stores/seguimiento/tareas/creacion/tareaCreacion.spatial";
+import type { TareaCreacionBorrador } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
 import { getSeguimientoToday } from "@/stores/seguimiento/tareas/tareasSeguimiento.helpers";
 import type {
   SeguimientoCrossFilter,
@@ -56,7 +63,7 @@ const {
   isPanelOpen: isCreatePanelOpen,
   isDiscardConfirmationOpen,
   validationErrors: createValidationErrors,
-  openCreate,
+  openSpatialCreate,
   requestCloseCreate,
   continueCreateEditing,
   discardCreate,
@@ -66,8 +73,12 @@ const {
   updateCompanions,
   updateDetails,
   updateGeometry,
+  captureSpatialRoute,
+  completeSpatialSelection,
   updateRoute,
   geometryMode,
+  spatialState,
+  lockedFarmId,
   beginGeometryEdit,
   finishGeometryEdit,
   remoteError: createRemoteError,
@@ -78,6 +89,15 @@ const {
 } = useSeguimientoTareaCreacion();
 const mapFocus = shallowRef<SeguimientoCoordinates | null>(null);
 const createSuccessMessage = shallowRef<string | null>(null);
+const pendingControlZone = shallowRef<
+  TareaCreacionBorrador["geometry"]["controlZones"][number] | null
+>(null);
+const creationSketchResetKey = shallowRef(0);
+const spatialVertexCount = shallowRef(0);
+const creationGeometryPreview = computed(() => ({
+  ...createDraft.value.geometry,
+  controlZones: createDraft.value.geometry.controlZones,
+}));
 let createSuccessTimer: ReturnType<typeof setTimeout> | null = null;
 onMounted(() => {
   if (
@@ -123,7 +143,7 @@ const canStartCreate = computed(
     Boolean(crossFilter.value.workerId || crossFilter.value.sourceId !== null),
 );
 const crossFilterLockMessage = computed(() =>
-  isCreatePanelOpen.value
+  isCreatePanelOpen.value || spatialState.value !== "idle"
     ? "Cierra el panel de creación para cambiar filtros."
     : "Cierra el panel de edición para cambiar filtros.",
 );
@@ -137,6 +157,23 @@ const createCompanions = computed(
     catalog.value.areas.find((area) => area.id === createDraft.value.areaId)
       ?.companions ?? [],
 );
+const lockedFarmBoundary = computed(() => {
+  if (!lockedFarmId.value || !createDraft.value.areaId) return null;
+  return (
+    geography.value
+      .find((item) => item.areaId === createDraft.value.areaId)
+      ?.farms.find((farm) => farm.id === lockedFarmId.value)?.boundary ?? null
+  );
+});
+const spatialDrawingMessage = computed(() => {
+  if (spatialState.value === "selecting-route-point")
+    return "Haz clic sobre una vía o cerca de ella para seleccionar el acceso.";
+  if (!spatialVertexCount.value)
+    return "Haz clic para colocar el primer vértice de la zona.";
+  if (spatialVertexCount.value < 3)
+    return `${spatialVertexCount.value} vértice(s). Marca ${3 - spatialVertexCount.value} más para formar la zona.`;
+  return `${spatialVertexCount.value} vértices. Toca el primer punto verde para cerrar la zona.`;
+});
 const hasAreaFilter = computed(
   () => catalog.value.areas.length > 1 && filters.value.areaId !== null,
 );
@@ -189,7 +226,7 @@ function closeTaskDetail(): void {
   closeDetail();
   mobileView.value = "list";
 }
-function startCreate(): void {
+function prepareCreationDraft(): void {
   if (!canStartCreate.value) return;
   closeDetail();
   mobileView.value = "view";
@@ -199,7 +236,7 @@ function startCreate(): void {
       )?.id ?? null)
     : null;
   creationLockedFilter.value = { ...crossFilter.value };
-  openCreate(
+  openSpatialCreate(
     filters.value.areaId ??
       selectedWorkerAreaId ??
       catalog.value.areas[0]?.id ??
@@ -211,6 +248,17 @@ function startCreate(): void {
     selectCreateWorker(crossFilter.value.workerId);
   if (crossFilter.value.sourceId !== null)
     selectCreateTracker(crossFilter.value.sourceId);
+}
+function startSpatialCreate(): void {
+  prepareCreationDraft();
+  mobileView.value = "map";
+  toast.add({
+    severity: "info",
+    summary: "Selecciona el acceso",
+    detail:
+      "Haz clic cerca de una vía para generar el punto y la línea de control.",
+    life: 4500,
+  });
 }
 function selectCreateWorker(workerId: string): void {
   updateWorker(
@@ -239,6 +287,129 @@ async function submitTaskCreate(): Promise<void> {
   await retry();
   const taskId = typeof result.tarea_id === "string" ? result.tarea_id : null;
   if (taskId) await selectTask(taskId);
+}
+function captureRoutePoint(clicked: SeguimientoCoordinates): void {
+  if (spatialState.value !== "selecting-route-point") {
+    updateGeometry({ routePoint: clicked });
+    return;
+  }
+  const snap = snapToAreaRoads(clicked, geography.value);
+  if (!snap) {
+    toast.add({
+      severity: "warn",
+      summary: "Sin vía enrutable",
+      detail: "No se encontró una vía enrutable para el punto seleccionado.",
+      life: 4200,
+    });
+    return;
+  }
+  captureSpatialRoute(snap.routePoint, snap.controlLine);
+  toast.add({
+    severity: "success",
+    summary: "Acceso ajustado",
+    detail: "Ahora dibuja la primera zona de trabajo.",
+    life: 3200,
+  });
+}
+function captureControlZone(
+  zone: TareaCreacionBorrador["geometry"]["controlZones"][number],
+): void {
+  if (!isValidControlZone(zone)) return;
+  pendingControlZone.value = zone;
+  finishCreateGeometry();
+}
+function notifyBlockedZoneCapture(): void {
+  toast.add({
+    severity: "warn",
+    summary: "Área bloqueada",
+    detail:
+      "Esta tarea quedó contenida en una finca; dibuja dentro de su límite.",
+    life: 3200,
+  });
+}
+function clearSpatialZoneVertices(): void {
+  pendingControlZone.value = null;
+  spatialVertexCount.value = 0;
+  creationSketchResetKey.value += 1;
+  toast.add({
+    severity: "info",
+    summary: "Vértices eliminados",
+    detail: "El punto enrutado se conserva. Puedes dibujar la zona nuevamente.",
+    life: 2800,
+  });
+}
+function finishCreateGeometry(): void {
+  const zone = pendingControlZone.value;
+  if (!zone) {
+    finishGeometryEdit();
+    return;
+  }
+  const farms =
+    geography.value.find((item) => item.areaId === createDraft.value.areaId)
+      ?.farms ?? [];
+  if (spatialState.value === "drawing-first-zone") {
+    const dominant = resolveDominantFarm([zone], farms);
+    const originalRoutePoint = createDraft.value.geometry.routePoint;
+    const farmSnap =
+      dominant && originalRoutePoint
+        ? snapToFarmRoads(originalRoutePoint, dominant.farm)
+        : null;
+    completeSpatialSelection(
+      dominant && farmSnap ? "finca" : "zona",
+      dominant && farmSnap ? dominant.farm.id : null,
+      zone,
+      farmSnap?.routePoint ?? originalRoutePoint,
+      farmSnap?.controlLine ?? null,
+      Boolean(dominant?.isFullyContained && farmSnap),
+    );
+    pendingControlZone.value = null;
+    return;
+  }
+  if (createDraft.value.type === "finca") {
+    const selectedFarm = farms.find(
+      (farm) => farm.id === createDraft.value.geometry.locationId,
+    );
+    const zoneInLockedFarm = selectedFarm
+      ? resolveDominantFarm([zone], [selectedFarm])?.isFullyContained
+      : false;
+    if (lockedFarmId.value && !zoneInLockedFarm) {
+      toast.add({
+        severity: "warn",
+        summary: "Zona fuera de la finca",
+        detail: "La primera zona fijó esta tarea dentro de una sola finca.",
+        life: 4200,
+      });
+      pendingControlZone.value = null;
+      finishGeometryEdit();
+      return;
+    }
+    const zones = [...createDraft.value.geometry.controlZones, zone];
+    const dominant = resolveDominantFarm(zones, farms);
+    const currentRoutePoint = createDraft.value.geometry.routePoint;
+    const farmSnap =
+      dominant && currentRoutePoint
+        ? snapToFarmRoads(currentRoutePoint, dominant.farm)
+        : null;
+    if (!dominant || !farmSnap) {
+      toast.add({
+        severity: "warn",
+        summary: "Zona sin acceso compatible",
+        detail: "La zona no puede agregarse a esta tarea finca.",
+        life: 4200,
+      });
+    } else {
+      updateGeometry({
+        locationId: dominant.farm.id,
+        routePoint: farmSnap.routePoint,
+        controlLine: farmSnap.controlLine,
+        controlZones: zones,
+      });
+    }
+  } else {
+    updateGeometry({ controlZones: [zone] });
+  }
+  pendingControlZone.value = null;
+  finishGeometryEdit();
 }
 function resetMap(): void {
   mapFocus.value = null;
@@ -286,19 +457,22 @@ function notifyCrossFilterLocked(): void {
       :map-configuration="mapConfiguration"
       :geography="geography"
       :creation-geometry-mode="geometryMode"
+      :creation-geometry="creationGeometryPreview"
+      :creation-locked-boundary="lockedFarmBoundary"
+      :creation-sketch-reset-key="creationSketchResetKey"
       @ready="setMapReady"
       @error="setMapError"
-      @capture:route-point="updateGeometry({ routePoint: $event })"
+      @capture:route-point="captureRoutePoint"
       @capture:control-line="
         updateGeometry({
           controlLine: { type: 'MultiLineString', coordinates: $event },
         })
       "
       @capture:control-zone="
-        updateGeometry({
-          controlZone: { type: 'MultiPolygon', coordinates: $event },
-        })
+        captureControlZone({ type: 'MultiPolygon', coordinates: $event })
       "
+      @capture:blocked="notifyBlockedZoneCapture"
+      @creation:vertices-change="spatialVertexCount = $event"
     />
     <div
       v-else
@@ -306,6 +480,51 @@ function notifyCrossFilterLocked(): void {
       role="status"
     >
       No tienes acceso al mapa de seguimiento.
+    </div>
+    <div
+      v-if="canStartCreate && spatialState === 'idle' && !isCreatePanelOpen"
+      class="absolute bottom-5 left-1/2 z-30 w-[min(22rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-white/70 bg-white/95 p-3 shadow-xl backdrop-blur"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="grid size-10 shrink-0 place-items-center rounded-lg bg-second text-main"
+        >
+          <MapPinPlus class="size-5" aria-hidden="true" />
+        </div>
+        <p class="min-w-0 flex-1 text-xs leading-5 text-slate-600">
+          Contexto listo. Selecciona un acceso en el mapa para iniciar la tarea.
+        </p>
+        <button
+          class="min-h-10 shrink-0 rounded-lg bg-main px-3 text-xs font-bold text-white transition hover:bg-main-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
+          type="button"
+          @click="startSpatialCreate"
+        >
+          Elegir punto
+        </button>
+      </div>
+    </div>
+    <div
+      v-else-if="spatialState !== 'idle' && !isCreatePanelOpen"
+      class="absolute bottom-5 left-1/2 z-30 flex w-[min(24rem,calc(100%-2rem))] items-center gap-3 -translate-x-1/2 rounded-xl border border-main/20 bg-white/95 p-3 shadow-xl backdrop-blur"
+    >
+      <p class="min-w-0 flex-1 text-xs font-semibold leading-5 text-slate-700">
+        {{ spatialDrawingMessage }}
+      </p>
+      <button
+        class="min-h-10 shrink-0 rounded-lg border border-slate-300 px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
+        type="button"
+        @click="
+          spatialState === 'drawing-first-zone'
+            ? clearSpatialZoneVertices()
+            : discardCreate()
+        "
+      >
+        {{
+          spatialState === "drawing-first-zone"
+            ? "Limpiar vértices"
+            : "Cancelar"
+        }}
+      </button>
     </div>
     <div
       v-if="createSuccessMessage"
@@ -326,7 +545,7 @@ function notifyCrossFilterLocked(): void {
       :loading="loadingInitial"
       :disabled="!canViewMap"
       :show-trackers="canViewTrackers"
-      :lock-cross-filters="isCreatePanelOpen"
+      :lock-cross-filters="isCreatePanelOpen || spatialState !== 'idle'"
       @apply="applyFilters"
       @focus="focusMap"
       @update:cross-filter="crossFilter = $event"
@@ -366,7 +585,7 @@ function notifyCrossFilterLocked(): void {
           :loading="loadingInitial"
           :disabled="!canViewMap"
           :show-trackers="canViewTrackers"
-          :lock-cross-filters="isCreatePanelOpen"
+          :lock-cross-filters="isCreatePanelOpen || spatialState !== 'idle'"
           @apply="applyFilters"
           @focus="focusMap"
           @update:cross-filter="crossFilter = $event"
@@ -440,13 +659,11 @@ function notifyCrossFilterLocked(): void {
       :search="filters.search"
       :has-active-filters="hasActiveFilters"
       :show-back="true"
-      :can-create="canStartCreate"
       @select="openTask"
       @retry="retry"
       @update-search="updateFilters({ search: $event })"
       @clear-filters="clearFilters"
       @back="mobileView = 'map'"
-      @create="startCreate"
     />
     <TaskDetailPanel
       v-if="panelMode === 'view' && !isCreatePanelOpen"
@@ -488,7 +705,7 @@ function notifyCrossFilterLocked(): void {
       @update:geometry="updateGeometry"
       @update:route="updateRoute"
       @edit:geometry="beginGeometryEdit"
-      @finish:geometry="finishGeometryEdit"
+      @finish:geometry="finishCreateGeometry"
       @skip:field="reportSkippedCreateField"
       @submit="submitTaskCreate"
     />

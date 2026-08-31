@@ -42,7 +42,7 @@ const draft = (type: "finca" | "zona"): TareaCreacionBorrador => ({
     locationId: type === "finca" ? "farm-1" : null,
     routePoint: { latitude: 8.43008, longitude: -82.50821 },
     controlLine: type === "finca" ? line : null,
-    controlZone: type === "zona" ? zone : null,
+    controlZones: type === "finca" ? [zone] : [zone],
   },
   route: { order: 4 },
   validBlocks: {
@@ -56,14 +56,14 @@ const draft = (type: "finca" | "zona"): TareaCreacionBorrador => ({
 });
 
 describe("contratos de creación de tarea", () => {
-  it("solo serializa la geometría de finca requerida por crear_tarea_v2", () => {
+  it("serializa las zonas independientes requeridas por crear_tarea_v2 para finca", () => {
     const payload = toCrearTareaV2Params(draft("finca"));
 
     expect(payload).toMatchObject({
       p_tipo_codigo: "finca",
       p_ubicacion_id: "farm-1",
       p_linea_control_geojson: line,
-      p_zona_control_geojson: null,
+      p_zona_control_geojson: [zone],
       p_indicaciones: "Fertilización",
     });
   });

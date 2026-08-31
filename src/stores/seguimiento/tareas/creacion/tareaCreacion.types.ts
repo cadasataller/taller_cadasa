@@ -39,10 +39,13 @@ export interface TareaCreacionGeometria {
   locationId: string | null;
   routePoint: SeguimientoCoordinates | null;
   controlLine: SeguimientoControlLine | null;
-  controlZone: SeguimientoControlZone | null;
+  /** Una zona lógica para `zona`; zonas independientes para `finca`. */
+  controlZones: SeguimientoControlZone[];
 }
 
 export type TareaCreacionModoGeometria = "point" | "line" | "zone" | null;
+export type TareaCreacionEstadoEspacial =
+  "idle" | "selecting-route-point" | "drawing-first-zone" | "ready";
 export type TareaCreacionEstadoGeometria =
   "empty" | "captured" | "editing" | "invalid" | "remote-error";
 
@@ -117,7 +120,7 @@ export interface CrearTareaV2Params {
   p_punto_latitud: number;
   p_punto_longitud: number;
   p_linea_control_geojson: SeguimientoControlLine | null;
-  p_zona_control_geojson: SeguimientoControlZone | null;
+  p_zona_control_geojson: SeguimientoControlZone | SeguimientoControlZone[];
   p_orden_ruta: number | null;
 }
 

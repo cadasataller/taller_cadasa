@@ -46,11 +46,13 @@ const lineLabel = computed(() =>
     : "Requerida para finca",
 );
 const zoneLabel = computed(() =>
-  props.geometry.controlZone
-    ? `${props.geometry.controlZone.coordinates[0]?.[0]?.length ?? 0} puntos definidos`
+  props.geometry.controlZones.length
+    ? props.type === "finca"
+      ? `${props.geometry.controlZones.length} zona(s) independiente(s) definida(s)`
+      : `${props.geometry.controlZones[0]?.coordinates[0]?.[0]?.length ?? 0} puntos definidos`
     : props.type === "zona"
       ? "Requerida para zona"
-      : "Opcional para esta finca",
+      : "Requerida para finca",
 );
 const editingLabel = computed(() => {
   if (props.mode === "point") return "Haz clic en el mapa para fijar el punto.";
@@ -166,16 +168,22 @@ const editingLabel = computed(() => {
           {{ controlLineError }}
         </p>
       </div>
-      <div v-if="type === 'zona'" class="rounded-lg bg-slate-50 p-3">
+      <div v-if="type" class="rounded-lg bg-slate-50 p-3">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="text-xs font-bold text-slate-700">Zona de control</p>
+            <p class="text-xs font-bold text-slate-700">
+              {{ type === "finca" ? "Zonas de control" : "Zona de control" }}
+            </p>
             <p class="mt-0.5 text-[11px] text-slate-500">{{ zoneLabel }}</p>
           </div>
           <button
             class="grid size-9 place-items-center rounded-md text-main hover:bg-second focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
             type="button"
-            aria-label="Editar zona de control"
+            :aria-label="
+              type === 'finca'
+                ? 'Agregar zona de control'
+                : 'Editar zona de control'
+            "
             @click="
               emit('skip:field', 'controlZone');
               emit('edit', 'zone');

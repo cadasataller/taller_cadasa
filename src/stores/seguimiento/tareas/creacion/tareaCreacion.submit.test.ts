@@ -32,6 +32,21 @@ const completeFarmDraft = () => {
         ],
       ],
     },
+    controlZones: [
+      {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [-82.5, 8.43],
+              [-82.51, 8.44],
+              [-82.52, 8.43],
+              [-82.5, 8.43],
+            ],
+          ],
+        ],
+      },
+    ],
   });
   return store;
 };

@@ -22,7 +22,7 @@ const payload: CrearTareaV2Params = {
   p_punto_latitud: 8.43008,
   p_punto_longitud: -82.50821,
   p_linea_control_geojson: { type: "MultiLineString", coordinates: [] },
-  p_zona_control_geojson: null,
+  p_zona_control_geojson: [{ type: "MultiPolygon", coordinates: [] }],
   p_orden_ruta: 4,
 };
 

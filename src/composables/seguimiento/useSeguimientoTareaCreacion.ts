@@ -9,6 +9,10 @@ export function useSeguimientoTareaCreacion() {
     ...state,
     openCreate: (areaId: string | null, scheduledDate: string | null = null) =>
       store.open(areaId, scheduledDate),
+    openSpatialCreate: (
+      areaId: string | null,
+      scheduledDate: string | null = null,
+    ) => store.openSpatial(areaId, scheduledDate),
     requestCloseCreate: () => store.requestClose(),
     continueCreateEditing: () => store.continueEditing(),
     discardCreate: () => store.discard(),
@@ -18,6 +22,8 @@ export function useSeguimientoTareaCreacion() {
     updateCompanions: store.updateCompanions,
     updateDetails: store.updateDetails,
     updateGeometry: store.updateGeometry,
+    captureSpatialRoute: store.captureSpatialRoute,
+    completeSpatialSelection: store.completeSpatialSelection,
     updateRoute: store.updateRoute,
     canSubmitCreate: store.canSubmit,
     reportSkippedCreateField: store.reportSkippedField,

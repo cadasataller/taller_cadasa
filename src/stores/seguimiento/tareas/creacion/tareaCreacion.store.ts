@@ -10,6 +10,7 @@ import type {
   TareaCreacionCampoError,
   TareaCreacionErrorRemoto,
   TareaCreacionErrorValidacion,
+  TareaCreacionEstadoEspacial,
   TareaCreacionEstadoFlujo,
   TareaCreacionModoGeometria,
   TareaCreacionRespuestaRpc,
@@ -57,7 +58,7 @@ const createDraft = (
     locationId: null,
     routePoint: null,
     controlLine: null,
-    controlZone: null,
+    controlZones: [],
   },
   route: { order: null },
   validBlocks: emptyBlocks(),
@@ -76,6 +77,8 @@ export const useTareaCreacionStore = defineStore(
     const validationErrors = ref<TareaCreacionErrorValidacion[]>([]);
     const remoteError = shallowRef<TareaCreacionErrorRemoto | null>(null);
     const geometryMode = shallowRef<TareaCreacionModoGeometria>(null);
+    const spatialState = shallowRef<TareaCreacionEstadoEspacial>("idle");
+    const lockedFarmId = shallowRef<string | null>(null);
     const isDiscardConfirmationOpen = shallowRef(false);
     const hasUnsavedChanges = computed(
       () => JSON.stringify(draft.value) !== JSON.stringify(originalDraft.value),
@@ -122,6 +125,55 @@ export const useTareaCreacionStore = defineStore(
       isDiscardConfirmationOpen.value = false;
       isPanelOpen.value = true;
       flowState.value = "editing";
+      spatialState.value = "ready";
+    }
+    function openSpatial(
+      areaId: string | null,
+      scheduledDate: string | null = null,
+    ): void {
+      draft.value = createDraft(areaId, scheduledDate);
+      originalDraft.value = copyDraft(draft.value);
+      validationErrors.value = [];
+      remoteError.value = null;
+      isDiscardConfirmationOpen.value = false;
+      isPanelOpen.value = false;
+      flowState.value = "editing";
+      spatialState.value = "selecting-route-point";
+      geometryMode.value = "point";
+      lockedFarmId.value = null;
+    }
+    function captureSpatialRoute(
+      routePoint: TareaCreacionBorrador["geometry"]["routePoint"],
+      controlLine: TareaCreacionBorrador["geometry"]["controlLine"],
+    ): void {
+      draft.value.geometry = {
+        ...draft.value.geometry,
+        routePoint,
+        controlLine,
+      };
+      geometryMode.value = "zone";
+      spatialState.value = "drawing-first-zone";
+    }
+    function completeSpatialSelection(
+      type: TareaCreacionTipo,
+      locationId: string | null,
+      zone: TareaCreacionBorrador["geometry"]["controlZones"][number],
+      routePoint: TareaCreacionBorrador["geometry"]["routePoint"],
+      controlLine: TareaCreacionBorrador["geometry"]["controlLine"],
+      lockToFarm: boolean,
+    ): void {
+      draft.value.type = type;
+      draft.value.geometry = {
+        locationId,
+        routePoint,
+        controlLine: type === "finca" ? controlLine : null,
+        controlZones: [zone],
+      };
+      lockedFarmId.value = lockToFarm ? locationId : null;
+      geometryMode.value = null;
+      spatialState.value = "ready";
+      isPanelOpen.value = true;
+      refreshValidation();
     }
     function updateType(type: TareaCreacionTipo): void {
       draft.value.type = type;
@@ -129,9 +181,10 @@ export const useTareaCreacionStore = defineStore(
         locationId: null,
         routePoint: null,
         controlLine: null,
-        controlZone: null,
+        controlZones: [],
       };
       geometryMode.value = null;
+      lockedFarmId.value = null;
       flowState.value = "editing";
       refreshValidation();
     }
@@ -208,6 +261,8 @@ export const useTareaCreacionStore = defineStore(
         draft.value.submitStatus = "success";
         originalDraft.value = copyDraft(draft.value);
         geometryMode.value = null;
+        spatialState.value = "idle";
+        lockedFarmId.value = null;
         isPanelOpen.value = false;
         return result;
       } catch (error) {
@@ -230,6 +285,8 @@ export const useTareaCreacionStore = defineStore(
       isPanelOpen.value = false;
       isDiscardConfirmationOpen.value = false;
       flowState.value = "idle";
+      spatialState.value = "idle";
+      lockedFarmId.value = null;
     }
     function continueEditing(): void {
       isDiscardConfirmationOpen.value = false;
@@ -248,12 +305,17 @@ export const useTareaCreacionStore = defineStore(
       validationErrors,
       remoteError,
       geometryMode,
+      spatialState,
+      lockedFarmId,
       isDiscardConfirmationOpen,
       hasUnsavedChanges,
       isSubmitLocked,
       canSubmit,
       needsGeometry,
       open,
+      openSpatial,
+      captureSpatialRoute,
+      completeSpatialSelection,
       updateType,
       updateWorker,
       updateTracker,
