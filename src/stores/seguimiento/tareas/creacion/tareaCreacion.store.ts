@@ -13,6 +13,7 @@ import type {
   TareaCreacionEstadoEspacial,
   TareaCreacionEstadoFlujo,
   TareaCreacionModoGeometria,
+  TareaCreacionPasoWizard,
   TareaCreacionRespuestaRpc,
   TareaCreacionTipo,
   TareaCreacionTrackerSeleccionado,
@@ -78,6 +79,7 @@ export const useTareaCreacionStore = defineStore(
     const remoteError = shallowRef<TareaCreacionErrorRemoto | null>(null);
     const geometryMode = shallowRef<TareaCreacionModoGeometria>(null);
     const spatialState = shallowRef<TareaCreacionEstadoEspacial>("idle");
+    const wizardStep = shallowRef<TareaCreacionPasoWizard>("ready");
     const lockedFarmId = shallowRef<string | null>(null);
     const isDiscardConfirmationOpen = shallowRef(false);
     const hasUnsavedChanges = computed(
@@ -126,6 +128,7 @@ export const useTareaCreacionStore = defineStore(
       isPanelOpen.value = true;
       flowState.value = "editing";
       spatialState.value = "ready";
+      wizardStep.value = "editing-details";
     }
     function openSpatial(
       areaId: string | null,
@@ -139,6 +142,7 @@ export const useTareaCreacionStore = defineStore(
       isPanelOpen.value = false;
       flowState.value = "editing";
       spatialState.value = "selecting-route-point";
+      wizardStep.value = "selecting-control-point";
       geometryMode.value = "point";
       lockedFarmId.value = null;
     }
@@ -153,6 +157,7 @@ export const useTareaCreacionStore = defineStore(
       };
       geometryMode.value = "zone";
       spatialState.value = "drawing-first-zone";
+      wizardStep.value = "drawing-initial-zone";
     }
     function completeSpatialSelection(
       type: TareaCreacionTipo,
@@ -172,8 +177,39 @@ export const useTareaCreacionStore = defineStore(
       lockedFarmId.value = lockToFarm ? locationId : null;
       geometryMode.value = null;
       spatialState.value = "ready";
-      isPanelOpen.value = true;
+      isPanelOpen.value = false;
+      wizardStep.value = "details-pending";
       refreshValidation();
+    }
+    function openDetails(): void {
+      if (spatialState.value !== "ready") return;
+      isPanelOpen.value = true;
+      wizardStep.value = "editing-details";
+    }
+    function startAdditionalControlZone(): boolean {
+      if (draft.value.type !== "finca" || !draft.value.geometry.routePoint)
+        return false;
+      isPanelOpen.value = false;
+      geometryMode.value = "zone";
+      spatialState.value = "drawing-extra-zone";
+      wizardStep.value = "drawing-extra-zone";
+      remoteError.value = null;
+      return true;
+    }
+    function finishAdditionalControlZone(): void {
+      if (spatialState.value !== "drawing-extra-zone") return;
+      geometryMode.value = null;
+      spatialState.value = "ready";
+      isPanelOpen.value = false;
+      wizardStep.value = "details-pending";
+      refreshValidation();
+    }
+    function cancelAdditionalControlZone(): void {
+      if (spatialState.value !== "drawing-extra-zone") return;
+      geometryMode.value = null;
+      spatialState.value = "ready";
+      isPanelOpen.value = true;
+      wizardStep.value = "editing-details";
     }
     function updateType(type: TareaCreacionTipo): void {
       draft.value.type = type;
@@ -262,6 +298,7 @@ export const useTareaCreacionStore = defineStore(
         originalDraft.value = copyDraft(draft.value);
         geometryMode.value = null;
         spatialState.value = "idle";
+        wizardStep.value = "ready";
         lockedFarmId.value = null;
         isPanelOpen.value = false;
         return result;
@@ -286,6 +323,7 @@ export const useTareaCreacionStore = defineStore(
       isDiscardConfirmationOpen.value = false;
       flowState.value = "idle";
       spatialState.value = "idle";
+      wizardStep.value = "ready";
       lockedFarmId.value = null;
     }
     function continueEditing(): void {
@@ -306,6 +344,7 @@ export const useTareaCreacionStore = defineStore(
       remoteError,
       geometryMode,
       spatialState,
+      wizardStep,
       lockedFarmId,
       isDiscardConfirmationOpen,
       hasUnsavedChanges,
@@ -314,6 +353,10 @@ export const useTareaCreacionStore = defineStore(
       needsGeometry,
       open,
       openSpatial,
+      openDetails,
+      startAdditionalControlZone,
+      finishAdditionalControlZone,
+      cancelAdditionalControlZone,
       captureSpatialRoute,
       completeSpatialSelection,
       updateType,

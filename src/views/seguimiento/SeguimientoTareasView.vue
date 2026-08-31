@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, shallowRef } from "vue";
-import { CheckCircle2, MapPinPlus } from "lucide-vue-next";
+import { CheckCircle2 } from "lucide-vue-next";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
@@ -8,6 +8,7 @@ import MapToolsOverlay from "@/components/seguimiento/tareas/MapToolsOverlay.vue
 import MobileMapActions from "@/components/seguimiento/tareas/MobileMapActions.vue";
 import TaskDetailPanel from "@/components/seguimiento/tareas/TaskDetailPanel.vue";
 import TaskCreatePanel from "@/components/seguimiento/tareas/create/TaskCreatePanel.vue";
+import TaskCreationWizardCard from "@/components/seguimiento/tareas/create/TaskCreationWizardCard.vue";
 import TaskListPanel from "@/components/seguimiento/tareas/TaskListPanel.vue";
 import TrackingFiltersBar from "@/components/seguimiento/tareas/TrackingFiltersBar.vue";
 import TrackingMapWorkspace from "@/components/seguimiento/tareas/TrackingMapWorkspace.vue";
@@ -64,6 +65,10 @@ const {
   isDiscardConfirmationOpen,
   validationErrors: createValidationErrors,
   openSpatialCreate,
+  openCreateDetails,
+  startAdditionalControlZone,
+  finishAdditionalControlZone,
+  cancelAdditionalControlZone,
   requestCloseCreate,
   continueCreateEditing,
   discardCreate,
@@ -78,6 +83,7 @@ const {
   updateRoute,
   geometryMode,
   spatialState,
+  wizardStep,
   lockedFarmId,
   beginGeometryEdit,
   finishGeometryEdit,
@@ -93,7 +99,6 @@ const pendingControlZone = shallowRef<
   TareaCreacionBorrador["geometry"]["controlZones"][number] | null
 >(null);
 const creationSketchResetKey = shallowRef(0);
-const spatialVertexCount = shallowRef(0);
 const creationGeometryPreview = computed(() => ({
   ...createDraft.value.geometry,
   controlZones: createDraft.value.geometry.controlZones,
@@ -164,15 +169,6 @@ const lockedFarmBoundary = computed(() => {
       .find((item) => item.areaId === createDraft.value.areaId)
       ?.farms.find((farm) => farm.id === lockedFarmId.value)?.boundary ?? null
   );
-});
-const spatialDrawingMessage = computed(() => {
-  if (spatialState.value === "selecting-route-point")
-    return "Haz clic sobre una vía o cerca de ella para seleccionar el acceso.";
-  if (!spatialVertexCount.value)
-    return "Haz clic para colocar el primer vértice de la zona.";
-  if (spatialVertexCount.value < 3)
-    return `${spatialVertexCount.value} vértice(s). Marca ${3 - spatialVertexCount.value} más para formar la zona.`;
-  return `${spatialVertexCount.value} vértices. Toca el primer punto verde para cerrar la zona.`;
 });
 const hasAreaFilter = computed(
   () => catalog.value.areas.length > 1 && filters.value.areaId !== null,
@@ -260,6 +256,20 @@ function startSpatialCreate(): void {
     life: 4500,
   });
 }
+function openCreationDetails(): void {
+  openCreateDetails();
+  mobileView.value = "view";
+}
+function addControlZone(): void {
+  if (!startAdditionalControlZone()) return;
+  mobileView.value = "map";
+  toast.add({
+    severity: "info",
+    summary: "Agregar zona de control",
+    detail: "Dibuja la zona y ciérrala tocando el primer punto verde.",
+    life: 3600,
+  });
+}
 function selectCreateWorker(workerId: string): void {
   updateWorker(
     createWorkers.value.find((worker) => worker.id === workerId) ?? null,
@@ -329,7 +339,6 @@ function notifyBlockedZoneCapture(): void {
 }
 function clearSpatialZoneVertices(): void {
   pendingControlZone.value = null;
-  spatialVertexCount.value = 0;
   creationSketchResetKey.value += 1;
   toast.add({
     severity: "info",
@@ -339,6 +348,7 @@ function clearSpatialZoneVertices(): void {
   });
 }
 function finishCreateGeometry(): void {
+  const isDrawingExtraZone = spatialState.value === "drawing-extra-zone";
   const zone = pendingControlZone.value;
   if (!zone) {
     finishGeometryEdit();
@@ -409,6 +419,10 @@ function finishCreateGeometry(): void {
     updateGeometry({ controlZones: [zone] });
   }
   pendingControlZone.value = null;
+  if (isDrawingExtraZone) {
+    finishAdditionalControlZone();
+    return;
+  }
   finishGeometryEdit();
 }
 function resetMap(): void {
@@ -472,7 +486,6 @@ function notifyCrossFilterLocked(): void {
         captureControlZone({ type: 'MultiPolygon', coordinates: $event })
       "
       @capture:blocked="notifyBlockedZoneCapture"
-      @creation:vertices-change="spatialVertexCount = $event"
     />
     <div
       v-else
@@ -481,51 +494,50 @@ function notifyCrossFilterLocked(): void {
     >
       No tienes acceso al mapa de seguimiento.
     </div>
-    <div
-      v-if="canStartCreate && spatialState === 'idle' && !isCreatePanelOpen"
-      class="absolute bottom-5 left-1/2 z-30 w-[min(22rem,calc(100%-2rem))] -translate-x-1/2 rounded-xl border border-white/70 bg-white/95 p-3 shadow-xl backdrop-blur"
-    >
-      <div class="flex items-center gap-3">
-        <div
-          class="grid size-10 shrink-0 place-items-center rounded-lg bg-second text-main"
-        >
-          <MapPinPlus class="size-5" aria-hidden="true" />
-        </div>
-        <p class="min-w-0 flex-1 text-xs leading-5 text-slate-600">
-          Contexto listo. Selecciona un acceso en el mapa para iniciar la tarea.
-        </p>
-        <button
-          class="min-h-10 shrink-0 rounded-lg bg-main px-3 text-xs font-bold text-white transition hover:bg-main-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
-          type="button"
-          @click="startSpatialCreate"
-        >
-          Elegir punto
-        </button>
-      </div>
-    </div>
-    <div
-      v-else-if="spatialState !== 'idle' && !isCreatePanelOpen"
-      class="absolute bottom-5 left-1/2 z-30 flex w-[min(24rem,calc(100%-2rem))] items-center gap-3 -translate-x-1/2 rounded-xl border border-main/20 bg-white/95 p-3 shadow-xl backdrop-blur"
-    >
-      <p class="min-w-0 flex-1 text-xs font-semibold leading-5 text-slate-700">
-        {{ spatialDrawingMessage }}
-      </p>
-      <button
-        class="min-h-10 shrink-0 rounded-lg border border-slate-300 px-3 text-xs font-bold text-slate-600 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
-        type="button"
-        @click="
-          spatialState === 'drawing-first-zone'
-            ? clearSpatialZoneVertices()
-            : discardCreate()
-        "
-      >
-        {{
-          spatialState === "drawing-first-zone"
-            ? "Limpiar vértices"
-            : "Cancelar"
-        }}
-      </button>
-    </div>
+    <TaskCreationWizardCard
+      v-if="canStartCreate && wizardStep === 'ready'"
+      class="absolute bottom-5 left-1/2 z-30 -translate-x-1/2"
+      :step="wizardStep"
+      @action="startSpatialCreate"
+      @cancel="discardCreate"
+    />
+    <TaskCreationWizardCard
+      v-else-if="wizardStep === 'selecting-control-point'"
+      class="absolute bottom-5 left-1/2 z-30 -translate-x-1/2"
+      :step="wizardStep"
+      @cancel="discardCreate"
+    />
+    <TaskCreationWizardCard
+      v-else-if="wizardStep === 'drawing-initial-zone'"
+      class="absolute bottom-5 left-1/2 z-30 -translate-x-1/2"
+      :step="wizardStep"
+      @cancel="clearSpatialZoneVertices"
+    />
+    <TaskCreationWizardCard
+      v-else-if="wizardStep === 'details-pending'"
+      class="absolute bottom-5 left-1/2 z-30 -translate-x-1/2"
+      :step="wizardStep"
+      :show-add-zone="createDraft.type === 'finca'"
+      @action="openCreationDetails"
+      @add-zone="addControlZone"
+      @cancel="discardCreate"
+    />
+    <TaskCreationWizardCard
+      v-else-if="wizardStep === 'drawing-extra-zone'"
+      class="absolute bottom-5 left-1/2 z-30 -translate-x-1/2"
+      :step="wizardStep"
+      @cancel="cancelAdditionalControlZone"
+    />
+    <TaskCreationWizardCard
+      v-else-if="
+        wizardStep === 'editing-details' &&
+        createDraft.type === 'finca' &&
+        geometryMode === null
+      "
+      class="absolute bottom-5 left-1/2 z-30 -translate-x-1/2"
+      :step="wizardStep"
+      @action="addControlZone"
+    />
     <div
       v-if="createSuccessMessage"
       class="absolute right-4 top-4 z-[60] flex max-w-[calc(100%-2rem)] items-center gap-2 rounded-xl border border-main/20 bg-white px-3 py-2.5 text-xs font-bold text-main shadow-lg md:right-[24rem]"

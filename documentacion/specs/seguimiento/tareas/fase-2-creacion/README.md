@@ -51,6 +51,7 @@ documentacion/rastreo_tarea/rpcs_funciones_bd.md
 6. [SPEC-12 — Validaciones, payload y frontera RPC](SPEC-12-validaciones-payload-frontera-rpc.md)
 7. [SPEC-13 — Integración UI, estados y pruebas](SPEC-13-integracion-estados-pruebas-creacion.md)
 8. [Subespecificaciones — Flujo espacial](flujo-espacial/README.md)
+9. [SPEC-17 — Wizard guiado de creación desde el mapa](SPEC-17-wizard-creacion-guiado-mapa.md)
 
 ## Reglas transversales
 

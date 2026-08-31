@@ -53,4 +53,59 @@ describe("useTareaCreacionStore", () => {
       { field: "worker", message: "Selecciona un trabajador válido." },
     ]);
   });
+
+  it("pausa el wizard después de la zona inicial y exige una acción para abrir detalles o agregar otra zona", () => {
+    const store = useTareaCreacionStore();
+    const routePoint = { latitude: 8.5, longitude: -80.5 };
+    const controlLine = {
+      type: "MultiLineString" as const,
+      coordinates: [
+        [
+          [-80.5, 8.5],
+          [-80.49, 8.51],
+        ],
+      ],
+    };
+    const zone = {
+      type: "MultiPolygon" as const,
+      coordinates: [
+        [
+          [
+            [-80.5, 8.5],
+            [-80.49, 8.5],
+            [-80.49, 8.51],
+            [-80.5, 8.5],
+          ],
+        ],
+      ],
+    };
+
+    store.openSpatial("area-1", "2026-08-31");
+    expect(store.wizardStep).toBe("selecting-control-point");
+
+    store.captureSpatialRoute(routePoint, controlLine);
+    expect(store.wizardStep).toBe("drawing-initial-zone");
+
+    store.completeSpatialSelection(
+      "finca",
+      "farm-1",
+      zone,
+      routePoint,
+      controlLine,
+      true,
+    );
+    expect(store.wizardStep).toBe("details-pending");
+    expect(store.isPanelOpen).toBe(false);
+
+    store.openDetails();
+    expect(store.wizardStep).toBe("editing-details");
+    expect(store.isPanelOpen).toBe(true);
+
+    expect(store.startAdditionalControlZone()).toBe(true);
+    expect(store.wizardStep).toBe("drawing-extra-zone");
+    expect(store.isPanelOpen).toBe(false);
+
+    store.finishAdditionalControlZone();
+    expect(store.wizardStep).toBe("details-pending");
+  });
 });

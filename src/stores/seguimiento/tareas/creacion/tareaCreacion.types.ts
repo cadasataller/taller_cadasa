@@ -45,7 +45,18 @@ export interface TareaCreacionGeometria {
 
 export type TareaCreacionModoGeometria = "point" | "line" | "zone" | null;
 export type TareaCreacionEstadoEspacial =
-  "idle" | "selecting-route-point" | "drawing-first-zone" | "ready";
+  | "idle"
+  | "selecting-route-point"
+  | "drawing-first-zone"
+  | "drawing-extra-zone"
+  | "ready";
+export type TareaCreacionPasoWizard =
+  | "ready"
+  | "selecting-control-point"
+  | "drawing-initial-zone"
+  | "details-pending"
+  | "editing-details"
+  | "drawing-extra-zone";
 export type TareaCreacionEstadoGeometria =
   "empty" | "captured" | "editing" | "invalid" | "remote-error";
 
