@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import {
+  Activity,
   AlertTriangle,
   CircleHelp,
-  Clock3,
+  FileText,
+  History,
   MapPinned,
   RotateCw,
+  Route,
   ScanLine,
+  Timer,
+  UsersRound,
   X,
 } from "lucide-vue-next";
 import TaskDoubtSection from "./TaskDetailSections/TaskDoubtSection.vue";
@@ -24,6 +29,7 @@ const emit = defineEmits<{
   focus: [coordinates: SeguimientoCoordinates | null];
   retry: [];
 }>();
+
 const isDoubt = computed(() => props.task?.type === "duda");
 const typeLabel = computed(() =>
   isDoubt.value
@@ -50,11 +56,47 @@ const durationLabel = computed(() =>
     ? `${props.task.estimatedMinutes} min`
     : "Sin estimación",
 );
-const currentTimeLabel = computed(() =>
-  props.task
-    ? `${Math.round(props.task.time.segundos_totales / 60)} min acumulados`
-    : null,
-);
+const visitHistory = computed(() => [...(props.task?.visits ?? [])].reverse());
+
+function formatDuration(seconds: number): string {
+  if (!seconds) return "0 min";
+  const minutes = Math.round(seconds / 60);
+  return minutes ? `${minutes} min` : `${seconds} s`;
+}
+
+function formatDate(value: string | null): string {
+  if (!value) return "Sin registro";
+  const date = new Date(value.length === 10 ? `${value}T00:00:00` : value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("es-PA", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(date);
+}
+
+function formatTime(value: string | null): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : new Intl.DateTimeFormat("es-PA", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+}
+
+function visitDuration(
+  visit: TareaSeguimientoDetail["visits"][number],
+): string {
+  if (!visit.salida_en) return "En curso";
+  const startedAt = new Date(visit.entrada_en).getTime();
+  const endedAt = new Date(visit.salida_en).getTime();
+  return Number.isFinite(startedAt) && Number.isFinite(endedAt)
+    ? formatDuration(Math.max(0, Math.round((endedAt - startedAt) / 1000)))
+    : "—";
+}
 </script>
 
 <template>
@@ -62,78 +104,82 @@ const currentTimeLabel = computed(() =>
     class="flex h-full min-h-0 flex-col bg-white shadow-[-4px_0_16px_rgb(0_0_0_/_16%)]"
     aria-label="Detalle de tarea"
   >
-    <header class="border-b border-slate-200 p-4">
-      <div class="flex items-start gap-3">
+    <header class="border-b border-slate-100 bg-white p-3.5">
+      <div class="flex items-start gap-2.5">
         <div
-          class="flex size-9 shrink-0 items-center justify-center rounded-lg"
+          class="grid size-[2.125rem] shrink-0 place-items-center rounded-[0.5625rem]"
           :class="
             isDoubt ? 'bg-warning-bg text-warning' : 'bg-second text-main'
           "
         >
-          <CircleHelp v-if="isDoubt" class="size-5" /><MapPinned
+          <CircleHelp v-if="isDoubt" class="size-[1.0625rem]" />
+          <MapPinned
             v-else-if="task?.type === 'finca'"
-            class="size-5"
-          /><ScanLine v-else class="size-5" />
+            class="size-[1.0625rem]"
+          />
+          <ScanLine v-else class="size-[1.0625rem]" />
         </div>
         <div class="min-w-0 flex-1">
-          <p
-            class="text-[10px] font-extrabold uppercase tracking-[0.14em] text-warning"
+          <h2
+            class="line-clamp-2 text-sm font-bold leading-[1.2] text-slate-900"
           >
-            {{ isDoubt ? "Duda detectada" : "Detalle de tarea" }}
-          </p>
-          <h2 class="mt-1 text-sm font-bold leading-5 text-slate-800">
             {{
               task?.instructions ||
               (loading ? "Cargando tarea" : "Tarea seleccionada")
             }}
           </h2>
-          <p class="mt-1 text-[11px] text-slate-500">
-            {{
-              isDoubt
-                ? "Señal automática para revisión operativa."
-                : "Información operativa de solo lectura."
-            }}
-          </p>
+          
         </div>
         <button
-          class="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+          class="grid size-7 shrink-0 place-items-center rounded-[0.4375rem] bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
           aria-label="Cerrar detalle"
           type="button"
           @click="emit('close')"
         >
-          <X class="size-5" />
+          <X class="size-4" />
         </button>
       </div>
-      <div v-if="task" class="mt-3 flex flex-wrap items-center gap-1.5">
+      <div v-if="task" class="mt-2.5 flex flex-wrap gap-1.5">
         <span
-          class="rounded-full bg-second px-2 py-1 text-[10px] font-bold text-main"
-          >{{ typeLabel }}</span
-        ><span
-          class="rounded-full px-2 py-1 text-[10px] font-bold"
+          class="inline-flex items-center gap-1 rounded-full bg-second px-2 py-1 text-[9px] font-extrabold text-main"
+        >
+          <span class="size-1 rounded-full bg-current" />{{ typeLabel }}
+        </span>
+        <span
+          class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-extrabold"
           :class="
             isDoubt
               ? 'bg-warning-bg text-warning'
-              : 'bg-slate-100 text-slate-600'
+              : task.status === 'activa' || task.status === 'visitada'
+                ? 'bg-success-bg text-success'
+                : task.status === 'en_ruta'
+                  ? 'bg-info-bg text-info'
+                  : 'bg-slate-100 text-slate-600'
           "
-          >{{ statusLabel }}</span
-        ><span
-          v-if="currentTimeLabel"
-          class="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500"
-          ><Clock3 class="size-3" />{{ currentTimeLabel }}</span
         >
+          <span class="size-1 rounded-full bg-current" />{{ statusLabel }}
+        </span>
+        <span
+          class="inline-flex items-center gap-1 rounded-full bg-warning-bg px-2 py-1 text-[9px] font-extrabold text-warning"
+        >
+          <span class="size-1 rounded-full bg-current" />{{
+            task.priorityLabel || "Sin prioridad"
+          }}
+        </span>
       </div>
     </header>
-    <div class="min-h-0 flex-1 overflow-y-auto p-4">
-      <div v-if="loading" class="grid gap-3" aria-live="polite">
+
+    <div class="min-h-0 flex-1 overflow-y-auto bg-[#f8f7f4] p-2.5">
+      <div v-if="loading" class="grid gap-2" aria-live="polite">
         <div
           v-for="index in 5"
           :key="index"
-          class="h-14 animate-pulse rounded-lg bg-slate-100"
+          class="h-20 animate-pulse rounded-[10px] bg-slate-200"
         />
       </div>
       <div
         v-else-if="error"
-        class="rounded-xl border border-danger/25 bg-danger-bg p-4 text-center"
+        class="rounded-[10px] border border-danger/25 bg-danger-bg p-4 text-center"
       >
         <AlertTriangle class="mx-auto size-5 text-danger" aria-hidden="true" />
         <p class="mt-2 text-xs leading-5 text-danger">{{ error }}</p>
@@ -146,77 +192,325 @@ const currentTimeLabel = computed(() =>
         </button>
       </div>
       <template v-else-if="task">
-        <TaskDoubtSection v-if="isDoubt" :task="task" />
-        <section class="border-b border-slate-100 py-4">
+        <TaskDoubtSection v-if="isDoubt" class="mb-2" :task="task" />
+
+        <section
+          class="mb-2 rounded-[10px] border border-slate-100 bg-white p-3"
+        >
           <h3
-            class="text-[11px] font-extrabold uppercase tracking-[0.1em] text-slate-600"
+            class="flex items-center gap-1.5 text-[11px] font-extrabold text-main"
           >
-            Asignación y tiempo
+            <Activity class="size-4" />Estado de la tarea
           </h3>
-          <dl class="mt-3 grid gap-2.5 text-xs">
-            <div class="flex justify-between gap-4">
-              <dt class="text-slate-500">Trabajador asignado</dt>
-              <dd
-                class="max-w-48 truncate text-right font-bold text-slate-700"
-                :title="task.assignedUserName || undefined"
+          <div class="mt-2.5 grid grid-cols-2 gap-2">
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
               >
+                Administrativo
+              </p>
+              <p class="mt-1 text-[10px] font-extrabold text-slate-700">
+                {{ task.administrativeStatusLabel || "Sin estado" }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Operativo
+              </p>
+              <p class="mt-1 text-[10px] font-extrabold text-slate-700">
+                {{ task.operationalStatusLabel || statusLabel }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Prioridad
+              </p>
+              <p class="mt-1 text-[10px] font-extrabold text-slate-700">
+                {{ task.priorityLabel || "Sin prioridad" }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Visita actual
+              </p>
+              <p class="mt-1 text-[10px] font-extrabold text-slate-700">
+                {{ task.time.visita_abierta ? "Activa" : "Sin visita activa" }}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          class="mb-2 rounded-[10px] border border-slate-100 bg-white p-3"
+        >
+          <h3
+            class="flex items-center gap-1.5 text-[11px] font-extrabold text-main"
+          >
+            <Timer class="size-4" />Tiempo en la tarea
+          </h3>
+          <div class="mt-2.5 grid grid-cols-2 gap-2">
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Tiempo total
+              </p>
+              <p class="mt-1 font-mono text-[11px] font-bold text-slate-700">
+                {{ formatDuration(task.time.segundos_totales) }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Visita actual
+              </p>
+              <p class="mt-1 font-mono text-[11px] font-bold text-slate-700">
+                {{ formatDuration(task.time.segundos_visita_abierta) }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Número de visitas
+              </p>
+              <p class="mt-1 font-mono text-[11px] font-bold text-slate-700">
+                {{ task.time.cantidad_visitas }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Sin datos
+              </p>
+              <p class="mt-1 font-mono text-[11px] font-bold text-slate-700">
+                {{ formatDuration(task.time.segundos_sin_datos) }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Primera entrada
+              </p>
+              <p class="mt-1 font-mono text-[11px] font-bold text-slate-700">
+                {{ formatTime(task.time.primera_llegada_en) }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
+              <p
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Última salida
+              </p>
+              <p class="mt-1 font-mono text-[11px] font-bold text-slate-700">
+                {{ formatTime(task.time.ultima_salida_en) }}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          class="mb-2 rounded-[10px] border border-slate-100 bg-white p-3"
+        >
+          <h3
+            class="flex items-center gap-1.5 text-[11px] font-extrabold text-main"
+          >
+            <UsersRound class="size-4" />Asignación
+          </h3>
+          <dl class="mt-2.5 grid gap-2">
+            <div
+              class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2 text-[10px]"
+            >
+              <dt
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Trabajador
+              </dt>
+              <dd class="truncate text-right font-bold text-slate-700">
                 {{ task.assignedUserName || "Sin asignar" }}
               </dd>
             </div>
-            <div class="flex justify-between gap-4">
-              <dt class="text-slate-500">Tracker / equipo</dt>
-              <dd class="text-right font-bold text-slate-700">
+            <div
+              class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2 text-[10px]"
+            >
+              <dt
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Tracker
+              </dt>
+              <dd class="truncate text-right font-bold text-slate-700">
                 {{ task.trackerLabel || "Sin asignar" }}
               </dd>
             </div>
-            <div v-if="task.companionNames.length" class="grid gap-1">
-              <dt class="text-slate-500">Acompañantes</dt>
-              <dd class="flex flex-wrap justify-end gap-1">
-                <span
-                  v-for="name in task.companionNames"
-                  :key="name"
-                  class="rounded-full bg-second px-2 py-0.5 text-[11px] font-bold text-main"
-                >
-                  {{ name }}
-                </span>
-              </dd>
-            </div>
-            <div class="flex justify-between gap-4">
-              <dt class="text-slate-500">Fecha programada</dt>
+            <div
+              v-if="task.companionNames.length"
+              class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2 text-[10px]"
+            >
+              <dt
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Acompañantes
+              </dt>
               <dd class="text-right font-bold text-slate-700">
-                {{ task.scheduledDate }}
+                {{ task.companionNames.join(", ") }}
               </dd>
             </div>
-            <div class="flex justify-between gap-4">
-              <dt class="text-slate-500">Duración estimada</dt>
-              <dd class="font-bold text-slate-700">{{ durationLabel }}</dd>
-            </div>
-            <div class="flex justify-between gap-4">
-              <dt class="text-slate-500">Visitas</dt>
-              <dd class="font-bold text-slate-700">
-                {{ task.time.cantidad_visitas
-                }}{{ task.time.visita_abierta ? " (una activa)" : "" }}
+            <div
+              class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2 text-[10px]"
+            >
+              <dt
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Tipo
+              </dt>
+              <dd class="text-right font-bold text-slate-700">
+                {{ typeLabel }}
               </dd>
             </div>
           </dl>
         </section>
+
+        <section
+          class="mb-2 rounded-[10px] border border-slate-100 bg-white p-3"
+        >
+          <h3
+            class="flex items-center gap-1.5 text-[11px] font-extrabold text-main"
+          >
+            <FileText class="size-4" />Detalles
+          </h3>
+          <dl class="mt-2.5 grid gap-2">
+            <div
+              class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2 text-[10px]"
+            >
+              <dt
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Indicaciones
+              </dt>
+              <dd class="text-right font-bold leading-[1.35] text-slate-700">
+                {{ task.instructions || "Sin indicaciones" }}
+              </dd>
+            </div>
+            <div
+              class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2 text-[10px]"
+            >
+              <dt
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Fecha
+              </dt>
+              <dd class="text-right font-bold text-slate-700">
+                {{ formatDate(task.scheduledDate) }}
+              </dd>
+            </div>
+            <div
+              class="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-2 text-[10px]"
+            >
+              <dt
+                class="text-[8px] font-extrabold uppercase tracking-[0.04em] text-slate-400"
+              >
+                Duración estimada
+              </dt>
+              <dd class="font-mono text-right font-bold text-slate-700">
+                {{ durationLabel }}
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section
+          class="mb-2 rounded-[10px] border border-slate-100 bg-white p-3"
+        >
+          <div class="flex items-center justify-between gap-2">
+            <h3
+              class="flex items-center gap-1.5 text-[11px] font-extrabold text-main"
+            >
+              <History class="size-4" />Historial de visitas
+            </h3>
+            <span
+              class="rounded-full bg-info-bg px-2 py-0.5 text-[8px] font-extrabold text-info"
+              >{{ task.visits.length }} visitas</span
+            >
+          </div>
+          <div
+            v-if="visitHistory.length"
+            class="relative mt-2.5 grid gap-2 border-l border-slate-200 pl-3"
+          >
+            <article
+              v-for="(visit, index) in visitHistory"
+              :key="visit.id"
+              class="relative rounded-lg border border-slate-100 bg-white p-2 before:absolute before:-left-[1.05rem] before:top-3 before:size-2 before:rounded-full before:border-2 before:border-info before:bg-white"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <strong class="text-[10px] text-slate-700"
+                  >Visita {{ task.visits.length - index }}</strong
+                ><span
+                  class="rounded-full px-1.5 py-0.5 text-[8px] font-extrabold"
+                  :class="
+                    visit.salida_en
+                      ? 'bg-slate-100 text-slate-600'
+                      : 'bg-success-bg text-success'
+                  "
+                  >{{ visit.salida_en ? "Cerrada" : "En curso" }}</span
+                >
+              </div>
+              <div class="mt-2 grid grid-cols-3 gap-2 text-[8px]">
+                <div>
+                  <p class="uppercase text-slate-400">Entrada</p>
+                  <b class="mt-0.5 block font-mono text-slate-700">{{
+                    formatTime(visit.entrada_en)
+                  }}</b>
+                </div>
+                <div>
+                  <p class="uppercase text-slate-400">Salida</p>
+                  <b class="mt-0.5 block font-mono text-slate-700">{{
+                    formatTime(visit.salida_en)
+                  }}</b>
+                </div>
+                <div>
+                  <p class="uppercase text-slate-400">Duración</p>
+                  <b class="mt-0.5 block font-mono text-slate-700">{{
+                    visitDuration(visit)
+                  }}</b>
+                </div>
+              </div>
+            </article>
+          </div>
+          <p v-else class="mt-2.5 text-[10px] text-slate-500">
+            No hay visitas registradas para esta tarea.
+          </p>
+        </section>
+
         <TaskGeometrySection
-          class="py-4"
+          class="mb-2"
           :task="task"
           @focus="emit('focus', $event)"
         />
-        <section v-if="!isDoubt" class="py-4">
+
+        <section
+          v-if="!isDoubt"
+          class="rounded-[10px] border border-slate-100 bg-white p-3"
+        >
           <h3
-            class="text-[11px] font-extrabold uppercase tracking-[0.1em] text-slate-600"
+            class="flex items-center gap-1.5 text-[11px] font-extrabold text-main"
           >
-            Ruta
+            <Route class="size-4" />Posición en ruta
           </h3>
-          <div class="mt-3 flex items-center gap-3 rounded-lg bg-slate-50 p-3">
+          <div class="mt-2.5 flex items-center gap-2.5">
             <span
-              class="flex size-7 items-center justify-center rounded-full bg-main text-xs font-extrabold text-white"
+              class="grid size-7 shrink-0 place-items-center rounded-full bg-main text-[10px] font-extrabold text-white"
               >{{ task.routeOrder ?? "—" }}</span
             >
-            <p class="text-xs text-slate-600">
+            <p class="text-[10px] leading-[1.35] text-slate-600">
               {{
                 task.route?.id
                   ? `Posición en ruta (${task.route.estado_calculo || "sin estado"})`

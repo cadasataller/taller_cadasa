@@ -150,14 +150,21 @@ export interface TareaRastreoDetalleDto {
   };
   estado: {
     prioridad_id: number | null;
+    prioridad_nombre: string | null;
     estado_tarea_codigo: string;
+    estado_tarea_nombre: string | null;
     estado_operativo_codigo: TareaRastreoEstadoOperativoCodigo | null;
     estado_operativo_nombre: string | null;
   };
   tiempo: {
     cantidad_visitas: number;
     segundos_totales: number;
+    segundos_visita_abierta: number;
+    segundos_sin_datos: number;
     visita_abierta: boolean;
+    llegada_actual_en: string | null;
+    primera_llegada_en: string | null;
+    ultima_salida_en: string | null;
   };
   visitas: Array<{ id: string; entrada_en: string; salida_en: string | null }>;
   ruta: { id: string | null; estado_calculo: string | null } | null;
@@ -198,7 +205,9 @@ export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
   companionNames: string[];
   controlLine: SeguimientoLineGeometry | null;
   controlZones: SeguimientoZoneGeometry[];
+  administrativeStatusLabel: string | null;
   operationalStatusLabel: string | null;
+  priorityLabel: string | null;
   time: TareaRastreoDetalleDto["tiempo"];
   visits: TareaRastreoDetalleDto["visitas"];
   route: TareaRastreoDetalleDto["ruta"];

@@ -89,7 +89,7 @@ export function mapTareaSeguimientoDetail(
     sourceId: asignacion.source_id,
     trackerLabel: asignacion.tracker_label,
     elapsedSeconds: response.tiempo.segundos_totales,
-    currentVisitSeconds: 0,
+    currentVisitSeconds: response.tiempo.segundos_visita_abierta,
     hasOpenVisit: response.tiempo.visita_abierta,
     assignedUserName: asignacion.usuario_nombre,
     companionNames: asignacion.acompanantes.map(
@@ -99,7 +99,9 @@ export function mapTareaSeguimientoDetail(
     routeOrder: tarea.orden_ruta,
     controlLine: tarea.linea_control,
     controlZones: tarea.zonas_control.map((zone) => zone.geom),
+    administrativeStatusLabel: estado.estado_tarea_nombre,
     operationalStatusLabel: estado.estado_operativo_nombre,
+    priorityLabel: estado.prioridad_nombre,
     time: response.tiempo,
     visits: response.visitas,
     route: response.ruta ?? { id: null, estado_calculo: null },

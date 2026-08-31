@@ -47,7 +47,9 @@ export const tareaRastreoDetalleSchema = z.object({
   }),
   estado: z.object({
     prioridad_id: z.number().nullable(),
+    prioridad_nombre: z.string().nullable(),
     estado_tarea_codigo: z.string(),
+    estado_tarea_nombre: z.string().nullable(),
     estado_operativo_codigo: z
       .enum(["sin_iniciar", "en_ruta", "en_ubicacion", "visitada"])
       .nullable(),
@@ -56,7 +58,12 @@ export const tareaRastreoDetalleSchema = z.object({
   tiempo: z.object({
     cantidad_visitas: z.number(),
     segundos_totales: z.number(),
+    segundos_visita_abierta: z.number(),
+    segundos_sin_datos: z.number(),
     visita_abierta: z.boolean(),
+    llegada_actual_en: z.string().nullable(),
+    primera_llegada_en: z.string().nullable(),
+    ultima_salida_en: z.string().nullable(),
   }),
   visitas: z.array(
     z.object({
