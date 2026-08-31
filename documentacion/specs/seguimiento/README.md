@@ -27,7 +27,7 @@ La documentación se separa en:
 - El módulo padre se llama `Seguimiento`.
 - La primera subruta es `Tareas`.
 - Debe existir una estrategia de permisos por acción desde el diseño, aunque la matriz real aún no esté publicada.
-- Mientras no existan permisos definitivos, se permitirá una simulación temporal de acceso para `testjl@cadasa.com`.
+- La matriz inicial bloquea el módulo por defecto y concede acceso formal sólo a `testjl@cadasa.com`.
 - Deben existir tres fases funcionales:
   1. visualización;
   2. creación;
@@ -77,15 +77,15 @@ tareas/
 3. Implementar `tareas/fase-1-visualizacion`.
 4. Implementar `tareas/fase-2-creacion`.
 5. Implementar `tareas/fase-3-actualizacion`.
-6. Integrar pruebas, endurecimiento de permisos y retiro del fallback temporal de desarrollo.
+6. Integrar pruebas y ampliar la matriz de permisos por perfil cuando se confirme.
 
 ## Reglas transversales del módulo
 
 - La ruta de vista debe ser una superficie de composición delgada.
 - El mapa es parte del workspace central, no un widget secundario.
 - La lógica de permisos no debe duplicarse entre router, layout y componentes.
-- La simulación temporal para desarrollo debe vivir encapsulada en un único punto.
-- Debe diseñarse permisos por acción aunque temporalmente un usuario de prueba obtenga acceso total.
+- La matriz de `app_feature_access` debe ser la única fuente de permisos por correo.
+- Deben mantenerse permisos por acción aunque inicialmente sólo un usuario tenga acceso total.
 - `Dudas` no debe mezclarse como simple badge visual; debe modelarse como variante funcional con capacidades restringidas.
 - No acoplar las fases de visualización, creación y actualización en un solo spec gigante.
 - No asumir que toda interacción del mockup entra en la primera entrega.
@@ -98,7 +98,7 @@ Al terminar los specs `shared`, el proyecto debe tener definidas:
 
 - la ruta canónica y la ubicación del módulo en navegación;
 - la taxonomía preliminar de permisos;
-- la simulación temporal de permisos para desarrollo;
+- la matriz inicial de permisos persistida;
 - el alcance transversal de mapa, trackers y proveedores externos;
 - el modelo base de tipos de tarea y sus capacidades mínimas;
 - la frontera entre decisiones del módulo y decisiones propias del submódulo `tareas`.

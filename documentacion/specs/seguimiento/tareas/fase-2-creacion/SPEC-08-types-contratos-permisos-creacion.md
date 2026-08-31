@@ -83,7 +83,7 @@ Si la política final decide granularidad más fina, la fase 2 igual debe poder 
 - Un usuario puede ver tareas sin poder crear.
 - El botón o trigger de nueva tarea no debe mostrarse sólo por tener acceso de lectura.
 - Si falta permiso de geometría o tracker, la UI no debe simular guardado exitoso.
-- El fallback temporal de `testjl@cadasa.com` puede atravesar el flujo en desarrollo, pero no elimina la necesidad de checks por capacidad.
+- La matriz inicial concede el flujo a `testjl@cadasa.com`, pero no elimina la necesidad de checks por capacidad.
 
 ## Frontera de contratos
 

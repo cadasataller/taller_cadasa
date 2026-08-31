@@ -64,7 +64,7 @@ acción de aplicar / ir
 
 - Si el usuario no tiene acceso al mapa, la barra no debe exponer acciones que dependan de él.
 - Si no tiene acceso a trackers, el filtro correspondiente puede ocultarse o quedar informativo según política futura.
-- En el fallback temporal de desarrollo, la UI sigue respetando el diseño de permisos, aunque el usuario de prueba vea todo.
+- La UI sigue respetando el diseño de permisos aunque la matriz inicial conceda todas las capacidades a `testjl@cadasa.com`.
 
 ## Herramientas del mapa
 

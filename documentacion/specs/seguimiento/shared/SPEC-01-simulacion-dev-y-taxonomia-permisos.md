@@ -1,67 +1,45 @@
-# SPEC-01 — Simulación temporal de desarrollo y taxonomía de permisos
+# SPEC-01 — Matriz inicial y taxonomía de permisos
 
 ## Objetivo
 
 Definir dos cosas antes de implementar lógica funcional:
 
-1. una simulación temporal de permisos para desarrollo;
+1. la matriz inicial de permisos persistida en `app_feature` y `app_feature_access`;
 2. una taxonomía preliminar de permisos por acción y por capacidad.
 
-Este spec existe para permitir avance controlado mientras la matriz oficial de permisos aún no está publicada.
+Este spec fija una política inicial controlada mientras se completa la matriz definitiva por perfiles.
 
 ## Contexto confirmado
 
-- Los permisos reales todavía no están definidos.
+- La matriz por perfiles finales todavía no está definida.
 - Deben existir permisos diferenciados para trabajador, supervisor y administrador.
-- Durante desarrollo se necesita que `testjl@cadasa.com` pueda atravesar el flujo sin esperar el alta formal de permisos.
-- La simulación temporal no debe degradar el diseño definitivo.
+- Durante desarrollo, `testjl@cadasa.com` requiere acceso formal al módulo.
+- La política debe permanecer centralizada en la fuente real de permisos.
 
-## Regla temporal de desarrollo
+## Política inicial de acceso
 
-Mientras no exista la matriz oficial:
+La fuente de verdad es `app_feature` y `app_feature_access`:
 
-- `testjl@cadasa.com` puede recibir respuesta positiva para los permisos del módulo `seguimiento`;
-- esa excepción debe vivir en un único punto de integración;
-- ningún otro correo debe depender de reglas ocultas o dispersas;
-- el comportamiento debe poder retirarse sin tocar componentes de UI.
+- las funcionalidades de `seguimiento` se crean con `visible_por_defecto = false`;
+- todos los accesos previos al módulo se marcan con `puede_ver = false`;
+- `testjl@cadasa.com` recibe `puede_ver = true` para las 18 funcionalidades definidas;
+- ningún otro correo recibe acceso positivo mientras no se publique una matriz adicional;
+- la resolución se consume mediante `obtener_funcionalidades_permitidas`, sin reglas ocultas en UI.
 
-## Alcance del fallback temporal
-
-El fallback temporal puede devolver `true` para permisos de `seguimiento` solamente si:
-
-1. el usuario autenticado coincide exactamente con `testjl@cadasa.com`;
-2. la verificación solicitada pertenece al espacio de permisos de `seguimiento`;
-3. la fuente real de permisos aún no provee la matriz oficial.
-
-No debe activar permisos de otros módulos no relacionados.
-
-## Ubicación arquitectónica permitida
-
-La simulación debe ubicarse en uno solo de estos niveles:
+El script ejecutable se encuentra en:
 
 ```txt
-adaptador de permisos
-store de feature access
-helper único consumido por el store
+documentacion/specs/seguimiento/shared/sql/01-permisos-seguimiento-solo-testjl.sql
 ```
 
-No debe vivir en:
+## Estrategia de ampliación
 
-```txt
-router + layout + view
-componentes sueltos
-composables de pantalla
-templates
-```
+La matriz se podrá ampliar cuando se definan perfiles reales:
 
-## Estrategia de retiro
-
-La implementación futura debe permitir retirar la simulación cuando se cumplan estas condiciones:
-
-1. ya existe matriz real de permisos para seguimiento;
-2. `app_feature_access` o su fuente equivalente retorna permisos definitivos;
-3. las pruebas cubren acceso de trabajador, supervisor y administrador;
-4. se elimina la excepción de `testjl@cadasa.com` sin cambiar contratos públicos.
+1. se insertan o actualizan explícitamente los registros de `app_feature_access` por correo;
+2. se mantienen `visible_por_defecto = false` y el mismo `feature_key`;
+3. se prueban los accesos de trabajador, supervisor y administrador;
+4. no se cambian los contratos públicos ni las verificaciones de router, layout o componentes.
 
 ## Taxonomía preliminar de permisos
 
@@ -147,15 +125,15 @@ Esta matriz es conceptual y no reemplaza la matriz oficial futura.
 
 ## No hacer
 
-- No dejar el correo temporal hardcodeado en varios archivos.
+- No dejar reglas de correo hardcodeadas en router, layout, vistas o componentes.
 - No devolver `true` global para cualquier permiso.
-- No usar el fallback temporal como sustituto permanente del modelo de permisos.
+- No sustituir `app_feature_access` con un fallback temporal una vez aplicada la matriz.
 - No colapsar varios permisos diferentes en uno solo de “admin seguimiento”.
 - No asumir que trabajador, supervisor y administrador comparten el mismo set.
 
 ## Criterios de aceptación
 
-- Queda documentada la excepción temporal para `testjl@cadasa.com`.
-- Queda documentado que la excepción debe vivir en un único punto.
+- Queda documentada la política inicial exclusiva para `testjl@cadasa.com`.
+- Queda documentada la fuente de verdad de los accesos.
 - Existe una taxonomía inicial de permisos por capacidad.
 - La estructura soporta fases de visualización, creación y actualización sin rediseñar permisos.

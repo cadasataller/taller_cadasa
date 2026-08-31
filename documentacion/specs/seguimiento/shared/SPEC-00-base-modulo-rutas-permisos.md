@@ -30,7 +30,7 @@ documentacion/specs/seguimiento/README.md
 - El módulo debe admitir crecimiento futuro sin rehacer la navegación.
 - Debe existir protección por funcionalidades desde el primer día.
 - La matriz definitiva de permisos aún no existe, pero el diseño del árbol de permisos sí debe quedar fijado.
-- Durante la etapa de desarrollo puede existir una simulación temporal para `testjl@cadasa.com`, documentada en el siguiente spec.
+- Durante la etapa de desarrollo, la matriz inicial concede acceso formal a `testjl@cadasa.com`, documentada en el siguiente spec.
 
 ## Arquitectura de navegación objetivo
 

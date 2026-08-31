@@ -131,7 +131,7 @@ ver_mapa_seguimiento
 ver_tracker_tarea_seguimiento
 ```
 
-En desarrollo, `testjl@cadasa.com` puede atravesar este flujo según la simulación temporal definida en `shared/SPEC-01`.
+En desarrollo, `testjl@cadasa.com` puede atravesar este flujo mediante la matriz inicial persistida definida en `shared/SPEC-01`.
 
 ## No hacer
 
