@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+import {
+  ref,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+  watch,
+  shallowRef,
+  useTemplateRef,
+} from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter, useRoute } from "vue-router";
 import {
@@ -29,8 +37,10 @@ import {
   Book, // Agregado el icono para Catálogo
   Droplets,
   ChevronDown,
+  ChevronUp,
   X,
   MapPinned,
+  MoreHorizontal,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -40,7 +50,12 @@ const filtrosCatalogoStore = useFiltrosCatalogoStore();
 const aceitesCatalogoStore = useAceitesCatalogoStore();
 const sistemasCatalogoStore = useSistemasCatalogoStore();
 const { isLoaded: isFeatureAccessLoaded } = storeToRefs(featureAccessStore);
-const isSidebarOpen = ref(true);
+const isSidebarOpen = shallowRef(false);
+const sidebarNav = useTemplateRef<HTMLElement>("sidebarNav");
+const isSidebarNavAtTop = shallowRef(true);
+const isSidebarNavAtBottom = shallowRef(true);
+const desktopFloatingGroup = shallowRef<"engrase" | "seguimiento" | null>(null);
+const desktopFloatingPanelTop = shallowRef(0);
 const isPreparingSolicitudCompraCreate = ref(false);
 const { dashboardHeaderNavState, selectDashboardHeaderSlide } =
   useDashboardHeaderNav();
@@ -62,9 +77,9 @@ const CREATE_SOLICITUD_FEATURE = "crear_solicitud_compra";
 const MODULE_ENGRASE_FEATURE = "module_engrase";
 const VIEW_FILTROS_ENGRASE_FEATURE = "ver_filtros_engrase";
 const engraseDesktopOpen = ref(false);
+const mobileMoreOpen = ref(false);
 const mobileEngraseOpen = ref(false);
 const seguimientoDesktopOpen = ref(false);
-const mobileSeguimientoOpen = ref(false);
 
 const allMenuItems = [
   {
@@ -148,20 +163,47 @@ const isFiltrosEngraseRoute = computed(
   () =>
     route.path.startsWith("/engrase/filtros") && !isCatalogoEngraseRoute.value,
 );
-watch(
-  isEngraseRoute,
-  (active) => {
-    if (active) engraseDesktopOpen.value = true;
-  },
-  { immediate: true },
-);
-watch(
-  isSeguimientoRoute,
-  (active) => {
-    if (active) seguimientoDesktopOpen.value = true;
-  },
-  { immediate: true },
-);
+const updateSidebarNavScrollState = (): void => {
+  const nav = sidebarNav.value;
+  if (!nav) return;
+
+  isSidebarNavAtTop.value = nav.scrollTop <= 1;
+  isSidebarNavAtBottom.value =
+    nav.scrollTop + nav.clientHeight >= nav.scrollHeight - 1;
+};
+
+const toggleDesktopNavigationGroup = (
+  group: "engrase" | "seguimiento",
+  event: MouseEvent,
+): void => {
+  if (!isSidebarOpen.value) {
+    const trigger = event.currentTarget as HTMLElement;
+    const sidebar = document.getElementById("desktop-sidebar-container");
+
+    if (sidebar) {
+      desktopFloatingPanelTop.value =
+        trigger.getBoundingClientRect().top -
+        sidebar.getBoundingClientRect().top;
+    }
+
+    desktopFloatingGroup.value =
+      desktopFloatingGroup.value === group ? null : group;
+    return;
+  }
+
+  if (group === "engrase") {
+    engraseDesktopOpen.value = !engraseDesktopOpen.value;
+    seguimientoDesktopOpen.value = false;
+    return;
+  }
+
+  seguimientoDesktopOpen.value = !seguimientoDesktopOpen.value;
+  engraseDesktopOpen.value = false;
+};
+
+const closeDesktopFloatingGroup = (): void => {
+  desktopFloatingGroup.value = null;
+};
 
 const menuItems = computed(() =>
   allMenuItems.filter(
@@ -169,6 +211,50 @@ const menuItems = computed(() =>
       isFeatureAccessLoaded.value &&
       featureAccessStore.tieneFuncionalidad(item.requiredFeature),
   ),
+);
+
+const dashboardMenuItems = computed(() =>
+  menuItems.value.filter((item) => item.path === "/dashboard"),
+);
+const operationMenuItems = computed(() =>
+  menuItems.value.filter((item) =>
+    ["/mantenimiento", "/reparaciones", "/calificaciones"].includes(item.path),
+  ),
+);
+const managementMenuItems = computed(() =>
+  menuItems.value.filter((item) =>
+    ["/compras", "/catalogo"].includes(item.path),
+  ),
+);
+const systemMenuItems = computed(() =>
+  menuItems.value.filter((item) => item.path === "/panel-admin"),
+);
+const mobilePrimaryItems = computed(() => {
+  const primaryPaths = ["/dashboard", "/mantenimiento", "/compras"];
+  const primaryItems = menuItems.value.filter((item) =>
+    primaryPaths.includes(item.path),
+  );
+
+  if (canSeeSeguimientoTareas.value) {
+    primaryItems.splice(2, 0, {
+      name: "Seguimiento",
+      path: "/seguimiento/tareas",
+      icon: MapPinned,
+      requiredFeature: SEGUIMIENTO_FEATURES.viewTasks,
+    });
+  }
+
+  return primaryItems;
+});
+const mobileMoreItems = computed(() =>
+  menuItems.value.filter(
+    (item) => !["/dashboard", "/mantenimiento", "/compras"].includes(item.path),
+  ),
+);
+const isMobileMoreActive = computed(
+  () =>
+    isEngraseRoute.value ||
+    mobileMoreItems.value.some((item) => isActive(item.path)),
 );
 
 const viewTitle = computed(() => {
@@ -262,6 +348,7 @@ watch(
 );
 
 onMounted(async () => {
+  window.addEventListener("resize", updateSidebarNavScrollState);
   window.addEventListener(
     "prepare-open-solicitud-compra",
     handlePrepareSolicitudCompraCreate,
@@ -290,9 +377,16 @@ onMounted(async () => {
       userProfile.value = data;
     }
   }
+
+  requestAnimationFrame(updateSidebarNavScrollState);
+});
+
+watch(menuItems, () => requestAnimationFrame(updateSidebarNavScrollState), {
+  flush: "post",
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateSidebarNavScrollState);
   window.removeEventListener(
     "prepare-open-solicitud-compra",
     handlePrepareSolicitudCompraCreate,
@@ -345,120 +439,311 @@ const isActive = (path: string) =>
     <aside
       v-if="!hideDefaultLayout"
       id="desktop-sidebar-container"
-      class="hidden md:flex flex-col w-64 bg-main-dark text-white p-6 transition-all duration-300 relative z-20"
-      :class="{ '-ml-64': !isSidebarOpen }"
+      class="hidden lg:flex flex-col bg-main-dark text-white transition-[width,padding] duration-300 relative z-20 overflow-visible"
+      :class="isSidebarOpen ? 'w-56 p-5' : 'w-14 p-2'"
     >
-      <div class="mb-10">
-        <h1 class="font-display text-2xl text-accent tracking-widest">
-          CADASA
-        </h1>
-        <p class="text-[10px] text-second-deep tracking-[0.2em] uppercase">
-          Gestión Operativa
-        </p>
+      <div
+        class="mb-4 flex"
+        :class="isSidebarOpen ? 'justify-end' : 'justify-center'"
+      >
+        <button
+          type="button"
+          class="rounded-lg p-2 text-accent transition-colors hover:bg-white/10 hover:text-white"
+          :aria-label="isSidebarOpen ? 'Contraer sidebar' : 'Expandir sidebar'"
+          @click="
+            isSidebarOpen = !isSidebarOpen;
+            closeDesktopFloatingGroup();
+          "
+        >
+          <Menu class="h-5 w-5" />
+        </button>
       </div>
 
-      <nav class="flex-1 space-y-2">
-        <router-link
-          v-for="item in menuItems"
-          :key="item.path"
-          :to="item.path"
-          class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all group"
-          :class="[
-            isActive(item.path)
-              ? 'bg-main text-accent'
-              : 'text-gray-400 hover:bg-main hover:text-white',
-          ]"
+      <div class="relative min-h-0 flex-1">
+        <div
+          v-show="!isSidebarNavAtTop"
+          class="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-10 justify-center bg-gradient-to-b from-main-dark via-main-dark/90 to-transparent pt-1 text-accent shadow-[0_8px_14px_rgba(0,0,0,0.22)]"
+          aria-hidden="true"
         >
-          <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
-          <span class="font-medium text-sm">{{ item.name }}</span>
-        </router-link>
-        <div v-if="canSeeEngrase" class="space-y-1">
-          <button
-            type="button"
-            class="flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all"
-            :class="
-              isEngraseRoute
-                ? 'bg-main text-accent'
-                : 'text-gray-400 hover:bg-main hover:text-white'
-            "
-            @click="engraseDesktopOpen = !engraseDesktopOpen"
-            :aria-expanded="engraseDesktopOpen"
-          >
-            <Droplets class="w-5 h-5 flex-shrink-0" /><span
-              class="font-medium text-sm flex-1 text-left"
-              >Engrase</span
-            ><ChevronDown
-              class="w-4 h-4 transition-transform"
-              :class="{ 'rotate-180': engraseDesktopOpen }"
-            />
-          </button>
-          <div v-if="engraseDesktopOpen" class="ml-5 space-y-1">
-            <router-link
-              v-if="canSeeFiltrosEngrase"
-              to="/engrase/filtros"
-              class="flex items-center rounded-lg px-4 py-2.5 text-sm"
-              :class="
-                isFiltrosEngraseRoute
-                  ? 'bg-white/10 text-white'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
-              "
-              >Filtros</router-link
-            >
-            <router-link
-              v-if="canSeeCatalogoEngrase"
-              to="/engrase/catalogo"
-              class="flex items-center rounded-lg px-4 py-2.5 text-sm"
-              :class="
-                isCatalogoEngraseRoute
-                  ? 'bg-white/10 text-white'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
-              "
-              >Catálogo</router-link
-            >
-          </div>
+          <ChevronUp class="h-4 w-4" />
         </div>
-        <div v-if="canSeeSeguimiento" class="space-y-1">
-          <button
-            type="button"
-            class="flex w-full items-center gap-3 px-4 py-3 rounded-xl transition-all"
-            :class="
-              isSeguimientoRoute
-                ? 'bg-main text-accent'
-                : 'text-gray-400 hover:bg-main hover:text-white'
-            "
-            @click="seguimientoDesktopOpen = !seguimientoDesktopOpen"
-            :aria-expanded="seguimientoDesktopOpen"
-          >
-            <MapPinned class="w-5 h-5 flex-shrink-0" /><span
-              class="font-medium text-sm flex-1 text-left"
-              >Seguimiento</span
-            ><ChevronDown
-              class="w-4 h-4 transition-transform"
-              :class="{ 'rotate-180': seguimientoDesktopOpen }"
-            />
-          </button>
-          <div v-if="seguimientoDesktopOpen" class="ml-5 space-y-1">
+        <nav
+          ref="sidebarNav"
+          class="sidebar-nav-scroll h-full space-y-5 overflow-y-auto overscroll-contain pr-1"
+          @scroll="updateSidebarNavScrollState"
+        >
+          <div class="space-y-2">
             <router-link
-              v-if="canSeeSeguimientoTareas"
-              to="/seguimiento/tareas"
-              class="flex items-center rounded-lg px-4 py-2.5 text-sm"
-              :class="
-                isSeguimientoRoute
-                  ? 'bg-white/10 text-white'
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
-              "
-              >Tareas</router-link
+              v-for="item in dashboardMenuItems"
+              :key="item.path"
+              :to="item.path"
+              :title="item.name"
+              class="group relative flex items-center rounded-xl transition-all"
+              :class="[
+                isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
+                isActive(item.path)
+                  ? 'bg-main text-accent'
+                  : 'text-gray-400 hover:bg-main hover:text-white',
+              ]"
             >
+              <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
+              <span v-if="isSidebarOpen" class="font-medium text-sm">{{
+                item.name
+              }}</span>
+              <span v-else class="sidebar-tooltip">{{ item.name }}</span>
+            </router-link>
           </div>
+
+          <div
+            v-if="
+              operationMenuItems.length || canSeeEngrase || canSeeSeguimiento
+            "
+            class="space-y-2"
+          >
+            <p
+              v-if="isSidebarOpen"
+              class="px-4 text-[10px] font-bold uppercase tracking-[0.18em] text-second-deep"
+            >
+              Operación
+            </p>
+            <router-link
+              v-for="item in operationMenuItems"
+              :key="item.path"
+              :to="item.path"
+              :title="item.name"
+              class="group relative flex items-center rounded-xl transition-all"
+              :class="[
+                isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
+                isActive(item.path)
+                  ? 'bg-main text-accent'
+                  : 'text-gray-400 hover:bg-main hover:text-white',
+              ]"
+            >
+              <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
+              <span v-if="isSidebarOpen" class="font-medium text-sm">{{
+                item.name
+              }}</span>
+              <span v-else class="sidebar-tooltip">{{ item.name }}</span>
+            </router-link>
+            <div v-if="canSeeEngrase" class="relative space-y-1">
+              <button
+                type="button"
+                title="Engrase"
+                class="group relative flex w-full items-center rounded-xl transition-all"
+                :class="[
+                  isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
+                  isEngraseRoute
+                    ? 'bg-main text-accent'
+                    : 'text-gray-400 hover:bg-main hover:text-white',
+                ]"
+                @click="toggleDesktopNavigationGroup('engrase', $event)"
+                :aria-expanded="engraseDesktopOpen"
+              >
+                <Droplets class="w-5 h-5 flex-shrink-0" /><span
+                  v-if="isSidebarOpen"
+                  class="font-medium text-sm flex-1 text-left"
+                  >Engrase</span
+                ><ChevronDown
+                  v-if="isSidebarOpen"
+                  class="w-4 h-4 transition-transform"
+                  :class="{ 'rotate-180': engraseDesktopOpen }"
+                />
+                <span v-if="!isSidebarOpen" class="sidebar-tooltip"
+                  >Engrase</span
+                >
+              </button>
+              <div
+                v-if="isSidebarOpen && engraseDesktopOpen"
+                class="ml-5 space-y-1"
+              >
+                <router-link
+                  v-if="canSeeFiltrosEngrase"
+                  to="/engrase/filtros"
+                  class="flex items-center rounded-lg px-4 py-2.5 text-sm"
+                  :class="
+                    isFiltrosEngraseRoute
+                      ? 'bg-white/10 text-white'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  "
+                  @click="engraseDesktopOpen = false"
+                  >Filtros</router-link
+                >
+                <router-link
+                  v-if="canSeeCatalogoEngrase"
+                  to="/engrase/catalogo"
+                  class="flex items-center rounded-lg px-4 py-2.5 text-sm"
+                  :class="
+                    isCatalogoEngraseRoute
+                      ? 'bg-white/10 text-white'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  "
+                  @click="engraseDesktopOpen = false"
+                  >Catálogo</router-link
+                >
+              </div>
+            </div>
+            <div v-if="canSeeSeguimiento" class="relative space-y-1">
+              <button
+                type="button"
+                title="Seguimiento"
+                class="group relative flex w-full items-center rounded-xl transition-all"
+                :class="[
+                  isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
+                  isSeguimientoRoute
+                    ? 'bg-main text-accent'
+                    : 'text-gray-400 hover:bg-main hover:text-white',
+                ]"
+                @click="toggleDesktopNavigationGroup('seguimiento', $event)"
+                :aria-expanded="seguimientoDesktopOpen"
+              >
+                <MapPinned class="w-5 h-5 flex-shrink-0" /><span
+                  v-if="isSidebarOpen"
+                  class="font-medium text-sm flex-1 text-left"
+                  >Seguimiento</span
+                ><ChevronDown
+                  v-if="isSidebarOpen"
+                  class="w-4 h-4 transition-transform"
+                  :class="{ 'rotate-180': seguimientoDesktopOpen }"
+                />
+                <span v-if="!isSidebarOpen" class="sidebar-tooltip"
+                  >Seguimiento</span
+                >
+              </button>
+              <div
+                v-if="isSidebarOpen && seguimientoDesktopOpen"
+                class="ml-5 space-y-1"
+              >
+                <router-link
+                  v-if="canSeeSeguimientoTareas"
+                  to="/seguimiento/tareas"
+                  class="flex items-center rounded-lg px-4 py-2.5 text-sm"
+                  :class="
+                    isSeguimientoRoute
+                      ? 'bg-white/10 text-white'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  "
+                  @click="seguimientoDesktopOpen = false"
+                  >Tareas</router-link
+                >
+              </div>
+            </div>
+          </div>
+
+          <div v-if="managementMenuItems.length" class="space-y-2">
+            <p
+              v-if="isSidebarOpen"
+              class="px-4 text-[10px] font-bold uppercase tracking-[0.18em] text-second-deep"
+            >
+              Gestión
+            </p>
+            <router-link
+              v-for="item in managementMenuItems"
+              :key="item.path"
+              :to="item.path"
+              :title="item.name"
+              class="group relative flex items-center rounded-xl transition-all"
+              :class="[
+                isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
+                isActive(item.path)
+                  ? 'bg-main text-accent'
+                  : 'text-gray-400 hover:bg-main hover:text-white',
+              ]"
+            >
+              <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
+              <span v-if="isSidebarOpen" class="font-medium text-sm">{{
+                item.name
+              }}</span>
+              <span v-else class="sidebar-tooltip">{{ item.name }}</span>
+            </router-link>
+          </div>
+
+          <div v-if="systemMenuItems.length" class="space-y-2">
+            <p
+              v-if="isSidebarOpen"
+              class="px-4 text-[10px] font-bold uppercase tracking-[0.18em] text-second-deep"
+            >
+              Sistema
+            </p>
+            <router-link
+              v-for="item in systemMenuItems"
+              :key="item.path"
+              :to="item.path"
+              :title="item.name"
+              class="group relative flex items-center rounded-xl transition-all"
+              :class="[
+                isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3',
+                isActive(item.path)
+                  ? 'bg-main text-accent'
+                  : 'text-gray-400 hover:bg-main hover:text-white',
+              ]"
+            >
+              <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
+              <span v-if="isSidebarOpen" class="font-medium text-sm">{{
+                item.name
+              }}</span>
+              <span v-else class="sidebar-tooltip">{{ item.name }}</span>
+            </router-link>
+          </div>
+        </nav>
+        <div
+          v-show="!isSidebarNavAtBottom"
+          class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex h-12 items-end justify-center bg-gradient-to-t from-main-dark via-main-dark/90 to-transparent pb-1 text-accent shadow-[0_-8px_14px_rgba(0,0,0,0.22)]"
+          aria-hidden="true"
+        >
+          <ChevronDown class="h-4 w-4" />
         </div>
-      </nav>
+      </div>
+
+      <div
+        v-if="!isSidebarOpen && desktopFloatingGroup"
+        class="absolute left-full z-50 ml-3 w-52 rounded-xl border border-white/10 bg-main-dark p-2 shadow-2xl"
+        :style="{ top: `${desktopFloatingPanelTop}px` }"
+      >
+        <p
+          class="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-second-deep"
+        >
+          {{ desktopFloatingGroup === "engrase" ? "Engrase" : "Seguimiento" }}
+        </p>
+        <div v-if="desktopFloatingGroup === 'engrase'" class="space-y-1">
+          <router-link
+            v-if="canSeeFiltrosEngrase"
+            to="/engrase/filtros"
+            class="flex rounded-lg px-3 py-2.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white"
+            :class="isFiltrosEngraseRoute ? 'bg-white/10 text-white' : ''"
+            @click="closeDesktopFloatingGroup"
+            >Filtros</router-link
+          >
+          <router-link
+            v-if="canSeeCatalogoEngrase"
+            to="/engrase/catalogo"
+            class="flex rounded-lg px-3 py-2.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white"
+            :class="isCatalogoEngraseRoute ? 'bg-white/10 text-white' : ''"
+            @click="closeDesktopFloatingGroup"
+            >Catálogo</router-link
+          >
+        </div>
+        <div v-else class="space-y-1">
+          <router-link
+            v-if="canSeeSeguimientoTareas"
+            to="/seguimiento/tareas"
+            class="flex rounded-lg px-3 py-2.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white"
+            :class="isSeguimientoRoute ? 'bg-white/10 text-white' : ''"
+            @click="closeDesktopFloatingGroup"
+            >Tareas</router-link
+          >
+        </div>
+      </div>
 
       <button
         @click="logout"
-        class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-danger hover:text-white transition-all mt-auto"
+        class="group relative mt-3 flex shrink-0 items-center rounded-xl text-gray-400 hover:bg-danger hover:text-white transition-all"
+        :class="isSidebarOpen ? 'gap-3 px-4 py-3' : 'justify-center p-3'"
       >
-        <LogOut class="w-5 h-5" />
-        <span class="font-medium text-sm">Cerrar Sesión</span>
+        <LogOut class="w-5 h-5 text-danger" />
+        <span v-if="isSidebarOpen" class="font-medium text-sm"
+          >Cerrar Sesión</span
+        >
+        <span v-else class="sidebar-tooltip">Cerrar sesión</span>
       </button>
     </aside>
 
@@ -469,15 +754,9 @@ const isActive = (path: string) =>
       <!-- Top Header (Desktop) -->
       <header
         v-if="!hideDefaultLayout"
-        class="hidden md:flex items-center gap-6 px-8 h-16 bg-white border-b border-gray-200 shadow-md relative z-10 transition-all duration-300"
+        class="hidden lg:flex items-center gap-6 px-8 h-16 bg-white border-b border-gray-200 shadow-md relative z-10 transition-all duration-300"
       >
-        <div class="flex items-center gap-4 min-w-0">
-          <button
-            @click="isSidebarOpen = !isSidebarOpen"
-            class="p-2 hover:bg-gray-50 rounded-lg text-gray-400"
-          >
-            <Menu class="w-5 h-5" />
-          </button>
+        <div class="flex min-w-0 items-center">
           <div class="flex items-center gap-2">
             <span
               class="text-[10px] text-gray-400 uppercase tracking-widest font-bold"
@@ -545,7 +824,7 @@ const isActive = (path: string) =>
       <!-- Mobile Top Bar -->
       <div
         v-if="!hideDefaultLayout"
-        class="md:hidden bg-white border-b border-gray-100 absolute top-0 left-0 w-full z-[30] shadow-sm transition-all duration-300"
+        class="lg:hidden bg-white border-b border-gray-100 absolute top-0 left-0 w-full z-[30] shadow-sm transition-all duration-300"
       >
         <div class="flex items-center justify-between px-6 py-4">
           <div class="flex items-center gap-2 min-w-0">
@@ -565,7 +844,7 @@ const isActive = (path: string) =>
               @click="logout"
               class="text-gray-400 hover:text-danger transition-colors p-2"
             >
-              <LogOut class="w-5 h-5" />
+              <LogOut class="w-5 h-5 text-danger" />
             </button>
             <div
               class="w-8 h-8 rounded-full bg-accent-light flex items-center justify-center font-display text-xs text-main cursor-pointer"
@@ -603,11 +882,14 @@ const isActive = (path: string) =>
       <div
         v-if="!hideDefaultLayout"
         :class="mobileTopBarSpacerClass"
-        class="md:hidden flex-shrink-0 w-full"
+        class="lg:hidden flex-shrink-0 w-full"
       ></div>
 
       <!-- Content Area -->
-      <div id="app-main-content-area" class="flex-1 overflow-y-auto w-full">
+      <div
+        id="app-main-content-area"
+        class="flex-1 overflow-y-auto w-full pb-[76px] lg:pb-0"
+      >
         <router-view v-slot="{ Component, route: childRoute }">
           <transition name="fade" mode="out-in">
             <component
@@ -618,132 +900,130 @@ const isActive = (path: string) =>
         </router-view>
       </div>
 
-      <!-- Mobile Bottom Nav - SCROLLABLE -->
+      <!-- Tablet and mobile bottom navigation -->
       <nav
         v-if="!hideDefaultLayout"
         id="mobile-bottom-nav"
-        class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-2 flex items-center justify-around gap-2 overflow-x-auto z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] rounded-t-3xl hide-scrollbar transition-all duration-300"
+        class="lg:hidden fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-gray-100 bg-white px-2 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
       >
         <router-link
-          v-for="item in menuItems"
+          v-for="item in mobilePrimaryItems"
           :key="item.path"
           :to="item.path"
-          class="flex flex-col items-center gap-1 p-2 transition-all flex-shrink-0 min-w-[56px]"
-          :class="[isActive(item.path) ? 'text-main' : 'text-gray-300']"
+          class="flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition-colors"
+          :class="isActive(item.path) ? 'text-main' : 'text-gray-400'"
         >
-          <component :is="item.icon" class="w-6 h-6 shrink-0" />
-          <span class="text-[10px] font-medium whitespace-nowrap">{{
+          <component :is="item.icon" class="h-5 w-5 shrink-0" />
+          <span class="truncate text-[10px] font-semibold">{{
             item.name
           }}</span>
         </router-link>
-        <div
-          v-if="canSeeEngrase"
-          class="flex flex-col items-center gap-1 flex-shrink-0 min-w-[56px]"
+        <button
+          type="button"
+          class="flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition-colors"
+          :class="isMobileMoreActive ? 'text-main' : 'text-gray-400'"
+          :aria-expanded="mobileMoreOpen"
+          aria-controls="mobile-more-sheet"
+          @click="mobileMoreOpen = true"
         >
-          <button
-            type="button"
-            class="flex flex-col items-center gap-1 p-2"
-            :class="isEngraseRoute ? 'text-main' : 'text-gray-300'"
-            @click="mobileEngraseOpen = !mobileEngraseOpen"
-            :aria-expanded="mobileEngraseOpen"
-          >
-            <Droplets class="w-6 h-6" /><span class="text-[10px] font-medium"
-              >Engrase</span
-            >
-          </button>
-        </div>
-        <div
-          v-if="canSeeSeguimiento"
-          class="flex flex-col items-center gap-1 flex-shrink-0 min-w-[56px]"
-        >
-          <button
-            type="button"
-            class="flex flex-col items-center gap-1 p-2"
-            :class="isSeguimientoRoute ? 'text-main' : 'text-gray-300'"
-            @click="mobileSeguimientoOpen = !mobileSeguimientoOpen"
-            :aria-expanded="mobileSeguimientoOpen"
-          >
-            <MapPinned class="w-6 h-6" /><span class="text-[10px] font-medium"
-              >Seguimiento</span
-            >
-          </button>
-        </div>
+          <MoreHorizontal class="h-5 w-5" />
+          <span class="text-[10px] font-semibold">Más</span>
+        </button>
       </nav>
+
       <div
-        v-if="!hideDefaultLayout && mobileEngraseOpen && canSeeEngrase"
-        class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl"
+        v-if="!hideDefaultLayout && mobileMoreOpen"
+        class="lg:hidden fixed inset-0 z-40 bg-main-dark/40"
+        @click.self="
+          mobileMoreOpen = false;
+          mobileEngraseOpen = false;
+        "
       >
-        <div
-          class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"
+        <section
+          id="mobile-more-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Más módulos"
+          class="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 shadow-2xl"
         >
-          <span>Engrase</span
-          ><button
-            type="button"
-            class="p-2"
-            @click="mobileEngraseOpen = false"
-            aria-label="Cerrar subpestañas"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-        <div class="space-y-2">
-          <router-link
-            v-if="canSeeFiltrosEngrase"
-            to="/engrase/filtros"
-            class="block w-full rounded-xl px-4 py-3 text-sm font-semibold"
-            :class="
-              isFiltrosEngraseRoute
-                ? 'bg-main/10 text-main'
-                : 'bg-gray-50 text-gray-600'
-            "
-            @click="mobileEngraseOpen = false"
-            >Filtros</router-link
-          >
-          <router-link
-            v-if="canSeeCatalogoEngrase"
-            to="/engrase/catalogo"
-            class="block w-full rounded-xl px-4 py-3 text-sm font-semibold"
-            :class="
-              isCatalogoEngraseRoute
-                ? 'bg-main/10 text-main'
-                : 'bg-gray-50 text-gray-600'
-            "
-            @click="mobileEngraseOpen = false"
-            >Catálogo</router-link
-          >
-        </div>
-      </div>
-      <div
-        v-if="!hideDefaultLayout && mobileSeguimientoOpen && canSeeSeguimiento"
-        class="md:hidden fixed inset-x-0 bottom-[72px] z-30 bg-white border-t p-4 shadow-xl"
-      >
-        <div
-          class="mb-3 flex items-center justify-between text-sm font-bold text-gray-700"
-        >
-          <span>Seguimiento</span
-          ><button
-            type="button"
-            class="p-2"
-            @click="mobileSeguimientoOpen = false"
-            aria-label="Cerrar subpestañas"
-          >
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-        <div class="space-y-2">
-          <router-link
-            v-if="canSeeSeguimientoTareas"
-            to="/seguimiento/tareas"
-            class="block w-full rounded-xl px-4 py-3 text-sm font-semibold"
-            :class="
-              isSeguimientoRoute
-                ? 'bg-main/10 text-main'
-                : 'bg-gray-50 text-gray-600'
-            "
-            @click="mobileSeguimientoOpen = false"
-            >Tareas</router-link
-          >
-        </div>
+          <div class="mb-4 flex items-center justify-between">
+            <div>
+              <p
+                class="text-xs font-bold uppercase tracking-[0.18em] text-main"
+              >
+                Navegación
+              </p>
+              <h3 class="text-lg font-bold text-gray-800">
+                {{ mobileEngraseOpen ? "Engrase" : "Más módulos" }}
+              </h3>
+            </div>
+            <button
+              type="button"
+              class="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              aria-label="Cerrar más módulos"
+              @click="
+                mobileMoreOpen = false;
+                mobileEngraseOpen = false;
+              "
+            >
+              <X class="h-5 w-5" />
+            </button>
+          </div>
+
+          <div v-if="mobileEngraseOpen" class="space-y-2">
+            <button
+              type="button"
+              class="mb-1 flex items-center gap-2 text-sm font-semibold text-gray-500"
+              @click="mobileEngraseOpen = false"
+            >
+              <ChevronDown class="h-4 w-4 rotate-90" /> Volver a módulos
+            </button>
+            <router-link
+              v-if="canSeeFiltrosEngrase"
+              to="/engrase/filtros"
+              class="block rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
+              :class="isFiltrosEngraseRoute ? 'bg-main/10 text-main' : ''"
+              @click="
+                mobileMoreOpen = false;
+                mobileEngraseOpen = false;
+              "
+              >Filtros</router-link
+            >
+            <router-link
+              v-if="canSeeCatalogoEngrase"
+              to="/engrase/catalogo"
+              class="block rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
+              :class="isCatalogoEngraseRoute ? 'bg-main/10 text-main' : ''"
+              @click="
+                mobileMoreOpen = false;
+                mobileEngraseOpen = false;
+              "
+              >Catálogo</router-link
+            >
+          </div>
+
+          <div v-else class="grid grid-cols-2 gap-3">
+            <router-link
+              v-for="item in mobileMoreItems"
+              :key="item.path"
+              :to="item.path"
+              class="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
+              :class="isActive(item.path) ? 'bg-main/10 text-main' : ''"
+              @click="mobileMoreOpen = false"
+            >
+              <component :is="item.icon" class="h-5 w-5" /> {{ item.name }}
+            </router-link>
+            <button
+              v-if="canSeeEngrase"
+              type="button"
+              class="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              :class="isEngraseRoute ? 'bg-main/10 text-main' : ''"
+              @click="mobileEngraseOpen = true"
+            >
+              <Droplets class="h-5 w-5" /> Engrase
+            </button>
+          </div>
+        </section>
       </div>
 
       <!-- FAB Mobile -->
@@ -786,5 +1066,41 @@ const isActive = (path: string) =>
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
+}
+
+.sidebar-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar-nav-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.sidebar-tooltip {
+  pointer-events: none;
+  position: absolute;
+  left: calc(100% + 0.75rem);
+  z-index: 50;
+  white-space: nowrap;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 0.5rem;
+  background: #002e2c;
+  padding: 0.45rem 0.65rem;
+  color: #f0ede5;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0;
+  transform: translateX(-0.25rem);
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.group:hover .sidebar-tooltip,
+.group:focus-visible .sidebar-tooltip {
+  opacity: 1;
+  transform: translateX(0);
 }
 </style>
