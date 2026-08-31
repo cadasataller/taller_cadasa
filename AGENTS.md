@@ -1,6 +1,16 @@
 # Instrucciones del repositorio
 
-formatea cada dcumento luego de crearlo modificarlo usando prettier, pero antes de hacer cualquier cosa verifica si esta disponile, sino entoncs detente y pide que se instale.
+Antes de crear o modificar cualquier archivo, valida Prettier usando el gestor de paquetes del proyecto:
+
+1. Ejecuta `pnpm exec prettier --version`.
+2. Si el comando devuelve una versión, Prettier está disponible y puedes continuar.
+3. No uses `command -v prettier` ni exijas una instalación global.
+4. Si falla, verifica que `prettier` exista en `devDependencies` o `dependencies` de `package.json`.
+5. Si está declarado pero no funciona, pide al usuario ejecutar `pnpm install`.
+6. Solo detente y solicita instalar Prettier con `pnpm add -D prettier` cuando no esté declarado en `package.json`.
+
+Después de crear o modificar cualquier documento o archivo de código, formatéalo con:
+`pnpm exec prettier --write <ruta-del-archivo>`.
 
 valida que los specs de segumineot usan la conexion de supabaseRastreoTareas sino se usa usalo y acutliza el specs, tambien valida que usan tailwind anten de implemtna el specs yq ue usan los htlmls de rasrteo_tarae como guia para como debe mostar la ui pero siempre usando vue tailwind y ts, valida tambien que usa los tipso correcto de los rpcs como esta deifnido en rpcs_funciones_bd.md
 
