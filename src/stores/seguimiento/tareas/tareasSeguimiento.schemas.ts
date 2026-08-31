@@ -39,6 +39,7 @@ export const tareaRastreoDetalleSchema = z.object({
   }),
   asignacion: z.object({
     usuario_id: z.string().nullable(),
+    usuario_nombre: z.string().nullable(),
     source_id: z.number().nullable(),
     tracker_id: z.number().nullable(),
     tracker_label: z.string().nullable(),

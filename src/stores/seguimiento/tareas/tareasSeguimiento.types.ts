@@ -142,6 +142,7 @@ export interface TareaRastreoDetalleDto {
   };
   asignacion: {
     usuario_id: string | null;
+    usuario_nombre: string | null;
     source_id: number | null;
     tracker_id: number | null;
     tracker_label: string | null;
@@ -190,6 +191,7 @@ export interface TareaSeguimientoListItem {
 }
 
 export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
+  assignedUserName: string | null;
   companionNames: string[];
   controlLine: SeguimientoLineGeometry | null;
   controlZones: SeguimientoZoneGeometry[];

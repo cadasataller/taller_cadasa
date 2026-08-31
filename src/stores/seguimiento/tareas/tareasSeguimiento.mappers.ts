@@ -85,6 +85,7 @@ export function mapTareaSeguimientoDetail(
     trackerId: asignacion.tracker_id,
     sourceId: asignacion.source_id,
     trackerLabel: asignacion.tracker_label,
+    assignedUserName: asignacion.usuario_nombre,
     companionNames: asignacion.acompanantes.map(
       (companion) => companion.nombre,
     ),

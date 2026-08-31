@@ -63,6 +63,7 @@ const taskDetail = (
   },
   asignacion: {
     usuario_id: "user-1",
+    usuario_nombre: "Felix Arauz",
     source_id: 45,
     tracker_id: 12,
     tracker_label: "Tracker 12",
@@ -154,6 +155,7 @@ describe("tareasSeguimiento mappers", () => {
     ).toMatchObject({
       type: "zona",
       assignedUserId: "user-1",
+      assignedUserName: "Felix Arauz",
       priorityId: 1,
       routePoint: { latitude: 8.4, longitude: -82.5 },
       controlZones: [zone],

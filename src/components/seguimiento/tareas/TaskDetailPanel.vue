@@ -158,9 +158,9 @@ const currentTimeLabel = computed(() =>
               <dt class="text-slate-500">Trabajador asignado</dt>
               <dd
                 class="max-w-48 truncate text-right font-bold text-slate-700"
-                :title="task.assignedUserId || undefined"
+                :title="task.assignedUserName || undefined"
               >
-                {{ task.assignedUserId || "Sin asignar" }}
+                {{ task.assignedUserName || "Sin asignar" }}
               </dd>
             </div>
             <div class="flex justify-between gap-4">

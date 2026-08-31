@@ -111,6 +111,7 @@ describe("tareasSeguimientoService", () => {
                 },
                 asignacion: {
                   usuario_id: null,
+                  usuario_nombre: null,
                   source_id: null,
                   tracker_id: null,
                   tracker_label: null,
