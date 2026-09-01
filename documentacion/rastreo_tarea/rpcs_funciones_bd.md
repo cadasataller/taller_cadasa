@@ -621,6 +621,40 @@ Resumen acumulado de permanencia.
 
 Referencia de ruta planificada relacionada.
 
+```json
+{
+  "ruta_planificada_id": "uuid | null",
+  "estado_calculo": "calculada | pendiente | null",
+  "numero_orden": 1,
+  "version_actual": 1,
+  "origen_tipo": "ubicacion_tracker | resguardo | null"
+}
+```
+
+El identificador del contrato remoto se llama `ruta_planificada_id`; los
+clientes deben mapearlo a su modelo de UI si este utiliza otro nombre.
+
+---
+
+## 5.3 `listar_rutas_planificadas_v2`
+
+```sql
+public.listar_rutas_planificadas_v2(
+  p_area_id uuid,
+  p_fecha date,
+  p_usuario_id uuid,
+  p_source_id bigint
+)
+returns jsonb
+```
+
+Devuelve `{ rutas: [...] }`. Cada ruta incluye `ruta_id`, `version_actual`,
+`polilinea_geojson` (`LineString`) y `paradas`. Aunque los filtros son
+opcionales en la base de datos, el workspace lo invoca únicamente cuando hay
+área, fecha y al menos trabajador o source. El frontend conserva tareas y
+rutas en estados separados y reemplaza una ruta por `ruta_id` cuando su
+versión cambia.
+
 ### `permisos`
 
 Puede incluir:

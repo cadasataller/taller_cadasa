@@ -38,6 +38,44 @@ export interface ListarTareasRastreoV2Params {
   p_incluir_canceladas: boolean;
 }
 
+export interface ListarRutasPlanificadasV2Params {
+  p_area_id: string;
+  p_fecha: string;
+  p_usuario_id: string | null;
+  p_source_id: number | null;
+}
+
+export interface RutaPlanificadaParadaDto {
+  parada_id: string;
+  tarea_id: string;
+  numero_orden: number;
+}
+
+export interface RutaPlanificadaDto {
+  ruta_id: string;
+  version_actual: number;
+  estado_calculo: string;
+  area_id: string;
+  fecha_programada: string;
+  source_id: number | null;
+  polilinea_geojson: {
+    type: "LineString";
+    coordinates: [number, number][];
+  } | null;
+  paradas: RutaPlanificadaParadaDto[];
+}
+
+export interface SeguimientoRutaPlanificada {
+  id: string;
+  version: number;
+  state: string;
+  areaId: string;
+  scheduledDate: string;
+  sourceId: number | null;
+  geometry: NonNullable<RutaPlanificadaDto["polilinea_geojson"]> | null;
+  stops: RutaPlanificadaParadaDto[];
+}
+
 /** DTO tabular de public.listar_tareas_rastreo_v2. */
 export interface TareaRastreoListadoDto {
   id: string;
@@ -167,7 +205,10 @@ export interface TareaRastreoDetalleDto {
     ultima_salida_en: string | null;
   };
   visitas: Array<{ id: string; entrada_en: string; salida_en: string | null }>;
-  ruta: { id: string | null; estado_calculo: string | null } | null;
+  ruta: {
+    ruta_planificada_id: string | null;
+    estado_calculo: string | null;
+  } | null;
   permisos: {
     puede_editar: boolean;
     puede_editar_punto: boolean;
@@ -210,7 +251,7 @@ export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
   priorityLabel: string | null;
   time: TareaRastreoDetalleDto["tiempo"];
   visits: TareaRastreoDetalleDto["visitas"];
-  route: TareaRastreoDetalleDto["ruta"];
+  route: { id: string | null; estado_calculo: string | null };
   permissions: TareaRastreoDetalleDto["permisos"];
   updatedAt: string;
 }

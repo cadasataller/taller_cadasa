@@ -87,14 +87,30 @@ listar_tareas_rastreo_v2({
   p_source_id,
   p_estado_operativo_codigo,
   p_incluir_canceladas,
-})
+});
 
-obtener_tarea_detalle_v2({ p_tarea_id })
+obtener_tarea_detalle_v2({ p_tarea_id });
+
+listar_rutas_planificadas_v2({
+  p_area_id,
+  p_fecha,
+  p_usuario_id,
+  p_source_id,
+});
 ```
 
 `listar_tareas_rastreo_v2` es la fuente del listado, filtros, puntos simples, tracker visible y resumen de permanencia. No devuelve líneas, zonas ni redes pesadas.
 
 `obtener_tarea_detalle_v2` es la fuente del panel derecho y devuelve `tarea`, `asignacion`, `estado`, `tiempo`, `visitas`, `ruta` y `permisos`; las geometrías de línea y zonas llegan como GeoJSON.
+
+`listar_rutas_planificadas_v2` entrega las polilíneas viales y paradas. Es una
+carga suplementaria y no bloqueante: se dispara en paralelo con el listado
+solo cuando hay área, fecha y trabajador o equipo.
+
+Cuando exista, `ruta` usa el DTO remoto
+`{ ruta_planificada_id, estado_calculo, ... }`. El mapper debe convertir
+`ruta_planificada_id` al nombre de identificador usado por el modelo de UI;
+el schema no debe esperar una clave remota llamada `id`.
 
 Los types remotos deben representar esos dos contratos y los mappers deben convertirlos al modelo de UI. No se permite utilizar `Record<string, unknown>` ni inferir WKT/PostGIS dentro del cliente para suplir un contrato que ya devuelve la RPC.
 

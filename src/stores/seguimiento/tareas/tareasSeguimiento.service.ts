@@ -1,13 +1,19 @@
 import { supabaseRastreoTareas } from "@/lib/supabase";
 import { navixyTrackerService } from "@/seguimiento/shared/trackers/navixyTracker.service";
+import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
 import {
   mapSeguimientoTracker,
+  mapRutaPlanificada,
   mapTareaSeguimientoDetail,
   mapTareaSeguimientoListItem,
 } from "./tareasSeguimiento.mappers";
-import { tareaRastreoDetalleSchema } from "./tareasSeguimiento.schemas";
+import {
+  listarRutasPlanificadasSchema,
+  tareaRastreoDetalleSchema,
+} from "./tareasSeguimiento.schemas";
 import type {
   ListarTareasRastreoV2Params,
+  ListarRutasPlanificadasV2Params,
   TareaRastreoListadoDto,
   TareaSeguimientoDetail,
   TareasSeguimientoFilters,
@@ -17,6 +23,7 @@ import type {
   SeguimientoMapConfiguration,
   SeguimientoLineGeometry,
   SeguimientoZoneGeometry,
+  SeguimientoRutaPlanificada,
   ConfiguracionInicialTrackersDto,
 } from "./tareasSeguimiento.types";
 
@@ -43,52 +50,90 @@ const toListParams = (
   p_incluir_canceladas: filters.statuses.includes("cancelada"),
 });
 
+const canLoadPlannedRoutes = (filters: TareasSeguimientoFilters): boolean =>
+  Boolean(filters.areaId) &&
+  Boolean(filters.scheduledDate) &&
+  Boolean(filters.assignedUserId || filters.sourceId !== null);
+
 export const tareasSeguimientoService = {
-  async loadWorkspace(
-    filters: TareasSeguimientoFilters,
-  ): Promise<TareaSeguimientoWorkspaceData> {
-    const [listResponse, catalogResponse, geographyResponse, trackerConfig] =
+  async loadWorkspaceContext(areaId: string | null): Promise<
+    Omit<TareaSeguimientoWorkspaceData, "tasks" | "trackerLoadObservations"> & {
+      trackerLoadObservations: string[];
+    }
+  > {
+    const [catalogResponse, geographyResponse, trackerConfig] =
       await Promise.all([
-        supabaseRastreoTareas.rpc(
-          "listar_tareas_rastreo_v2",
-          toListParams(filters),
-        ),
         supabaseRastreoTareas.rpc("obtener_catalogo_personas_tarea_v2"),
         supabaseRastreoTareas.rpc("obtener_geografia_operativa_area_v2"),
         supabaseRastreoTareas.rpc("obtener_configuracion_inicial_trackers_v2"),
       ]);
-    const { data, error } = listResponse;
-    if (error) throw error;
     if (catalogResponse.error) throw catalogResponse.error;
     if (geographyResponse.error) throw geographyResponse.error;
     if (trackerConfig.error) throw trackerConfig.error;
     const navixyTrackers = await navixyTrackerService.load({
       groupIds: getAllowedTrackerGroupIds(
         trackerConfig.data as ConfiguracionInicialTrackersDto | null,
-        filters.areaId,
+        areaId,
       ),
     });
+    const catalog = mapCatalog(catalogResponse.data);
+    const mapConfiguration = await loadMapConfiguration(
+      areaId ?? catalog.areas[0]?.id ?? null,
+    );
+    return {
+      trackers: navixyTrackers.trackers,
+      trackerLoadObservations: navixyTrackers.observations,
+      catalog,
+      geography: mapGeography(geographyResponse.data),
+      mapConfiguration,
+    };
+  },
+
+  async loadTasks(
+    filters: TareasSeguimientoFilters,
+    trackers: SeguimientoTracker[],
+  ): Promise<Pick<TareaSeguimientoWorkspaceData, "tasks" | "trackers">> {
+    const { data, error } = await supabaseRastreoTareas.rpc(
+      "listar_tareas_rastreo_v2",
+      toListParams(filters),
+    );
+    if (error) throw error;
     const rows = (data ?? []) as TareaRastreoListadoDto[];
-    const trackersBySource = new Map<
-      number,
-      TareaSeguimientoWorkspaceData["trackers"][number]
-    >(navixyTrackers.trackers.map((tracker) => [tracker.sourceId, tracker]));
+    const trackersBySource = new Map<number, SeguimientoTracker>(
+      trackers.map((tracker) => [tracker.sourceId, tracker]),
+    );
     for (const row of rows) {
       const tracker = mapSeguimientoTracker(row);
       if (tracker && trackersBySource.has(tracker.sourceId))
         trackersBySource.set(tracker.sourceId, tracker);
     }
-    const catalog = mapCatalog(catalogResponse.data);
-    const geography = mapGeography(geographyResponse.data);
-    const areaId = filters.areaId ?? catalog.areas[0]?.id ?? null;
-    const mapConfiguration = await loadMapConfiguration(areaId);
     return {
       tasks: rows.map(mapTareaSeguimientoListItem),
       trackers: [...trackersBySource.values()],
-      trackerLoadObservations: navixyTrackers.observations,
-      catalog,
-      geography,
-      mapConfiguration,
+    };
+  },
+
+  async loadPlannedRoutes(
+    params: ListarRutasPlanificadasV2Params,
+  ): Promise<SeguimientoRutaPlanificada[]> {
+    const { data, error } = await supabaseRastreoTareas.rpc(
+      "listar_rutas_planificadas_v2",
+      params,
+    );
+    if (error) throw error;
+    return listarRutasPlanificadasSchema
+      .parse(data)
+      .rutas.map(mapRutaPlanificada);
+  },
+
+  async loadWorkspace(
+    filters: TareasSeguimientoFilters,
+  ): Promise<TareaSeguimientoWorkspaceData> {
+    const context = await this.loadWorkspaceContext(filters.areaId);
+    const taskData = await this.loadTasks(filters, context.trackers);
+    return {
+      ...context,
+      ...taskData,
     };
   },
 

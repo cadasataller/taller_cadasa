@@ -147,6 +147,19 @@ describe("tareasSeguimiento mappers", () => {
     });
   });
 
+  it("mapea ruta_planificada_id del RPC al identificador de ruta de la UI", () => {
+    expect(
+      mapTareaSeguimientoDetail(
+        taskDetail({
+          ruta: {
+            ruta_planificada_id: "route-1",
+            estado_calculo: "calculada",
+          },
+        }),
+      ).route,
+    ).toEqual({ id: "route-1", estado_calculo: "calculada" });
+  });
+
   it("mapea la geometría y asignación del payload real del detalle", () => {
     const zone = {
       type: "MultiPolygon" as const,

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { TareaRastreoDetalleDto } from "./tareasSeguimiento.types";
+import type { RutaPlanificadaDto } from "./tareasSeguimiento.types";
 
 const lineGeometrySchema = z.object({
   type: z.literal("MultiLineString"),
@@ -74,7 +75,7 @@ export const tareaRastreoDetalleSchema = z.object({
   ),
   ruta: z
     .object({
-      id: z.string().nullable(),
+      ruta_planificada_id: z.string().nullable(),
       estado_calculo: z.string().nullable(),
     })
     .nullable(),
@@ -88,3 +89,50 @@ export const tareaRastreoDetalleSchema = z.object({
     puede_eliminar: z.boolean(),
   }),
 }) satisfies z.ZodType<TareaRastreoDetalleDto>;
+
+const routeCoordinatesSchema = z.tuple([
+  z.number().finite(),
+  z.number().finite(),
+]);
+const routeLineStringSchema = z.object({
+  type: z.literal("LineString"),
+  coordinates: z.array(routeCoordinatesSchema).min(2),
+});
+const rutaPlanificadaSchema = z
+  .object({
+    ruta_id: z.string().uuid(),
+    version_actual: z.number().int().nonnegative(),
+    estado_calculo: z.string(),
+    area_id: z.string().uuid(),
+    fecha_programada: z.string(),
+    source_id: z.number().int().nullable(),
+    polilinea_geojson: z
+      .union([
+        routeLineStringSchema,
+        z.object({
+          type: z.literal("Feature"),
+          geometry: routeLineStringSchema,
+        }),
+      ])
+      .nullable(),
+    paradas: z.array(
+      z
+        .object({
+          parada_id: z.string().uuid(),
+          tarea_id: z.string().uuid(),
+          numero_orden: z.number().int().positive(),
+        })
+        .passthrough(),
+    ),
+  })
+  .transform((route) => ({
+    ...route,
+    polilinea_geojson:
+      route.polilinea_geojson?.type === "Feature"
+        ? route.polilinea_geojson.geometry
+        : route.polilinea_geojson,
+  })) satisfies z.ZodType<RutaPlanificadaDto>;
+
+export const listarRutasPlanificadasSchema = z.object({
+  rutas: z.array(rutaPlanificadaSchema),
+});

@@ -63,6 +63,28 @@ Al abrir creación:
 - limpieza o transición controlada;
 - integración de la tarea creada en el workspace.
 
+### Procesamiento y visualización de ruta
+
+Cuando `crear_tarea_v2` devuelva `requiere_procesar_ruta` y
+`solicitud_recalculo_ruta_id`, el store debe invocar
+`procesar-ruta-pendiente` mediante `supabaseRastreoTareas`.
+
+- Con `motor = "v2_orden_supervisor"`, debe consultar
+  `listar_rutas_planificadas_v2` por el `source_id` afectado y reemplazar en
+  el estado de rutas la entrada correspondiente. `polilinea_geojson` se
+  valida como GeoJSON `LineString` con Zod y se entrega al mapa para dibujar
+  el recorrido vial.
+- Con `codigo = "origen_no_disponible"` (`202`), la tarea se conserva creada;
+  se informa que el recálculo quedó pendiente y no se intenta leer una ruta.
+- Con `codigo = "ruta_eliminada_sin_tareas"` o `"sin_tareas_activas"`, se
+  limpia la geometría visual de ruta.
+- Con error de Edge Function o de lectura/validación de la geometría, la tarea
+  también se conserva creada y se muestra una advertencia.
+
+Esta es una lectura puntual posterior a la Edge Function mediante RPC; no
+consulta ni modifica tablas internas y usa exclusivamente la conexión
+`supabaseRastreoTareas`.
+
 ## Responsive
 
 Desktop:
@@ -106,6 +128,8 @@ Integración:
 - guardar `zona` válida;
 - manejar error remoto sin perder borrador;
 - integrar tarea creada al workspace.
+- dibujar el `LineString` almacenado después de una ruta calculada;
+- mantener pendiente el flujo cuando el origen del tracker no está disponible.
 
 ## No hacer
 

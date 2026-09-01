@@ -15,6 +15,7 @@ export function useSeguimientoTareasView() {
   return {
     ...state,
     retry: () => store.loadWorkspace(true),
+    refreshPlannedRoutes: store.refreshPlannedRoutes,
     updateFilters: (filters: Partial<TareasSeguimientoFilters>) =>
       store.setFilters(filters),
     selectTask: store.selectTask,

@@ -346,9 +346,16 @@ export const useTareaCreacionStore = defineStore(
           result.solicitud_recalculo_ruta_id
         ) {
           try {
-            await tareaCreacionService.processPendingRoute({
+            const routeResult = await tareaCreacionService.processPendingRoute({
               solicitud_id: result.solicitud_recalculo_ruta_id,
             });
+            if (
+              "codigo" in routeResult &&
+              routeResult.codigo === "origen_no_disponible"
+            ) {
+              routeProcessingWarning.value =
+                "La tarea fue creada correctamente. La ruta se calculará cuando el tracker tenga una ubicación válida.";
+            }
           } catch (error) {
             console.error(
               "La tarea fue creada, pero la ruta no pudo procesarse.",

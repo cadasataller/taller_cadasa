@@ -163,14 +163,39 @@ export interface ProcesarRutaPendientePayload {
   solicitud_id: string;
 }
 
-export interface ProcesarRutaPendienteRespuesta {
+export interface ProcesarRutaCalculadaRespuesta {
   solicitud_id: string;
-  ruta_id?: string | null;
-  paradas?: number;
-  codigo?:
-    "ruta_eliminada_sin_tareas" | "sin_tareas_activas" | "origen_no_disponible";
-  motor?: "v2" | "v2_orden_supervisor";
+  ruta_id: string;
+  paradas: number;
+  tracker_id: number;
+  source_id: number;
+  origen_tipo: "ubicacion_tracker" | "resguardo";
+  origen_capturada_en: string | null;
+  recorrido_tracker_id: string | null;
+  motor: "v2_orden_supervisor";
 }
+
+export interface ProcesarRutaSinTareasRespuesta {
+  solicitud_id: string;
+  ruta_id: string | null;
+  paradas: 0;
+  codigo: "ruta_eliminada_sin_tareas" | "sin_tareas_activas";
+  motor: "v2";
+}
+
+export interface ProcesarRutaOrigenNoDisponibleRespuesta {
+  solicitud_id: string;
+  estado: "pendiente";
+  codigo: "origen_no_disponible";
+  motivo: string;
+  origen_tipo: "ubicacion_tracker" | "resguardo";
+  recorrido_tracker_id: string | null;
+}
+
+export type ProcesarRutaPendienteRespuesta =
+  | ProcesarRutaCalculadaRespuesta
+  | ProcesarRutaSinTareasRespuesta
+  | ProcesarRutaOrigenNoDisponibleRespuesta;
 
 export interface TareaCreacionErrorRemoto {
   message: string;

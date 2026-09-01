@@ -21,6 +21,8 @@ import type {
   SeguimientoMapStatus,
   SeguimientoMapToolState,
   SeguimientoOperationalGeography,
+  SeguimientoRutaPlanificada,
+  TareaSeguimientoDetail,
   TareaSeguimientoListItem,
 } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 
@@ -43,6 +45,8 @@ const props = defineProps<{
   creationEditingZoneIndex?: number | null;
   creationLockedBoundary?: SeguimientoOperationalGeography["farms"][number]["boundary"];
   creationSketchResetKey?: number;
+  plannedRoutes?: SeguimientoRutaPlanificada[];
+  selectedTaskDetail?: TareaSeguimientoDetail | null;
 }>();
 const emit = defineEmits<{
   ready: [];
@@ -59,7 +63,7 @@ const mapCanvas = useTemplateRef<HTMLDivElement>("mapCanvas");
 let map: any = null;
 let taskMarkers: { marker: any; selected: boolean }[] = [];
 let trackerMarkers: { marker: any; tracker: SeguimientoTracker }[] = [];
-let routeLine: any = null;
+let routeLines: any[] = [];
 let farmBoundaries: any[] = [];
 let farmRoads: { halo: any; surface: any }[] = [];
 let shelterBoundaries: { halo: any; surface: any }[] = [];
@@ -188,8 +192,8 @@ function clearLayers(): void {
   trackerMarkers.forEach(({ marker }) => marker.setMap(null));
   taskMarkers = [];
   trackerMarkers = [];
-  routeLine?.setMap(null);
-  routeLine = null;
+  routeLines.forEach((line) => line.setMap(null));
+  routeLines = [];
   farmBoundaries.forEach((boundary) => boundary.setMap(null));
   farmBoundaries = [];
   farmRoads.forEach(({ halo, surface }) => {
@@ -504,24 +508,79 @@ function renderLayers(): void {
     updateTrackerMarkerDisplay();
   }
   if (isToolEnabled("route")) {
-    const routePoints = props.tasks
-      .filter((task) => task.routePoint)
-      .sort(
-        (left, right) =>
-          (left.routeOrder ?? Number.MAX_SAFE_INTEGER) -
-          (right.routeOrder ?? Number.MAX_SAFE_INTEGER),
-      )
-      .map((task) => toLatLng(task.routePoint!));
-    if (routePoints.length > 1)
-      routeLine = new maps.Polyline({
-        map,
-        path: routePoints,
-        geodesic: true,
-        strokeColor: "#D4A853",
-        strokeOpacity: 0.96,
-        strokeWeight: 4.5,
-        zIndex: seguimientoMapZIndex.route,
-      });
+    const plannedRouteLines = (props.plannedRoutes ?? [])
+      .filter((route) => route.geometry)
+      .map((route) =>
+        route.geometry!.coordinates.map(([longitude, latitude]) => ({
+          lat: latitude,
+          lng: longitude,
+        })),
+      );
+    const routeLinesToRender = plannedRouteLines.length
+      ? plannedRouteLines
+      : [
+          props.tasks
+            .filter((task) => task.routePoint)
+            .sort(
+              (left, right) =>
+                (left.routeOrder ?? Number.MAX_SAFE_INTEGER) -
+                (right.routeOrder ?? Number.MAX_SAFE_INTEGER),
+            )
+            .map((task) => toLatLng(task.routePoint!)),
+        ];
+    routeLines = routeLinesToRender
+      .filter((routePoints) => routePoints.length > 1)
+      .map(
+        (routePoints) =>
+          new maps.Polyline({
+            map,
+            path: routePoints,
+            geodesic: !plannedRouteLines.length,
+            strokeColor: "#D4A853",
+            strokeOpacity: 0.96,
+            strokeWeight: 4.5,
+            zIndex: seguimientoMapZIndex.route,
+          }),
+      );
+  }
+  if (props.selectedTaskDetail?.id === props.selectedTaskId) {
+    props.selectedTaskDetail.controlLine?.coordinates.forEach((line) => {
+      creationOverlays.push(
+        new maps.Polyline({
+          map,
+          path: line.map(([longitude, latitude]) => ({
+            lat: latitude,
+            lng: longitude,
+          })),
+          clickable: false,
+          strokeColor: "#004643",
+          strokeOpacity: 1,
+          strokeWeight: 4,
+          zIndex: seguimientoMapZIndex.selected + 2,
+        }),
+      );
+    });
+    props.selectedTaskDetail.controlZones.forEach((zone) => {
+      const paths = zone.coordinates.map((polygon) =>
+        polygon[0].map(([longitude, latitude]) => ({
+          lat: latitude,
+          lng: longitude,
+        })),
+      );
+      creationOverlays.push(
+        new maps.Polygon({
+          map,
+          paths,
+          clickable: false,
+          strokeColor: "#004643",
+          strokeOpacity: 1,
+          strokeWeight: 2.5,
+          fillColor: "#20A39E",
+          fillOpacity: 0.26,
+          zIndex: seguimientoMapZIndex.selected + 2,
+        }),
+      );
+    });
   }
   if (props.creationGeometry?.routePoint) {
     creationOverlays.push(
@@ -710,6 +769,8 @@ watch(
     props.creationGeometry,
     props.creationEditingZoneIndex,
     props.creationLockedBoundary,
+    props.plannedRoutes,
+    props.selectedTaskDetail,
   ],
   renderLayers,
   { deep: true },

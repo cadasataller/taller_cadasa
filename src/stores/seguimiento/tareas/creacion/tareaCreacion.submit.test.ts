@@ -109,4 +109,25 @@ describe("submit de creación", () => {
       "La tarea fue creada correctamente, pero no se pudo actualizar la ruta.",
     );
   });
+
+  it("conserva la solicitud pendiente cuando el tracker no tiene origen", async () => {
+    const store = completeFarmDraft();
+    create.mockResolvedValue({
+      id: "task-1",
+      requiere_procesar_ruta: true,
+      solicitud_recalculo_ruta_id: "f4cb0000-5bd4-4d94-8694-cc3b8fe4bea8",
+    });
+    processPendingRoute.mockResolvedValue({
+      solicitud_id: "f4cb0000-5bd4-4d94-8694-cc3b8fe4bea8",
+      estado: "pendiente",
+      codigo: "origen_no_disponible",
+      motivo: "Sin ubicación vigente.",
+      origen_tipo: "ubicacion_tracker",
+      recorrido_tracker_id: null,
+    });
+
+    await expect(store.submit()).resolves.toMatchObject({ id: "task-1" });
+
+    expect(store.routeProcessingWarning).toContain("ubicación válida");
+  });
 });

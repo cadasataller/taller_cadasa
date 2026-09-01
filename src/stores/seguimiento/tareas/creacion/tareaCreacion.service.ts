@@ -30,6 +30,38 @@ const tareaCreacionRespuestaSchema = z
   })
   .passthrough();
 
+const procesarRutaCalculadaSchema = z.object({
+  solicitud_id: z.string().uuid(),
+  ruta_id: z.string().uuid(),
+  paradas: z.number().int().nonnegative(),
+  tracker_id: z.number().int(),
+  source_id: z.number().int(),
+  origen_tipo: z.enum(["ubicacion_tracker", "resguardo"]),
+  origen_capturada_en: z.string().nullable(),
+  recorrido_tracker_id: z.string().uuid().nullable(),
+  motor: z.literal("v2_orden_supervisor"),
+});
+const procesarRutaSinTareasSchema = z.object({
+  solicitud_id: z.string().uuid(),
+  ruta_id: z.string().uuid().nullable(),
+  paradas: z.literal(0),
+  codigo: z.enum(["ruta_eliminada_sin_tareas", "sin_tareas_activas"]),
+  motor: z.literal("v2"),
+});
+const procesarRutaOrigenNoDisponibleSchema = z.object({
+  solicitud_id: z.string().uuid(),
+  estado: z.literal("pendiente"),
+  codigo: z.literal("origen_no_disponible"),
+  motivo: z.string().min(1),
+  origen_tipo: z.enum(["ubicacion_tracker", "resguardo"]),
+  recorrido_tracker_id: z.string().uuid().nullable(),
+});
+const procesarRutaPendienteRespuestaSchema = z.union([
+  procesarRutaCalculadaSchema,
+  procesarRutaSinTareasSchema,
+  procesarRutaOrigenNoDisponibleSchema,
+]);
+
 /** Frontera única de mutación: no usa tablas ni SQL directo desde Vue. */
 export const tareaCreacionService = {
   async create(params: CrearTareaV2Params): Promise<TareaCreacionRespuestaRpc> {
@@ -43,13 +75,13 @@ export const tareaCreacionService = {
 
   async processPendingRoute(
     payload: ProcesarRutaPendientePayload,
-  ): Promise<ProcesarRutaPendienteRespuesta | null> {
+  ): Promise<ProcesarRutaPendienteRespuesta> {
     const { data, error } =
       await supabaseRastreoTareas.functions.invoke<ProcesarRutaPendienteRespuesta>(
         "procesar-ruta-pendiente",
         { body: payload },
       );
     if (error) throw error;
-    return data;
+    return procesarRutaPendienteRespuestaSchema.parse(data);
   },
 };

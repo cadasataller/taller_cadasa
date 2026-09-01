@@ -58,6 +58,8 @@ const {
   setMapReady,
   toggleMapTool,
   updateFilters,
+  plannedRoutes,
+  refreshPlannedRoutes,
 } = useSeguimientoTareasView();
 const {
   draft: createDraft,
@@ -170,6 +172,11 @@ const createCompanions = computed(
     catalog.value.areas.find((area) => area.id === createDraft.value.areaId)
       ?.companions ?? [],
 );
+const routableTaskCount = computed(
+  () =>
+    tasks.value.filter((task) => task.type === "finca" || task.type === "zona")
+      .length,
+);
 const lockedFarmBoundary = computed(() => {
   if (!lockedFarmId.value || !createDraft.value.areaId) return null;
   return (
@@ -211,7 +218,23 @@ const locallyFilteredTasks = computed(() =>
 function applyFilters(next: Partial<TareasSeguimientoFilters>): void {
   updateFilters(next);
   void retry();
+  void refreshPlannedRoutes({
+    userId: crossFilter.value.workerId,
+    sourceId: crossFilter.value.sourceId,
+  });
   mobileView.value = "map";
+}
+function applyCrossFilter(next: SeguimientoCrossFilter): void {
+  if (
+    crossFilter.value.workerId === next.workerId &&
+    crossFilter.value.sourceId === next.sourceId
+  )
+    return;
+  crossFilter.value = next;
+  void refreshPlannedRoutes({
+    userId: next.workerId,
+    sourceId: next.sourceId,
+  });
 }
 function focusMap(coordinates: SeguimientoCoordinates | null): void {
   if (coordinates) {
@@ -247,7 +270,7 @@ function prepareCreationDraft(): void {
       null,
     filters.value.scheduledDate,
   );
-  updateRoute(tasks.value.length + 1);
+  updateRoute(routableTaskCount.value + 1);
   if (crossFilter.value.workerId)
     selectCreateWorker(crossFilter.value.workerId);
   if (crossFilter.value.sourceId !== null)
@@ -304,6 +327,7 @@ async function submitTaskCreate(): Promise<void> {
     createSuccessMessage.value = null;
   }, 4000);
   await retry();
+  void refreshPlannedRoutes({ sourceId: result.source_id });
   await selectTask(result.id);
 }
 function captureRoutePoint(clicked: SeguimientoCoordinates): void {
@@ -513,6 +537,8 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
       :creation-editing-zone-index="editingControlZoneIndex"
       :creation-locked-boundary="lockedFarmBoundary"
       :creation-sketch-reset-key="creationSketchResetKey"
+      :planned-routes="plannedRoutes"
+      :selected-task-detail="detail"
       @ready="setMapReady"
       @error="setMapError"
       @capture:route-point="captureRoutePoint"
@@ -628,7 +654,7 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
       :lock-cross-filters="isCreatePanelOpen || spatialState !== 'idle'"
       @apply="applyFilters"
       @focus="focusMap"
-      @update:cross-filter="crossFilter = $event"
+      @update:cross-filter="applyCrossFilter"
       @attempt:cross-filter-change="notifyCrossFilterLocked"
     />
     <section
@@ -668,7 +694,7 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
           :lock-cross-filters="isCreatePanelOpen || spatialState !== 'idle'"
           @apply="applyFilters"
           @focus="focusMap"
-          @update:cross-filter="crossFilter = $event"
+          @update:cross-filter="applyCrossFilter"
           @attempt:cross-filter-change="notifyCrossFilterLocked"
         />
       </div>
@@ -764,7 +790,7 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
       :workers="createWorkers"
       :trackers="trackers"
       :companions="createCompanions"
-      :total-tasks="tasks.length"
+      :total-tasks="routableTaskCount"
       :errors="createValidationErrors"
       :show-discard-confirmation="isDiscardConfirmationOpen"
       :geography="geography"

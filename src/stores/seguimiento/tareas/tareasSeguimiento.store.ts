@@ -19,6 +19,7 @@ import type {
   SeguimientoOperationalGeography,
   SeguimientoTaskCatalog,
   SeguimientoMapToolState,
+  SeguimientoRutaPlanificada,
   TareaSeguimientoDetail,
   TareaSeguimientoListItem,
   TareasSeguimientoFilters,
@@ -52,12 +53,14 @@ export const useTareasSeguimientoStore = defineStore(
     const mapStatus = shallowRef<SeguimientoMapStatus>("idle");
     const mapError = shallowRef<string | null>(null);
     const mapTools = ref<SeguimientoMapToolState[]>(initialMapTools());
+    const plannedRoutes = ref<SeguimientoRutaPlanificada[]>([]);
     const loadingInitial = shallowRef(false);
     const loadingDetail = shallowRef(false);
     const initialError = shallowRef<string | null>(null);
     const detailError = shallowRef<string | null>(null);
     let initialRequest: Promise<void> | null = null;
     let detailRequestId = 0;
+    let plannedRoutesRequestId = 0;
     let trackerLocationSyncRequest: Promise<void> = Promise.resolve();
 
     const visibleTasks = computed(() => {
@@ -86,6 +89,14 @@ export const useTareasSeguimientoStore = defineStore(
       if (filters.value.sourceId) return [filters.value.sourceId];
       return trackers.value.map((tracker) => tracker.sourceId);
     });
+    const canLoadPlannedRoutes = computed(
+      () =>
+        Boolean(filters.value.areaId) &&
+        Boolean(filters.value.scheduledDate) &&
+        Boolean(
+          filters.value.assignedUserId || filters.value.sourceId !== null,
+        ),
+    );
 
     function applyTrackerLocation(location: TrackerCurrentLocation): void {
       trackers.value = trackers.value.map((tracker) =>
@@ -166,15 +177,22 @@ export const useTareasSeguimientoStore = defineStore(
         loadingInitial.value = true;
         initialError.value = null;
         try {
-          const workspace = await tareasSeguimientoService.loadWorkspace(
-            filters.value,
+          const context = await tareasSeguimientoService.loadWorkspaceContext(
+            filters.value.areaId,
           );
-          tasks.value = workspace.tasks;
-          trackers.value = workspace.trackers;
-          trackerLoadObservations.value = workspace.trackerLoadObservations;
-          catalog.value = workspace.catalog;
-          geography.value = workspace.geography;
-          mapConfiguration.value = workspace.mapConfiguration;
+          trackers.value = context.trackers;
+          trackerLoadObservations.value = context.trackerLoadObservations;
+          catalog.value = context.catalog;
+          geography.value = context.geography;
+          mapConfiguration.value = context.mapConfiguration;
+          const taskDataRequest = tareasSeguimientoService.loadTasks(
+            filters.value,
+            context.trackers,
+          );
+          if (canLoadPlannedRoutes.value) void refreshPlannedRoutes();
+          const taskData = await taskDataRequest;
+          tasks.value = taskData.tasks;
+          trackers.value = taskData.trackers;
           void syncTrackerLocations();
           if (
             selectedTaskId.value &&
@@ -192,6 +210,45 @@ export const useTareasSeguimientoStore = defineStore(
         }
       })();
       return initialRequest;
+    }
+
+    async function refreshPlannedRoutes(options?: {
+      sourceId?: number | null;
+      userId?: string | null;
+    }): Promise<void> {
+      const sourceId = options?.sourceId ?? filters.value.sourceId;
+      const userId = options?.userId ?? filters.value.assignedUserId;
+      if (
+        !filters.value.areaId ||
+        !filters.value.scheduledDate ||
+        (!userId && sourceId === null)
+      ) {
+        plannedRoutesRequestId++;
+        plannedRoutes.value = [];
+        return;
+      }
+      const requestId = ++plannedRoutesRequestId;
+      try {
+        const routes = await tareasSeguimientoService.loadPlannedRoutes({
+          p_area_id: filters.value.areaId,
+          p_fecha: filters.value.scheduledDate,
+          p_usuario_id: userId,
+          p_source_id: sourceId,
+        });
+        if (requestId !== plannedRoutesRequestId) return;
+        if (options?.sourceId !== undefined && sourceId !== null) {
+          plannedRoutes.value = [
+            ...plannedRoutes.value.filter(
+              (route) => route.sourceId !== sourceId,
+            ),
+            ...routes,
+          ];
+          return;
+        }
+        plannedRoutes.value = routes;
+      } catch {
+        // La ruta visible anterior se conserva si esta carga auxiliar falla.
+      }
     }
 
     async function selectTask(taskId: string): Promise<void> {
@@ -275,11 +332,13 @@ export const useTareasSeguimientoStore = defineStore(
       mapStatus,
       mapError,
       mapTools,
+      plannedRoutes,
       loadingInitial,
       loadingDetail,
       initialError,
       detailError,
       loadWorkspace,
+      refreshPlannedRoutes,
       selectTask,
       closeDetail,
       setFilters,

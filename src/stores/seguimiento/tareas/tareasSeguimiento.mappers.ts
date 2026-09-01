@@ -12,6 +12,8 @@ import type {
   TareaRastreoListadoDto,
   TareaSeguimientoDetail,
   TareaSeguimientoListItem,
+  RutaPlanificadaDto,
+  SeguimientoRutaPlanificada,
 } from "./tareasSeguimiento.types";
 
 const mapTaskType = (
@@ -104,9 +106,29 @@ export function mapTareaSeguimientoDetail(
     priorityLabel: estado.prioridad_nombre,
     time: response.tiempo,
     visits: response.visitas,
-    route: response.ruta ?? { id: null, estado_calculo: null },
+    route: response.ruta
+      ? {
+          id: response.ruta.ruta_planificada_id,
+          estado_calculo: response.ruta.estado_calculo,
+        }
+      : { id: null, estado_calculo: null },
     permissions: response.permisos,
     updatedAt: tarea.actualizado_en,
+  };
+}
+
+export function mapRutaPlanificada(
+  route: RutaPlanificadaDto,
+): SeguimientoRutaPlanificada {
+  return {
+    id: route.ruta_id,
+    version: route.version_actual,
+    state: route.estado_calculo,
+    areaId: route.area_id,
+    scheduledDate: route.fecha_programada,
+    sourceId: route.source_id,
+    geometry: route.polilinea_geojson,
+    stops: route.paradas,
   };
 }
 
