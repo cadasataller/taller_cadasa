@@ -10,6 +10,7 @@ const task = (
 ): TareaSeguimientoListItem => ({
   id: "task-1",
   type: "finca",
+  typeName: "Finca",
   status: "pendiente",
   areaId: "area-1",
   assignedUserId: null,
@@ -34,7 +35,11 @@ describe("paneles de seguimiento de tareas", () => {
   it("diferencia una duda y comunica la selección de la card", async () => {
     const wrapper = mount(TaskCard, {
       props: {
-        task: task({ type: "duda", status: "duda_detectada" }),
+        task: task({
+          type: "duda",
+          typeName: "Duda automática",
+          status: "duda_detectada",
+        }),
         selected: false,
       },
     });
@@ -42,6 +47,17 @@ describe("paneles de seguimiento de tareas", () => {
     expect(wrapper.text()).toContain("Detectada automáticamente");
     await wrapper.get("button").trigger("click");
     expect(wrapper.emitted("select")).toEqual([["task-1"]]);
+  });
+
+  it("muestra el nombre del tipo entregado por el RPC", () => {
+    const wrapper = mount(TaskCard, {
+      props: {
+        task: task({ type: "zona", typeName: "Zona de mantenimiento" }),
+        selected: false,
+      },
+    });
+
+    expect(wrapper.text()).toContain("Zona de mantenimiento");
   });
 
   it("muestra el nombre del trabajador asignado", () => {

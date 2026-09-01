@@ -17,7 +17,8 @@ const taskRow = (
   area_id: "area-1",
   fecha_programada: "2026-08-29",
   indicaciones: "Visitar ubicación",
-  tipo_tarea: "zona",
+  tipo_tarea_codigo: "zona",
+  tipo_tarea_nombre: "Zona",
   ubicacion_id: null,
   usuario_asignado_id: "user-1",
   usuario_nombre: "Felix Arauz",
@@ -109,6 +110,7 @@ describe("tareasSeguimiento mappers", () => {
     expect(mapTareaSeguimientoListItem(taskRow())).toMatchObject({
       id: "task-1",
       type: "zona",
+      typeName: "Zona",
       status: "activa",
       assignedUserName: "Felix Arauz",
       elapsedSeconds: 300,
@@ -122,17 +124,21 @@ describe("tareasSeguimiento mappers", () => {
 
   it("maps duda_automatica to the read-only UI task type", () => {
     expect(
-      mapTareaSeguimientoListItem(taskRow({ tipo_tarea: "duda_automatica" }))
-        .type,
+      mapTareaSeguimientoListItem(
+        taskRow({
+          tipo_tarea_codigo: "duda_automatica",
+          tipo_tarea_nombre: "Duda automática",
+        }),
+      ).type,
     ).toBe("duda");
   });
 
-  it("identifica una duda por su estado administrativo aunque el listado conserve tipo finca", () => {
+  it("conserva el tipo recibido aunque el estado administrativo sea duda", () => {
     expect(
       mapTareaSeguimientoListItem(
-        taskRow({ tipo_tarea: "finca", estado_tarea_codigo: "duda" }),
+        taskRow({ tipo_tarea_codigo: "finca", estado_tarea_codigo: "duda" }),
       ),
-    ).toMatchObject({ type: "duda", status: "duda_detectada" });
+    ).toMatchObject({ type: "finca", status: "duda_detectada" });
   });
 
   it("descarta un punto incompleto del RPC para que el detalle no falle al renderizar", () => {

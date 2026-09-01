@@ -10,11 +10,11 @@ import {
 import {
   listarRutasPlanificadasSchema,
   tareaRastreoDetalleSchema,
+  tareasRastreoListadoSchema,
 } from "./tareasSeguimiento.schemas";
 import type {
   ListarTareasRastreoV2Params,
   ListarRutasPlanificadasV2Params,
-  TareaRastreoListadoDto,
   TareaSeguimientoDetail,
   TareasSeguimientoFilters,
   TareaSeguimientoWorkspaceData,
@@ -98,7 +98,7 @@ export const tareasSeguimientoService = {
       toListParams(filters),
     );
     if (error) throw error;
-    const rows = (data ?? []) as TareaRastreoListadoDto[];
+    const rows = tareasRastreoListadoSchema.parse(data ?? []);
     const trackersBySource = new Map<number, SeguimientoTracker>(
       trackers.map((tracker) => [tracker.sourceId, tracker]),
     );

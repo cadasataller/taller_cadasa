@@ -13,13 +13,7 @@ const emit = defineEmits<{ select: [taskId: string] }>();
 
 const isDoubt = computed(() => props.task.type === "duda");
 const isActive = computed(() => props.task.status === "activa");
-const typeLabel = computed(() =>
-  isDoubt.value
-    ? "Duda automática"
-    : props.task.type === "zona"
-      ? "Zona"
-      : "Finca",
-);
+const typeLabel = computed(() => props.task.typeName ?? "Tipo sin nombre");
 const placeLabel = computed(() => {
   if (isDoubt.value) return "Zona automática de permanencia";
   if (props.task.type === "zona") return "Zona de control";

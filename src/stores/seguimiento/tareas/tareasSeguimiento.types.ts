@@ -83,7 +83,8 @@ export interface TareaRastreoListadoDto {
   area_id: string;
   fecha_programada: string;
   indicaciones: string | null;
-  tipo_tarea: TareaRastreoTipoCodigo;
+  tipo_tarea_codigo: TareaRastreoTipoCodigo;
+  tipo_tarea_nombre: string;
   ubicacion_id: string | null;
   usuario_asignado_id: string | null;
   usuario_nombre: string | null;
@@ -260,6 +261,8 @@ export interface TareaRastreoObservacionDto {
 export interface TareaSeguimientoListItem {
   id: string;
   type: SeguimientoTaskType;
+  /** Etiqueta entregada por el catálogo de tipos del RPC de listado. */
+  typeName?: string | null;
   status: SeguimientoTaskStatus;
   areaId: string;
   assignedUserId: string | null;

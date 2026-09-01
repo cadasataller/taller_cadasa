@@ -17,10 +17,8 @@ import type {
 } from "./tareasSeguimiento.types";
 
 const mapTaskType = (
-  type: TareaRastreoListadoDto["tipo_tarea"],
-  administrativeStatus: string,
-): SeguimientoTaskType =>
-  type === "duda_automatica" || administrativeStatus === "duda" ? "duda" : type;
+  type: TareaRastreoListadoDto["tipo_tarea_codigo"],
+): SeguimientoTaskType => (type === "duda_automatica" ? "duda" : type);
 
 const mapTaskStatus = (
   operationalStatus: TareaRastreoListadoDto["estado_operativo_codigo"],
@@ -51,7 +49,8 @@ export function mapTareaSeguimientoListItem(
 ): TareaSeguimientoListItem {
   return {
     id: row.id,
-    type: mapTaskType(row.tipo_tarea, row.estado_tarea_codigo),
+    type: mapTaskType(row.tipo_tarea_codigo),
+    typeName: row.tipo_tarea_nombre,
     status: mapTaskStatus(row.estado_operativo_codigo, row.estado_tarea_codigo),
     areaId: row.area_id,
     assignedUserId: row.usuario_asignado_id,

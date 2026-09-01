@@ -17,6 +17,43 @@ const taskCoordinateSchema = z.object({
   lng: z.number().finite(),
 });
 
+export const tareasRastreoListadoSchema = z.array(
+  z.object({
+    id: z.string(),
+    version: z.number().int(),
+    area_id: z.string(),
+    fecha_programada: z.string(),
+    indicaciones: z.string().nullable(),
+    tipo_tarea_codigo: z.enum(["finca", "zona", "duda_automatica"]),
+    tipo_tarea_nombre: z.string(),
+    ubicacion_id: z.string().nullable(),
+    usuario_asignado_id: z.string().nullable(),
+    usuario_nombre: z.string().nullable(),
+    source_id: z.number().nullable(),
+    tracker_id: z.number().nullable(),
+    tracker_label: z.string().nullable(),
+    prioridad_id: z.number().nullable(),
+    estado_tarea_codigo: z.string(),
+    estado_operativo_codigo: z
+      .enum(["sin_iniciar", "en_ruta", "en_ubicacion", "visitada"])
+      .nullable(),
+    tiempo_estimado_minutos: z.number().nullable(),
+    cantidad_visitas: z.number(),
+    segundos_totales: z.number(),
+    segundos_visita_actual: z.number(),
+    visita_abierta: z.boolean(),
+    entrada_actual_en: z.string().nullable(),
+    primera_entrada_en: z.string().nullable(),
+    ultima_salida_en: z.string().nullable(),
+    orden_ruta: z.number().int().nullable(),
+    punto_latitud: z.number().finite().nullable(),
+    punto_longitud: z.number().finite().nullable(),
+    cancelada_en: z.string().nullable(),
+    eliminado_en: z.string().nullable(),
+    actualizado_en: z.string(),
+  }),
+);
+
 export const tareaRastreoDetalleSchema = z.object({
   tarea: z.object({
     id: z.string(),
