@@ -11,6 +11,8 @@ const props = defineProps<{
   error: string | null;
   search: string;
   hasActiveFilters: boolean;
+  liveBadgeNow?: number | null;
+  liveTaskPermanences?: Record<string, { seconds: number; startedAt: number }>;
   showBack?: boolean;
 }>();
 const emit = defineEmits<{
@@ -53,7 +55,6 @@ const panelMessage = computed(() =>
       </button>
       <div class="flex items-center justify-between gap-3">
         <div>
-          
           <h1 class="mt-0.5 text-xl font-bold text-main">Tareas</h1>
         </div>
         <div class="flex items-center gap-2">
@@ -63,7 +64,7 @@ const panelMessage = computed(() =>
           >
         </div>
       </div>
-      
+
       <label class="relative mt-3 block"
         ><span class="sr-only">Buscar tareas</span
         ><input
@@ -133,6 +134,8 @@ const panelMessage = computed(() =>
           <TaskCard
             :task="task"
             :selected="task.id === selectedTaskId"
+            :live-now="liveBadgeNow"
+            :live-permanence="liveTaskPermanences?.[task.id]"
             @select="emit('select', $event)"
           />
         </li>

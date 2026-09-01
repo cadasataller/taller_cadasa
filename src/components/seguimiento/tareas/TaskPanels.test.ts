@@ -43,6 +43,27 @@ describe("paneles de seguimiento de tareas", () => {
     expect(wrapper.emitted("select")).toEqual([["task-1"]]);
   });
 
+  it("muestra hh:mm y agrega segundos solo mientras la permanencia cuenta", () => {
+    const countingCard = mount(TaskCard, {
+      props: {
+        task: task({ status: "activa", currentVisitSeconds: 59 }),
+        selected: false,
+        livePermanence: { seconds: 59, startedAt: 0 },
+        liveNow: 0,
+      },
+    });
+    expect(countingCard.text()).toContain("00:00:59");
+    expect(countingCard.text()).toContain("Contando");
+
+    const elapsedCard = mount(TaskCard, {
+      props: {
+        task: task({ elapsedSeconds: 3_660 }),
+        selected: false,
+      },
+    });
+    expect(elapsedCard.text()).toContain("01:01");
+  });
+
   it("distingue vacío estructural de resultados filtrados y permite limpiar", async () => {
     const wrapper = mount(TaskListPanel, {
       props: {

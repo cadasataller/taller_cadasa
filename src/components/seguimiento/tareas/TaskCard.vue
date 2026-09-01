@@ -6,6 +6,8 @@ import type { TareaSeguimientoListItem } from "@/stores/seguimiento/tareas/tarea
 const props = defineProps<{
   task: TareaSeguimientoListItem;
   selected: boolean;
+  livePermanence?: { seconds: number; startedAt: number };
+  liveNow?: number | null;
 }>();
 const emit = defineEmits<{ select: [taskId: string] }>();
 
@@ -39,14 +41,36 @@ const estimateLabel = computed(() =>
     ? `${props.task.estimatedMinutes} min est.`
     : "Sin estimación",
 );
+const isCounting = computed(
+  () =>
+    Boolean(props.livePermanence) &&
+    props.liveNow !== null &&
+    props.liveNow !== undefined,
+);
 const durationLabel = computed(() => {
+  const liveSeconds =
+    isCounting.value &&
+    props.livePermanence &&
+    props.liveNow !== null &&
+    props.liveNow !== undefined
+      ? props.livePermanence.seconds +
+        Math.max(
+          0,
+          Math.floor((props.liveNow - props.livePermanence.startedAt) / 1000),
+        )
+      : null;
   const seconds =
-    isActive.value || isDoubt.value
+    liveSeconds ??
+    (isActive.value || isDoubt.value
       ? props.task.currentVisitSeconds || props.task.elapsedSeconds
-      : props.task.elapsedSeconds;
+      : props.task.elapsedSeconds);
   if (!seconds) return estimateLabel.value;
-  const minutes = Math.round(seconds / 60);
-  return minutes ? `${minutes} min` : `${seconds} s`;
+  const totalSeconds = Math.max(0, Math.floor(seconds));
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const base = `${pad(hours)}:${pad(minutes)}`;
+  return isCounting.value ? `${base}:${pad(totalSeconds % 60)}` : base;
 });
 const durationCaption = computed(() => {
   if (isDoubt.value) return "permanencia";
@@ -149,6 +173,12 @@ const durationCaption = computed(() => {
         class="w-full text-[8px] font-semibold uppercase tracking-[0.035em] text-slate-400"
         >{{ durationCaption }}</span
       >
+      <span
+        v-if="isCounting"
+        class="inline-flex w-full items-center justify-end gap-1 text-[8px] font-bold uppercase tracking-[0.05em] text-success"
+      >
+        <span class="size-1.5 animate-pulse rounded-full bg-success" />Contando
+      </span>
     </span>
   </button>
 </template>

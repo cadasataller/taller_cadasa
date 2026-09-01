@@ -37,6 +37,8 @@ const {
   detailError,
   filters,
   initialError,
+  liveBadgeNow,
+  liveTaskPermanences,
   loadingDetail,
   loadingInitial,
   mapError,
@@ -764,6 +766,8 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
       :error="initialError"
       :search="filters.search"
       :has-active-filters="hasActiveFilters"
+      :live-badge-now="liveBadgeNow"
+      :live-task-permanences="liveTaskPermanences"
       :show-back="true"
       @select="openTask"
       @retry="retry"
@@ -778,6 +782,10 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
       :task="detail"
       :loading="loadingDetail"
       :error="detailError"
+      :live-now="liveBadgeNow"
+      :live-permanence="
+        selectedTaskId ? liveTaskPermanences[selectedTaskId] : undefined
+      "
       @close="closeTaskDetail"
       @focus="focusTaskOnMap"
       @retry="selectedTaskId && selectTask(selectedTaskId)"

@@ -112,6 +112,7 @@ describe("tareasSeguimiento mappers", () => {
       elapsedSeconds: 300,
       currentVisitSeconds: 300,
       hasOpenVisit: true,
+      lastVisitedAt: "2026-08-29T12:00:00Z",
       routeOrder: 3,
       routePoint: { latitude: 8.98, longitude: -79.52 },
     });

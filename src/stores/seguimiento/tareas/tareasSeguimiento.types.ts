@@ -250,6 +250,8 @@ export interface TareaSeguimientoListItem {
   elapsedSeconds: number;
   currentVisitSeconds: number;
   hasOpenVisit: boolean;
+  /** Marca temporal de la última visita para priorizar las tareas ya atendidas. */
+  lastVisitedAt?: string | null;
   routePoint: SeguimientoCoordinates | null;
   routeOrder: number | null;
 }

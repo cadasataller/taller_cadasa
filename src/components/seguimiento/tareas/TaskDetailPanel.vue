@@ -23,6 +23,8 @@ const props = defineProps<{
   task: TareaSeguimientoDetail | null;
   loading: boolean;
   error: string | null;
+  livePermanence?: { seconds: number; startedAt: number };
+  liveNow?: number | null;
 }>();
 const emit = defineEmits<{
   close: [];
@@ -57,9 +59,48 @@ const durationLabel = computed(() =>
     : "Sin estimación",
 );
 const visitHistory = computed(() => [...(props.task?.visits ?? [])].reverse());
+const isCounting = computed(
+  () =>
+    Boolean(props.livePermanence) &&
+    props.liveNow !== null &&
+    props.liveNow !== undefined,
+);
+const liveCurrentVisitSeconds = computed(() => {
+  if (
+    !isCounting.value ||
+    !props.livePermanence ||
+    props.liveNow === null ||
+    props.liveNow === undefined
+  )
+    return props.task?.time.segundos_visita_abierta ?? 0;
+  return (
+    props.livePermanence.seconds +
+    Math.max(
+      0,
+      Math.floor((props.liveNow - props.livePermanence.startedAt) / 1000),
+    )
+  );
+});
+const liveTotalSeconds = computed(() => {
+  if (!props.task) return 0;
+  if (!isCounting.value) return props.task.time.segundos_totales;
+  return Math.max(
+    0,
+    props.task.time.segundos_totales -
+      props.task.time.segundos_visita_abierta +
+      liveCurrentVisitSeconds.value,
+  );
+});
 
-function formatDuration(seconds: number): string {
+function formatDuration(seconds: number, includeSeconds = false): string {
   if (!seconds) return "0 min";
+  if (includeSeconds) {
+    const totalSeconds = Math.max(0, Math.floor(seconds));
+    const pad = (value: number) => value.toString().padStart(2, "0");
+    return `${pad(Math.floor(totalSeconds / 3600))}:${pad(
+      Math.floor((totalSeconds % 3600) / 60),
+    )}:${pad(totalSeconds % 60)}`;
+  }
   const minutes = Math.round(seconds / 60);
   return minutes ? `${minutes} min` : `${seconds} s`;
 }
@@ -128,7 +169,6 @@ function visitDuration(
               (loading ? "Cargando tarea" : "Tarea seleccionada")
             }}
           </h2>
-          
         </div>
         <button
           class="grid size-7 shrink-0 place-items-center rounded-[0.4375rem] bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
@@ -262,7 +302,7 @@ function visitDuration(
                 Tiempo total
               </p>
               <p class="mt-1 font-mono text-[11px] font-bold text-slate-700">
-                {{ formatDuration(task.time.segundos_totales) }}
+                {{ formatDuration(liveTotalSeconds, isCounting) }}
               </p>
             </div>
             <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
@@ -272,7 +312,15 @@ function visitDuration(
                 Visita actual
               </p>
               <p class="mt-1 font-mono text-[11px] font-bold text-slate-700">
-                {{ formatDuration(task.time.segundos_visita_abierta) }}
+                {{ formatDuration(liveCurrentVisitSeconds, isCounting) }}
+              </p>
+              <p
+                v-if="isCounting"
+                class="mt-1 inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-[0.05em] text-success"
+              >
+                <span
+                  class="size-1.5 animate-pulse rounded-full bg-success"
+                />Contando
               </p>
             </div>
             <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">

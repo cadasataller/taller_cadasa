@@ -13,6 +13,11 @@ import type {
 } from "@/seguimiento/shared/trackers/tracker.types";
 import { trackerCurrentLocationService } from "@/seguimiento/shared/trackers/trackerCurrentLocation.service";
 import { trackerLocationService } from "@/seguimiento/shared/trackers/trackerLocation.service";
+import {
+  tareaRealtimeService,
+  type TareaObservacionRealtimeEvent,
+  type TareaPermanenciaRealtimeEvent,
+} from "@/seguimiento/shared/tareas/tareaRealtime.service";
 import type {
   SeguimientoMapStatus,
   SeguimientoMapConfiguration,
@@ -42,6 +47,11 @@ export const useTareasSeguimientoStore = defineStore(
     const trackers = ref<SeguimientoTracker[]>([]);
     const trackerLoadObservations = ref<string[]>([]);
     const trackerLocationError = shallowRef<string | null>(null);
+    const realtimeError = shallowRef<string | null>(null);
+    const liveBadgeNow = shallowRef<number | null>(null);
+    const liveTaskPermanences = ref<
+      Record<string, { seconds: number; startedAt: number }>
+    >({});
     const catalog = ref<SeguimientoTaskCatalog>({ areas: [] });
     const geography = ref<SeguimientoOperationalGeography[]>([]);
     const mapConfiguration = shallowRef<SeguimientoMapConfiguration | null>(
@@ -62,10 +72,12 @@ export const useTareasSeguimientoStore = defineStore(
     let detailRequestId = 0;
     let plannedRoutesRequestId = 0;
     let trackerLocationSyncRequest: Promise<void> = Promise.resolve();
+    let realtimeSyncRequest: Promise<void> = Promise.resolve();
+    let liveClock: ReturnType<typeof setInterval> | null = null;
 
     const visibleTasks = computed(() => {
       const search = filters.value.search.trim().toLocaleLowerCase();
-      return tasks.value.filter(
+      const filteredTasks = tasks.value.filter(
         (task) =>
           (!filters.value.types.length ||
             filters.value.types.includes(task.type)) &&
@@ -76,6 +88,23 @@ export const useTareasSeguimientoStore = defineStore(
               .filter((value): value is string => Boolean(value))
               .some((value) => value.toLocaleLowerCase().includes(search))),
       );
+      return filteredTasks
+        .map((task, index) => ({ task, index }))
+        .sort((left, right) => {
+          const leftVisitedAt = left.task.lastVisitedAt;
+          const rightVisitedAt = right.task.lastVisitedAt;
+          if (leftVisitedAt && rightVisitedAt) {
+            const difference =
+              Date.parse(rightVisitedAt) - Date.parse(leftVisitedAt);
+            return Number.isFinite(difference) && difference !== 0
+              ? difference
+              : left.index - right.index;
+          }
+          if (leftVisitedAt) return -1;
+          if (rightVisitedAt) return 1;
+          return left.index - right.index;
+        })
+        .map(({ task }) => task);
     });
     const selectedTask = computed(
       () =>
@@ -97,6 +126,162 @@ export const useTareasSeguimientoStore = defineStore(
           filters.value.assignedUserId || filters.value.sourceId !== null,
         ),
     );
+    const realtimeAreaIds = computed(() =>
+      filters.value.areaId
+        ? [filters.value.areaId]
+        : catalog.value.areas.map((area) => area.id),
+    );
+
+    function startLiveClock(): void {
+      if (liveClock) return;
+      liveBadgeNow.value = Date.now();
+      liveClock = setInterval(() => {
+        liveBadgeNow.value = Date.now();
+      }, 1000);
+    }
+
+    function stopLiveClockIfIdle(): void {
+      if (Object.keys(liveTaskPermanences.value).length || !liveClock) return;
+      clearInterval(liveClock);
+      liveClock = null;
+      liveBadgeNow.value = null;
+    }
+
+    function initializeLivePermanences(
+      loadedTasks: readonly TareaSeguimientoListItem[],
+    ): void {
+      const startedAt = Date.now();
+      liveTaskPermanences.value = Object.fromEntries(
+        loadedTasks
+          .filter((task) => task.hasOpenVisit)
+          .map((task) => [
+            task.id,
+            { seconds: task.currentVisitSeconds, startedAt },
+          ]),
+      );
+      if (Object.keys(liveTaskPermanences.value).length) {
+        startLiveClock();
+        return;
+      }
+      stopLiveClockIfIdle();
+    }
+
+    function applyTaskPermanencia(
+      event: Extract<TareaPermanenciaRealtimeEvent, { alcance: "tarea" }>,
+    ): void {
+      tasks.value = tasks.value.map((task) => {
+        if (task.id !== event.tarea_id) return task;
+        const status =
+          event.estado_operativo_codigo === "en_ubicacion"
+            ? "activa"
+            : event.estado_operativo_codigo === "en_ruta"
+              ? "en_ruta"
+              : event.estado_operativo_codigo === "visitada"
+                ? "visitada"
+                : event.estado_operativo_codigo === "sin_iniciar"
+                  ? "pendiente"
+                  : task.status;
+        return {
+          ...task,
+          status,
+          sourceId: event.source_id ?? task.sourceId,
+          trackerId: event.tracker_id ?? task.trackerId,
+          trackerLabel: event.tracker_label ?? task.trackerLabel,
+          elapsedSeconds: event.segundos_totales ?? task.elapsedSeconds,
+          currentVisitSeconds:
+            event.segundos_permanencia_actual ?? task.currentVisitSeconds,
+          hasOpenVisit: event.visita_abierta ?? task.hasOpenVisit,
+          lastVisitedAt:
+            event.entrada_actual_en ??
+            event.ultima_salida_en ??
+            event.primera_entrada_en ??
+            task.lastVisitedAt,
+        };
+      });
+      if (event.tipo === "permanencia_iniciada" && event.visita_abierta) {
+        liveTaskPermanences.value = {
+          ...liveTaskPermanences.value,
+          [event.tarea_id]: {
+            seconds: event.segundos_permanencia_actual ?? 0,
+            startedAt: Date.now(),
+          },
+        };
+        startLiveClock();
+      }
+      if (
+        event.tipo === "permanencia_finalizada" ||
+        event.visita_abierta === false
+      ) {
+        const { [event.tarea_id]: _, ...remainingPermanences } =
+          liveTaskPermanences.value;
+        liveTaskPermanences.value = remainingPermanences;
+        stopLiveClockIfIdle();
+      }
+    }
+
+    async function refreshOpenDetail(taskId: string): Promise<void> {
+      if (selectedTaskId.value !== taskId) return;
+      const requestId = ++detailRequestId;
+      try {
+        const refreshedDetail =
+          await tareasSeguimientoService.loadDetail(taskId);
+        if (requestId === detailRequestId && selectedTaskId.value === taskId)
+          detail.value = refreshedDetail;
+      } catch {
+        // El detalle anterior se conserva hasta que el siguiente Broadcast o reintento tenga éxito.
+      }
+    }
+
+    function handlePermanenciaRealtime(
+      event: TareaPermanenciaRealtimeEvent,
+    ): void {
+      if (event.alcance === "tarea") {
+        applyTaskPermanencia(event);
+        void refreshOpenDetail(event.tarea_id);
+        return;
+      }
+      if (event.tipo_tarea === "duda_automatica") {
+        tasks.value = tasks.value.map((task) =>
+          task.id === event.tarea_id
+            ? {
+                ...task,
+                elapsedSeconds:
+                  event.segundos_zona_totales ?? task.elapsedSeconds,
+                currentVisitSeconds:
+                  event.segundos_zona_actual ?? task.currentVisitSeconds,
+                hasOpenVisit: event.visita_zona_abierta ?? task.hasOpenVisit,
+              }
+            : task,
+        );
+      }
+      void refreshOpenDetail(event.tarea_id);
+    }
+
+    function handleObservacionRealtime(
+      event: TareaObservacionRealtimeEvent,
+    ): void {
+      void refreshOpenDetail(event.tarea_id);
+    }
+
+    function syncRealtime(): Promise<void> {
+      realtimeSyncRequest = realtimeSyncRequest
+        .catch(() => undefined)
+        .then(async () => {
+          try {
+            await tareaRealtimeService.sync(realtimeAreaIds.value, {
+              onPermanencia: handlePermanenciaRealtime,
+              onObservacion: handleObservacionRealtime,
+            });
+            realtimeError.value = null;
+          } catch (error) {
+            realtimeError.value = toErrorMessage(
+              error,
+              "No se pudieron conectar las actualizaciones en tiempo real.",
+            );
+          }
+        });
+      return realtimeSyncRequest;
+    }
 
     function applyTrackerLocation(location: TrackerCurrentLocation): void {
       trackers.value = trackers.value.map((tracker) =>
@@ -192,8 +377,10 @@ export const useTareasSeguimientoStore = defineStore(
           if (canLoadPlannedRoutes.value) void refreshPlannedRoutes();
           const taskData = await taskDataRequest;
           tasks.value = taskData.tasks;
+          initializeLivePermanences(taskData.tasks);
           trackers.value = taskData.trackers;
           void syncTrackerLocations();
+          void syncRealtime();
           if (
             selectedTaskId.value &&
             !tasks.value.some((task) => task.id === selectedTaskId.value)
@@ -296,6 +483,7 @@ export const useTareasSeguimientoStore = defineStore(
           getSeguimientoToday(),
       };
       void syncTrackerLocations();
+      void syncRealtime();
     }
     function setMapReady(): void {
       mapStatus.value = "ready";
@@ -312,7 +500,12 @@ export const useTareasSeguimientoStore = defineStore(
       void syncTrackerLocations();
     }
     async function clearTrackerLocationSubscriptions(): Promise<void> {
+      if (liveClock) clearInterval(liveClock);
+      liveClock = null;
+      liveBadgeNow.value = null;
+      liveTaskPermanences.value = {};
       await trackerLocationService.clear();
+      await tareaRealtimeService.clear();
     }
 
     return {
@@ -321,6 +514,9 @@ export const useTareasSeguimientoStore = defineStore(
       trackers,
       trackerLoadObservations,
       trackerLocationError,
+      realtimeError,
+      liveBadgeNow,
+      liveTaskPermanences,
       catalog,
       geography,
       mapConfiguration,

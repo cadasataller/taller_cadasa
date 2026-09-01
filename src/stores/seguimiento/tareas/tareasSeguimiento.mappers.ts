@@ -66,6 +66,8 @@ export function mapTareaSeguimientoListItem(
     elapsedSeconds: row.segundos_totales,
     currentVisitSeconds: row.segundos_visita_actual,
     hasOpenVisit: row.visita_abierta,
+    lastVisitedAt:
+      row.entrada_actual_en ?? row.ultima_salida_en ?? row.primera_entrada_en,
     routePoint: mapRoutePoint(row.punto_latitud, row.punto_longitud),
     routeOrder: row.orden_ruta,
   };
@@ -96,6 +98,10 @@ export function mapTareaSeguimientoDetail(
     elapsedSeconds: response.tiempo.segundos_totales,
     currentVisitSeconds: response.tiempo.segundos_visita_abierta,
     hasOpenVisit: response.tiempo.visita_abierta,
+    lastVisitedAt:
+      response.tiempo.llegada_actual_en ??
+      response.tiempo.ultima_salida_en ??
+      response.tiempo.primera_llegada_en,
     assignedUserName: asignacion.usuario_nombre,
     companionNames: asignacion.acompanantes.map(
       (companion) => companion.nombre,
