@@ -34,6 +34,7 @@ const listedTask: TareaRastreoListadoDto = {
   tipo_tarea: "duda_automatica",
   ubicacion_id: null,
   usuario_asignado_id: null,
+  usuario_nombre: null,
   source_id: 1,
   tracker_id: 9,
   tracker_label: "Tracker 9",

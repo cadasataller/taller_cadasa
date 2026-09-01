@@ -7,6 +7,8 @@ import {
   FileText,
   History,
   MapPinned,
+  MessageSquareMore,
+  Reply,
   RotateCw,
   Route,
   ScanLine,
@@ -59,6 +61,39 @@ const durationLabel = computed(() =>
     : "Sin estimación",
 );
 const visitHistory = computed(() => [...(props.task?.visits ?? [])].reverse());
+const observationThreads = computed(() => {
+  const observations = props.task?.observations ?? [];
+  const observationIds = new Set(
+    observations.map((observation) => observation.id),
+  );
+  const repliesByOrigin = new Map<string, typeof observations>();
+  observations.forEach((observation) => {
+    if (!observation.observacion_origen_id) return;
+    const replies =
+      repliesByOrigin.get(observation.observacion_origen_id) ?? [];
+    replies.push(observation);
+    repliesByOrigin.set(observation.observacion_origen_id, replies);
+  });
+  return observations
+    .filter(
+      (observation) =>
+        !observation.observacion_origen_id ||
+        !observationIds.has(observation.observacion_origen_id),
+    )
+    .map((observation) => ({
+      observation,
+      replies: [...(repliesByOrigin.get(observation.id) ?? [])].sort(
+        (left, right) =>
+          new Date(left.creado_en).getTime() -
+          new Date(right.creado_en).getTime(),
+      ),
+    }))
+    .sort(
+      (left, right) =>
+        new Date(right.observation.creado_en).getTime() -
+        new Date(left.observation.creado_en).getTime(),
+    );
+});
 const isCounting = computed(
   () =>
     Boolean(props.livePermanence) &&
@@ -566,6 +601,66 @@ function visitDuration(
               }}
             </p>
           </div>
+        </section>
+
+        <section class="rounded-[10px] border border-slate-100 bg-white p-3">
+          <div class="flex items-center justify-between gap-2">
+            <h3
+              class="flex items-center gap-1.5 text-[11px] font-extrabold text-main"
+            >
+              <MessageSquareMore class="size-4" />Observaciones
+            </h3>
+            <span
+              class="rounded-full bg-second px-2 py-0.5 text-[8px] font-extrabold text-main"
+              >{{ task.observations.length }}</span
+            >
+          </div>
+          <div v-if="observationThreads.length" class="mt-2.5 grid gap-2">
+            <article
+              v-for="thread in observationThreads"
+              :key="thread.observation.id"
+              class="rounded-lg border border-slate-100 bg-slate-50 p-2"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <span
+                  class="rounded-full bg-warning-bg px-1.5 py-0.5 text-[8px] font-extrabold text-warning"
+                  >{{ thread.observation.tipo_observacion_nombre }}</span
+                >
+                <time class="shrink-0 text-[8px] text-slate-400">
+                  {{ formatTime(thread.observation.capturada_en) }}
+                </time>
+              </div>
+              <p class="mt-1.5 text-[10px] leading-[1.45] text-slate-700">
+                {{ thread.observation.descripcion }}
+              </p>
+              <p class="mt-1.5 text-[8px] font-bold text-slate-500">
+                {{ thread.observation.usuario_nombre || "Usuario" }}
+              </p>
+              <div
+                v-if="thread.replies.length"
+                class="mt-2 grid gap-1.5 border-l-2 border-main/20 pl-2"
+              >
+                <div
+                  v-for="reply in thread.replies"
+                  :key="reply.id"
+                  class="rounded-md bg-white p-1.5"
+                >
+                  <p
+                    class="flex items-center gap-1 text-[8px] font-extrabold text-main"
+                  >
+                    <Reply class="size-3" />Aclaración ·
+                    {{ reply.usuario_nombre || "Usuario" }}
+                  </p>
+                  <p class="mt-1 text-[9px] leading-[1.4] text-slate-600">
+                    {{ reply.descripcion }}
+                  </p>
+                </div>
+              </div>
+            </article>
+          </div>
+          <p v-else class="mt-2.5 text-[10px] text-slate-500">
+            No hay observaciones registradas para esta tarea.
+          </p>
         </section>
       </template>
     </div>

@@ -20,6 +20,7 @@ const taskRow = (
   tipo_tarea: "zona",
   ubicacion_id: null,
   usuario_asignado_id: "user-1",
+  usuario_nombre: "Felix Arauz",
   source_id: 45,
   tracker_id: 12,
   tracker_label: "Tracker 12",
@@ -109,6 +110,7 @@ describe("tareasSeguimiento mappers", () => {
       id: "task-1",
       type: "zona",
       status: "activa",
+      assignedUserName: "Felix Arauz",
       elapsedSeconds: 300,
       currentVisitSeconds: 300,
       hasOpenVisit: true,
@@ -240,5 +242,34 @@ describe("tareasSeguimiento mappers", () => {
       },
       permanenceZones: [permanenceZone],
     });
+  });
+
+  it("preserva observaciones y vincula las aclaraciones por su origen", () => {
+    const observation = {
+      id: "observation-1",
+      tarea_id: "task-1",
+      usuario_id: "user-1",
+      usuario_nombre: "Pedro Hurtado",
+      tipo_observacion_id: 1,
+      tipo_observacion_codigo: "otro",
+      tipo_observacion_nombre: "Otro",
+      observacion_origen_id: null,
+      descripcion: "Equipo detenido cerca de la entrada",
+      estado_operativo_tarea_id: 2,
+      estado_operativo_codigo: "en_ubicacion",
+      estado_operativo_nombre: "En ubicación",
+      latitud: 8.43334,
+      longitud: -82.56367,
+      precision_metros: 8,
+      ubicacion_capturada_en: "2026-09-01T12:00:00Z",
+      capturada_en: "2026-09-01T12:00:00Z",
+      recibida_en: "2026-09-01T12:00:01Z",
+      creado_en: "2026-09-01T12:00:01Z",
+    };
+
+    expect(
+      mapTareaSeguimientoDetail(taskDetail({ observaciones: [observation] }))
+        .observations,
+    ).toEqual([observation]);
   });
 });

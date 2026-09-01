@@ -13,6 +13,7 @@ const task = (
   status: "pendiente",
   areaId: "area-1",
   assignedUserId: null,
+  assignedUserName: null,
   locationId: null,
   scheduledDate: "2026-08-29",
   instructions: "Revisar lote norte",
@@ -41,6 +42,20 @@ describe("paneles de seguimiento de tareas", () => {
     expect(wrapper.text()).toContain("Detectada automáticamente");
     await wrapper.get("button").trigger("click");
     expect(wrapper.emitted("select")).toEqual([["task-1"]]);
+  });
+
+  it("muestra el nombre del trabajador asignado", () => {
+    const wrapper = mount(TaskCard, {
+      props: {
+        task: task({
+          assignedUserId: "user-1",
+          assignedUserName: "Pedro Hurtado",
+        }),
+        selected: false,
+      },
+    });
+
+    expect(wrapper.text()).toContain("Pedro Hurtado");
   });
 
   it("muestra hh:mm y agrega segundos solo mientras la permanencia cuenta", () => {

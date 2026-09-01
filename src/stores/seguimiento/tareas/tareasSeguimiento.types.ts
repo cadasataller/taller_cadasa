@@ -86,6 +86,7 @@ export interface TareaRastreoListadoDto {
   tipo_tarea: TareaRastreoTipoCodigo;
   ubicacion_id: string | null;
   usuario_asignado_id: string | null;
+  usuario_nombre: string | null;
   source_id: number | null;
   tracker_id: number | null;
   tracker_label: string | null;
@@ -218,6 +219,7 @@ export interface TareaRastreoDetalleDto {
     ultima_salida_en: string | null;
   };
   visitas: Array<{ id: string; entrada_en: string; salida_en: string | null }>;
+  observaciones?: TareaRastreoObservacionDto[];
   ruta: {
     ruta_planificada_id: string | null;
     estado_calculo: string | null;
@@ -233,12 +235,35 @@ export interface TareaRastreoDetalleDto {
   };
 }
 
+export interface TareaRastreoObservacionDto {
+  id: string;
+  tarea_id: string;
+  usuario_id: string;
+  usuario_nombre: string | null;
+  tipo_observacion_id: number;
+  tipo_observacion_codigo: string;
+  tipo_observacion_nombre: string;
+  observacion_origen_id: string | null;
+  descripcion: string;
+  estado_operativo_tarea_id: number;
+  estado_operativo_codigo: string | null;
+  estado_operativo_nombre: string | null;
+  latitud: number | null;
+  longitud: number | null;
+  precision_metros: number | null;
+  ubicacion_capturada_en: string | null;
+  capturada_en: string;
+  recibida_en: string;
+  creado_en: string;
+}
+
 export interface TareaSeguimientoListItem {
   id: string;
   type: SeguimientoTaskType;
   status: SeguimientoTaskStatus;
   areaId: string;
   assignedUserId: string | null;
+  assignedUserName: string | null;
   locationId: string | null;
   scheduledDate: string;
   instructions: string | null;
@@ -257,7 +282,6 @@ export interface TareaSeguimientoListItem {
 }
 
 export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
-  assignedUserName: string | null;
   companionNames: string[];
   controlLine: SeguimientoLineGeometry | null;
   controlZones: SeguimientoZoneGeometry[];
@@ -270,6 +294,7 @@ export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
   priorityLabel: string | null;
   time: TareaRastreoDetalleDto["tiempo"];
   visits: TareaRastreoDetalleDto["visitas"];
+  observations: TareaRastreoObservacionDto[];
   route: { id: string | null; estado_calculo: string | null };
   permissions: TareaRastreoDetalleDto["permisos"];
   updatedAt: string;

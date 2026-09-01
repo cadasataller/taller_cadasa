@@ -91,6 +91,32 @@ export const tareaRastreoDetalleSchema = z.object({
       salida_en: z.string().nullable(),
     }),
   ),
+  observaciones: z
+    .array(
+      z.object({
+        id: z.string(),
+        tarea_id: z.string(),
+        usuario_id: z.string(),
+        usuario_nombre: z.string().nullable(),
+        tipo_observacion_id: z.number().int(),
+        tipo_observacion_codigo: z.string(),
+        tipo_observacion_nombre: z.string(),
+        observacion_origen_id: z.string().nullable(),
+        descripcion: z.string(),
+        estado_operativo_tarea_id: z.number().int(),
+        estado_operativo_codigo: z.string().nullable(),
+        estado_operativo_nombre: z.string().nullable(),
+        latitud: z.number().finite().nullable(),
+        longitud: z.number().finite().nullable(),
+        precision_metros: z.number().finite().nullable(),
+        ubicacion_capturada_en: z.string().nullable(),
+        capturada_en: z.string(),
+        recibida_en: z.string(),
+        creado_en: z.string(),
+      }),
+    )
+    .optional()
+    .default([]),
   ruta: z
     .object({
       ruta_planificada_id: z.string().nullable(),

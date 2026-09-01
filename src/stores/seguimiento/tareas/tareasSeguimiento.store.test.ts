@@ -39,6 +39,7 @@ const listedTask = {
   status: "pendiente" as const,
   areaId: "area-1",
   assignedUserId: null,
+  assignedUserName: null,
   locationId: null,
   scheduledDate: "2026-09-01",
   instructions: "Revisar lote",

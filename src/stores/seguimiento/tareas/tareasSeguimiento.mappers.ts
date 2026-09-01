@@ -55,6 +55,7 @@ export function mapTareaSeguimientoListItem(
     status: mapTaskStatus(row.estado_operativo_codigo, row.estado_tarea_codigo),
     areaId: row.area_id,
     assignedUserId: row.usuario_asignado_id,
+    assignedUserName: row.usuario_nombre,
     locationId: row.ubicacion_id,
     scheduledDate: row.fecha_programada,
     instructions: row.indicaciones,
@@ -120,6 +121,7 @@ export function mapTareaSeguimientoDetail(
     priorityLabel: estado.prioridad_nombre,
     time: response.tiempo,
     visits: response.visitas,
+    observations: response.observaciones ?? [],
     route: response.ruta
       ? {
           id: response.ruta.ruta_planificada_id,

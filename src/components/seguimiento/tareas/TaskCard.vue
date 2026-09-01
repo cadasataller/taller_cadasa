@@ -25,9 +25,12 @@ const placeLabel = computed(() => {
   if (props.task.type === "zona") return "Zona de control";
   return props.task.locationId ? "Finca vinculada" : "Ubicación por definir";
 });
-const workerLabel = computed(() =>
-  props.task.assignedUserId ? "Trabajador asignado" : "Sin trabajador asignado",
-);
+const workerLabel = computed(() => {
+  if (props.task.assignedUserName) return props.task.assignedUserName;
+  return props.task.assignedUserId
+    ? "Trabajador asignado"
+    : "Sin trabajador asignado";
+});
 const statusLabel: Record<TareaSeguimientoListItem["status"], string> = {
   pendiente: "Sin iniciar",
   en_ruta: "En ruta",
