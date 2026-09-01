@@ -16,12 +16,16 @@ const routePoint = computed(() => {
     ? point
     : null;
 });
+const focusPoint = computed(
+  () => routePoint.value ?? props.task.visualLocation,
+);
 const pointLabel = computed(() =>
-  routePoint.value
-    ? `${routePoint.value.latitude.toFixed(5)}, ${routePoint.value.longitude.toFixed(5)}`
-    : "Sin punto de enrutado",
+  focusPoint.value
+    ? `${focusPoint.value.latitude.toFixed(5)}, ${focusPoint.value.longitude.toFixed(5)}`
+    : "Sin ubicación disponible",
 );
 const controlZoneCount = computed(() => props.task.controlZones?.length ?? 0);
+const permanenceZoneCount = computed(() => props.task.permanenceZones.length);
 </script>
 
 <template>
@@ -32,22 +36,37 @@ const controlZoneCount = computed(() => props.task.controlZones?.length ?? 0);
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="text-[10px] font-extrabold text-slate-700">
-              Punto de enrutado
+              {{ routePoint ? "Punto de enrutado" : "Ubicación detectada" }}
             </p>
             <p class="mt-0.5 font-mono text-[9px] text-slate-500">
               {{ pointLabel }}
             </p>
           </div>
           <button
-            v-if="routePoint"
+            v-if="focusPoint"
             class="grid size-8 place-items-center rounded-md text-main hover:bg-second focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
             type="button"
-            aria-label="Enfocar punto de enrutado"
-            @click="emit('focus', routePoint)"
+            aria-label="Enfocar ubicación de la tarea"
+            @click="emit('focus', focusPoint)"
           >
             <Crosshair class="size-4" />
           </button>
         </div>
+      </div>
+      <div
+        v-if="task.type === 'duda'"
+        class="rounded-lg border border-warning/20 bg-warning-bg/45 p-2.5"
+      >
+        <p class="text-[10px] font-extrabold text-warning">
+          Zona de permanencia detectada
+        </p>
+        <p class="mt-0.5 text-[9px] text-slate-500">
+          {{
+            permanenceZoneCount
+              ? `${permanenceZoneCount} ${permanenceZoneCount === 1 ? "zona" : "zonas"} detectada(s)`
+              : "Sin zona de permanencia disponible"
+          }}
+        </p>
       </div>
       <div class="rounded-lg border border-slate-100 bg-slate-50 p-2.5">
         <p class="text-[10px] font-extrabold text-slate-700">

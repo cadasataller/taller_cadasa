@@ -165,13 +165,43 @@ describe("tareasSeguimientoService", () => {
                   area_id: "area-1",
                   fecha_programada: "2026-08-29",
                   indicaciones: "Revisar lote",
-                  tipo_codigo: "finca",
+                  tipo_codigo: "duda_automatica",
                   ubicacion_id: null,
                   tiempo_estimado_minutos: 30,
                   orden_ruta: null,
                   punto_enrutado: null,
+                  ubicacion_visual: {
+                    lat: 8.3833332061767,
+                    lng: -82.5899810791011,
+                    origen: "zona_permanencia",
+                    zona_id: "permanence-zone-1",
+                  },
                   linea_control: null,
                   zonas_control: [],
+                  zonas_permanencia: [
+                    {
+                      id: "permanence-zone-1",
+                      geom: {
+                        type: "MultiPolygon",
+                        coordinates: [
+                          [
+                            [
+                              [-82.590026477, 8.383287997],
+                              [-82.590026477, 8.383378416],
+                              [-82.589935681, 8.383378416],
+                              [-82.590026477, 8.383287997],
+                            ],
+                          ],
+                        ],
+                      },
+                      origen: "automatica_tracker",
+                      tipo_zona: "duda_automatica",
+                      punto_representativo: {
+                        lat: 8.3833332061767,
+                        lng: -82.5899810791011,
+                      },
+                    },
+                  ],
                   actualizado_en: "2026-08-29T00:00:00Z",
                 },
                 asignacion: {
@@ -223,7 +253,19 @@ describe("tareasSeguimientoService", () => {
 
     await expect(
       tareasSeguimientoService.loadDetail("task-1"),
-    ).resolves.toMatchObject({ id: "task-1", type: "finca" });
+    ).resolves.toMatchObject({
+      id: "task-1",
+      type: "duda",
+      visualLocation: {
+        latitude: 8.3833332061767,
+        longitude: -82.5899810791011,
+      },
+      permanenceZones: [
+        {
+          type: "MultiPolygon",
+        },
+      ],
+    });
     expect(rpc).toHaveBeenCalledWith("obtener_tarea_detalle_v2", {
       p_tarea_id: "task-1",
     });

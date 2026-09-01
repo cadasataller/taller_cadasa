@@ -57,8 +57,10 @@ const taskDetail = (
     tiempo_estimado_minutos: 60,
     orden_ruta: 1,
     punto_enrutado: { lat: 8.4, lng: -82.5 },
+    ubicacion_visual: null,
     linea_control: null,
     zonas_control: [],
+    zonas_permanencia: [],
     actualizado_en: "2026-08-29T12:00:00Z",
   },
   asignacion: {
@@ -183,6 +185,51 @@ describe("tareasSeguimiento mappers", () => {
       routePoint: { latitude: 8.4, longitude: -82.5 },
       controlZones: [zone],
       operationalStatusLabel: "Sin iniciar",
+    });
+  });
+
+  it("preserva la ubicación y zona de permanencia de una duda automática", () => {
+    const permanenceZone = {
+      type: "MultiPolygon" as const,
+      coordinates: [[[[-82.590026477, 8.383287997]]]],
+    };
+
+    expect(
+      mapTareaSeguimientoDetail(
+        taskDetail({
+          tarea: {
+            ...taskDetail().tarea,
+            tipo_codigo: "duda_automatica",
+            punto_enrutado: null,
+            ubicacion_visual: {
+              lat: 8.3833332061767,
+              lng: -82.5899810791011,
+              origen: "zona_permanencia",
+              zona_id: "permanence-zone-1",
+            },
+            zonas_permanencia: [
+              {
+                id: "permanence-zone-1",
+                geom: permanenceZone,
+                origen: "automatica_tracker",
+                tipo_zona: "duda_automatica",
+                punto_representativo: {
+                  lat: 8.3833332061767,
+                  lng: -82.5899810791011,
+                },
+              },
+            ],
+          },
+        }),
+      ),
+    ).toMatchObject({
+      type: "duda",
+      routePoint: null,
+      visualLocation: {
+        latitude: 8.3833332061767,
+        longitude: -82.5899810791011,
+      },
+      permanenceZones: [permanenceZone],
     });
   });
 });

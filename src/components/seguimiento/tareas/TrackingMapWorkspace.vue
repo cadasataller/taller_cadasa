@@ -105,6 +105,11 @@ const geometryCenter = (
     longitude: totals.longitude / points.length,
   };
 };
+const selectedTaskFocus = (): SeguimientoCoordinates | null =>
+  props.selectedTaskDetail?.id === props.selectedTaskId
+    ? (props.selectedTaskDetail.routePoint ??
+      props.selectedTaskDetail.visualLocation)
+    : null;
 
 function clearCreationSketch(): void {
   creationSketchLine?.setMap(null);
@@ -581,6 +586,47 @@ function renderLayers(): void {
         }),
       );
     });
+    props.selectedTaskDetail.permanenceZones.forEach((zone) => {
+      const paths = zone.coordinates.map((polygon) =>
+        polygon[0].map(([longitude, latitude]) => ({
+          lat: latitude,
+          lng: longitude,
+        })),
+      );
+      creationOverlays.push(
+        new maps.Polygon({
+          map,
+          paths,
+          clickable: false,
+          strokeColor: "#B45309",
+          strokeOpacity: 1,
+          strokeWeight: 2.5,
+          fillColor: "#F59E0B",
+          fillOpacity: 0.3,
+          zIndex: seguimientoMapZIndex.selected + 2,
+        }),
+      );
+    });
+    const detailFocus = selectedTaskFocus();
+    if (detailFocus) {
+      creationOverlays.push(
+        new maps.Marker({
+          map,
+          position: toLatLng(detailFocus),
+          clickable: false,
+          title: "Ubicación de la tarea seleccionada",
+          zIndex: seguimientoMapZIndex.selected + 3,
+          icon: {
+            path: maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#B45309",
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 2.5,
+          },
+        }),
+      );
+    }
   }
   if (props.creationGeometry?.routePoint) {
     creationOverlays.push(
@@ -776,6 +822,14 @@ watch(
   { deep: true },
 );
 watch(() => props.focus, focusMap);
+watch(
+  () => props.selectedTaskDetail,
+  (detail) => {
+    if (!map || detail?.id !== props.selectedTaskId) return;
+    const focus = selectedTaskFocus();
+    if (focus) map.panTo(toLatLng(focus));
+  },
+);
 watch(
   () => props.creationGeometryMode,
   (mode) => {

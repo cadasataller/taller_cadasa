@@ -101,6 +101,11 @@ export function mapTareaSeguimientoDetail(
     routeOrder: tarea.orden_ruta,
     controlLine: tarea.linea_control,
     controlZones: tarea.zonas_control.map((zone) => zone.geom),
+    visualLocation: mapRoutePoint(
+      tarea.ubicacion_visual?.lat,
+      tarea.ubicacion_visual?.lng,
+    ),
+    permanenceZones: tarea.zonas_permanencia.map((zone) => zone.geom),
     administrativeStatusLabel: estado.estado_tarea_nombre,
     operationalStatusLabel: estado.estado_operativo_nombre,
     priorityLabel: estado.prioridad_nombre,

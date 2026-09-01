@@ -12,6 +12,11 @@ const zoneGeometrySchema = z.object({
   coordinates: z.array(z.array(z.array(z.array(z.number().finite())))),
 });
 
+const taskCoordinateSchema = z.object({
+  lat: z.number().finite(),
+  lng: z.number().finite(),
+});
+
 export const tareaRastreoDetalleSchema = z.object({
   tarea: z.object({
     id: z.string(),
@@ -23,12 +28,14 @@ export const tareaRastreoDetalleSchema = z.object({
     ubicacion_id: z.string().nullable(),
     tiempo_estimado_minutos: z.number().nullable(),
     orden_ruta: z.number().int().nullable(),
-    punto_enrutado: z
-      .object({
-        lat: z.number().finite(),
-        lng: z.number().finite(),
+    punto_enrutado: taskCoordinateSchema.nullable(),
+    ubicacion_visual: taskCoordinateSchema
+      .extend({
+        origen: z.string(),
+        zona_id: z.string().nullable(),
       })
-      .nullable(),
+      .nullable()
+      .default(null),
     linea_control: lineGeometrySchema.nullable(),
     zonas_control: z.array(
       z.object({
@@ -36,6 +43,17 @@ export const tareaRastreoDetalleSchema = z.object({
         geom: zoneGeometrySchema,
       }),
     ),
+    zonas_permanencia: z
+      .array(
+        z.object({
+          id: z.string(),
+          geom: zoneGeometrySchema,
+          origen: z.string(),
+          tipo_zona: z.string(),
+          punto_representativo: taskCoordinateSchema.nullable(),
+        }),
+      )
+      .default([]),
     actualizado_en: z.string(),
   }),
   asignacion: z.object({

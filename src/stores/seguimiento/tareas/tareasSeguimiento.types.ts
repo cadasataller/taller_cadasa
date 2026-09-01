@@ -171,10 +171,23 @@ export interface TareaRastreoDetalleDto {
     tiempo_estimado_minutos: number | null;
     orden_ruta: number | null;
     punto_enrutado: { lat: number; lng: number } | null;
+    ubicacion_visual: {
+      lat: number;
+      lng: number;
+      origen: string;
+      zona_id: string | null;
+    } | null;
     linea_control: SeguimientoLineGeometry | null;
     zonas_control: Array<{
       id: string;
       geom: SeguimientoZoneGeometry;
+    }>;
+    zonas_permanencia: Array<{
+      id: string;
+      geom: SeguimientoZoneGeometry;
+      origen: string;
+      tipo_zona: string;
+      punto_representativo: { lat: number; lng: number } | null;
     }>;
     actualizado_en: string;
   };
@@ -246,6 +259,10 @@ export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
   companionNames: string[];
   controlLine: SeguimientoLineGeometry | null;
   controlZones: SeguimientoZoneGeometry[];
+  /** Punto de referencia de una duda automática cuando no existe punto enrutable. */
+  visualLocation: SeguimientoCoordinates | null;
+  /** Polígonos detectados por permanencia; no son zonas de control de la tarea. */
+  permanenceZones: SeguimientoZoneGeometry[];
   administrativeStatusLabel: string | null;
   operationalStatusLabel: string | null;
   priorityLabel: string | null;
