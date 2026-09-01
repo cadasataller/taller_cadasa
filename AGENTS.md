@@ -19,3 +19,5 @@ usa iconos de lucide icon
 valida si tiene zod instalado, si lo tien cualquier logica de validacion que puedaser reempzlad por zod, sino esta instlado detente y pide que lo instale
 
 si hay algun componente que usa input date usa la libreria vue date picker que esya instalado, sino lo esta detente y pide qye lo instale, adapta la logica de fecha que se neceati al date picker vue
+
+nunca usas unknown o any, solo bajo estas condionces: aanlzia y si determinar ese uso detente y di que necesita para evitar que eso sea unknowe o any para poder tiparlo bien, si la repsuesta es no importa ntonces usa unknow o any si te dan un tipado o algo que permitar tiapr ntonces evita usar unknow o any
