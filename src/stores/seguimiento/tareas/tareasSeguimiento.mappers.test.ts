@@ -124,6 +124,14 @@ describe("tareasSeguimiento mappers", () => {
     ).toBe("duda");
   });
 
+  it("identifica una duda por su estado administrativo aunque el listado conserve tipo finca", () => {
+    expect(
+      mapTareaSeguimientoListItem(
+        taskRow({ tipo_tarea: "finca", estado_tarea_codigo: "duda" }),
+      ),
+    ).toMatchObject({ type: "duda", status: "duda_detectada" });
+  });
+
   it("descarta un punto incompleto del RPC para que el detalle no falle al renderizar", () => {
     expect(
       mapTareaSeguimientoListItem(

@@ -110,6 +110,23 @@ const selectedTaskFocus = (): SeguimientoCoordinates | null =>
     ? (props.selectedTaskDetail.routePoint ??
       props.selectedTaskDetail.visualLocation)
     : null;
+const mapWarningColor = (): string =>
+  mapCanvas.value
+    ? getComputedStyle(mapCanvas.value)
+        .getPropertyValue("--color-warning")
+        .trim() || "#402823"
+    : "#AD44AD";
+
+const taskPinSize = { width: 29, height: 38 };
+
+function createTaskPinIcon(maps: any, color: string, selected = false): object {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${taskPinSize.width}" height="${taskPinSize.height}" viewBox="0 0 32 42"><path d="M16 1.5C8.5 1.5 2.5 7.6 2.5 15.1c0 10.1 13.5 25.4 13.5 25.4s13.5-15.3 13.5-25.4C29.5 7.6 23.5 1.5 16 1.5Z" fill="${color}" stroke="#fff" stroke-width="${selected ? 3 : 2.5}" stroke-linejoin="round"/><circle cx="16" cy="15" r="5" fill="#fff"/></svg>`;
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new maps.Size(taskPinSize.width, taskPinSize.height),
+    anchor: new maps.Point(taskPinSize.width / 2, taskPinSize.height),
+  };
+}
 
 function clearCreationSketch(): void {
   creationSketchLine?.setMap(null);
@@ -324,6 +341,7 @@ function renderLayers(): void {
   if (!map || !window.google?.maps) return;
   clearLayers();
   const maps = window.google.maps;
+  const warningColor = mapWarningColor();
   if (isToolEnabled("zones")) {
     farmBoundaries = props.geography.flatMap((area) =>
       area.farms.flatMap((farm) => {
@@ -471,6 +489,7 @@ function renderLayers(): void {
       )
       .map((task) => {
         const selected = task.id === props.selectedTaskId;
+        const isDoubt = task.type === "duda";
         return {
           selected,
           marker: new maps.Marker({
@@ -482,16 +501,18 @@ function renderLayers(): void {
             zIndex: selected
               ? seguimientoMapZIndex.selected
               : seguimientoMapZIndex.task,
-            icon: selected
-              ? {
-                  path: maps.SymbolPath.CIRCLE,
-                  scale: 10,
-                  fillColor: "#004643",
-                  fillOpacity: 1,
-                  strokeColor: "#ffffff",
-                  strokeWeight: 3,
-                }
-              : undefined,
+            icon: isDoubt
+              ? createTaskPinIcon(maps, warningColor, selected)
+              : selected
+                ? {
+                    path: maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: "#004643",
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 3,
+                  }
+                : createTaskPinIcon(maps, "#EA4335"),
           }),
         };
       });
@@ -521,26 +542,14 @@ function renderLayers(): void {
           lng: longitude,
         })),
       );
-    const routeLinesToRender = plannedRouteLines.length
-      ? plannedRouteLines
-      : [
-          props.tasks
-            .filter((task) => task.routePoint)
-            .sort(
-              (left, right) =>
-                (left.routeOrder ?? Number.MAX_SAFE_INTEGER) -
-                (right.routeOrder ?? Number.MAX_SAFE_INTEGER),
-            )
-            .map((task) => toLatLng(task.routePoint!)),
-        ];
-    routeLines = routeLinesToRender
+    routeLines = plannedRouteLines
       .filter((routePoints) => routePoints.length > 1)
       .map(
         (routePoints) =>
           new maps.Polyline({
             map,
             path: routePoints,
-            geodesic: !plannedRouteLines.length,
+            geodesic: false,
             strokeColor: "#D4A853",
             strokeOpacity: 0.96,
             strokeWeight: 4.5,
@@ -598,10 +607,10 @@ function renderLayers(): void {
           map,
           paths,
           clickable: false,
-          strokeColor: "#B45309",
+          strokeColor: warningColor,
           strokeOpacity: 1,
           strokeWeight: 2.5,
-          fillColor: "#F59E0B",
+          fillColor: warningColor,
           fillOpacity: 0.3,
           zIndex: seguimientoMapZIndex.selected + 2,
         }),
@@ -616,14 +625,17 @@ function renderLayers(): void {
           clickable: false,
           title: "Ubicación de la tarea seleccionada",
           zIndex: seguimientoMapZIndex.selected + 3,
-          icon: {
-            path: maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: "#B45309",
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 2.5,
-          },
+          icon:
+            props.selectedTaskDetail.type === "duda"
+              ? createTaskPinIcon(maps, warningColor, true)
+              : {
+                  path: maps.SymbolPath.CIRCLE,
+                  scale: 8,
+                  fillColor: "#004643",
+                  fillOpacity: 1,
+                  strokeColor: "#ffffff",
+                  strokeWeight: 2.5,
+                },
         }),
       );
     }

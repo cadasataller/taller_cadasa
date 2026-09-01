@@ -18,13 +18,16 @@ import type {
 
 const mapTaskType = (
   type: TareaRastreoListadoDto["tipo_tarea"],
-): SeguimientoTaskType => (type === "duda_automatica" ? "duda" : type);
+  administrativeStatus: string,
+): SeguimientoTaskType =>
+  type === "duda_automatica" || administrativeStatus === "duda" ? "duda" : type;
 
 const mapTaskStatus = (
   operationalStatus: TareaRastreoListadoDto["estado_operativo_codigo"],
   administrativeStatus: string,
 ): SeguimientoTaskStatus => {
   if (administrativeStatus === "cancelada") return "cancelada";
+  if (administrativeStatus === "duda") return "duda_detectada";
   if (operationalStatus === "en_ruta") return "en_ruta";
   if (operationalStatus === "en_ubicacion") return "activa";
   if (operationalStatus === "visitada") return "visitada";
@@ -48,7 +51,7 @@ export function mapTareaSeguimientoListItem(
 ): TareaSeguimientoListItem {
   return {
     id: row.id,
-    type: mapTaskType(row.tipo_tarea),
+    type: mapTaskType(row.tipo_tarea, row.estado_tarea_codigo),
     status: mapTaskStatus(row.estado_operativo_codigo, row.estado_tarea_codigo),
     areaId: row.area_id,
     assignedUserId: row.usuario_asignado_id,
@@ -75,7 +78,7 @@ export function mapTareaSeguimientoDetail(
   const routePoint = tarea.punto_enrutado;
   return {
     id: tarea.id,
-    type: mapTaskType(tarea.tipo_codigo),
+    type: mapTaskType(tarea.tipo_codigo, estado.estado_tarea_codigo),
     status: mapTaskStatus(
       estado.estado_operativo_codigo,
       estado.estado_tarea_codigo,
