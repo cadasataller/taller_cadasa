@@ -824,7 +824,27 @@ const isActive = (path: string) =>
           }}</time>
         </div>
 
-        <p class="text-xs font-normal text-gray-500">
+        <div
+          v-if="showDashboardHeaderNav"
+          class="flex min-w-0 max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-gray-200/20 bg-gray-100 p-1 shadow-inner hide-scrollbar"
+        >
+          <button
+            v-for="(slide, index) in dashboardHeaderNavState.slides"
+            :key="slide.id"
+            type="button"
+            class="flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-center text-[11px] font-bold transition-all"
+            :class="
+              index === dashboardHeaderNavState.currentSlideIndex
+                ? 'bg-white text-main shadow-md'
+                : 'text-gray-400 hover:text-gray-600'
+            "
+            @click="selectDashboardHeaderSlide(index)"
+          >
+            {{ slide.label }}
+          </button>
+        </div>
+
+        <p v-else class="text-xs font-normal text-gray-500">
           Bienvenido
           <span class="font-medium text-main">{{ currentUserName }}</span>
         </p>

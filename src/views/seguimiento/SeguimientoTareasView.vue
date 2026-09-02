@@ -59,6 +59,8 @@ const {
   tasks,
   catalog,
   trackers,
+  trackerHistory,
+  trackerHistoryNow,
   visibleTasks,
   closeDetail,
   retry,
@@ -69,6 +71,7 @@ const {
   updateFilters,
   plannedRoutes,
   refreshPlannedRoutes,
+  loadTrackerHistory,
 } = useSeguimientoTareasView();
 const {
   draft: createDraft,
@@ -235,6 +238,7 @@ const locallyFilteredTasks = computed(() =>
 function applyFilters(next: Partial<TareasSeguimientoFilters>): void {
   updateFilters(next);
   void retry();
+  void loadTrackerHistory(crossFilter.value.sourceId);
   void refreshPlannedRoutes({
     userId: crossFilter.value.workerId,
     sourceId: crossFilter.value.sourceId,
@@ -248,6 +252,7 @@ function applyCrossFilter(next: SeguimientoCrossFilter): void {
   )
     return;
   crossFilter.value = next;
+  void loadTrackerHistory(next.sourceId);
   void refreshPlannedRoutes({
     userId: next.workerId,
     sourceId: next.sourceId,
@@ -552,6 +557,7 @@ watch(mobileView, (view) => {
     <TrackingMapWorkspace
       v-if="canViewMap"
       :tasks="locallyFilteredTasks"
+      :task-exclusion-points="tasks"
       :trackers="trackers"
       :selected-task-id="selectedTaskId"
       :map-tools="mapTools"
@@ -566,6 +572,8 @@ watch(mobileView, (view) => {
       :creation-locked-boundary="lockedFarmBoundary"
       :creation-sketch-reset-key="creationSketchResetKey"
       :planned-routes="plannedRoutes"
+      :tracker-history="trackerHistory"
+      :tracker-history-now="trackerHistoryNow"
       :selected-task-detail="detail"
       @ready="setMapReady"
       @error="setMapError"

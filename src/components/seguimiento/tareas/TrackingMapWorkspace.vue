@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { booleanPointInPolygon, multiPolygon, point } from "@turf/turf";
+import {
+  booleanPointInPolygon,
+  distance,
+  multiPolygon,
+  point,
+} from "@turf/turf";
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from "vue";
 import { mapsProviderLoader } from "@/seguimiento/shared/maps/mapsProvider.loader";
+import { formatPanamaDateTime } from "@/seguimiento/shared/trackers/trackerHistoryWindow";
 import {
   resolveSeguimientoMapDisplayZoom,
   resolveSeguimientoMapViewport,
@@ -13,7 +19,14 @@ import type {
   TareaCreacionGeometria,
   TareaCreacionModoGeometria,
 } from "@/stores/seguimiento/tareas/creacion/tareaCreacion.types";
-import type { SeguimientoTracker } from "@/seguimiento/shared/trackers/tracker.types";
+import type {
+  SeguimientoTracker,
+  SeguimientoTrackerHistoryPoint,
+} from "@/seguimiento/shared/trackers/tracker.types";
+import {
+  buildTrackerParkingStops,
+  type TrackerParkingStop,
+} from "@/seguimiento/shared/trackers/trackerParkingStops";
 import {
   createTrackerMarkerIcon,
   getTrackerMarkerTitle,
@@ -30,6 +43,7 @@ import type {
 
 const props = defineProps<{
   tasks: TareaSeguimientoListItem[];
+  taskExclusionPoints?: TareaSeguimientoListItem[];
   trackers: SeguimientoTracker[];
   selectedTaskId: string | null;
   mapTools: SeguimientoMapToolState[];
@@ -48,6 +62,8 @@ const props = defineProps<{
   creationLockedBoundary?: SeguimientoOperationalGeography["farms"][number]["boundary"];
   creationSketchResetKey?: number;
   plannedRoutes?: SeguimientoRutaPlanificada[];
+  trackerHistory?: SeguimientoTrackerHistoryPoint[];
+  trackerHistoryNow?: number | null;
   selectedTaskDetail?: TareaSeguimientoDetail | null;
 }>();
 const emit = defineEmits<{
@@ -123,6 +139,11 @@ const mapWarningColor = (): string =>
     : "#AD44AD";
 
 const taskPinSize = { width: 29, height: 38 };
+
+interface MapIconFactory {
+  Size: new (width: number, height: number) => object;
+  Point: new (x: number, y: number) => object;
+}
 
 function createTaskPinIcon(
   maps: any,
@@ -263,7 +284,7 @@ const escapeXml = (value: string): string =>
   );
 
 function createFarmLabelIcon(name: string, maps: any): object {
-  const width = Math.min(200, Math.max(92, name.length * 6.2 + 16));
+  const width = Math.min(200, name.length * 6.2 + 8);
   const safeName = escapeXml(name);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="26" viewBox="0 0 ${width} 26"><rect x=".5" y=".5" width="${width - 1}" height="25" rx="6" fill="#fffaf0" fill-opacity=".82" stroke="#31544d" stroke-opacity=".5"/><text x="${width / 2}" y="17" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#173d35">${safeName}</text></svg>`;
   return {
@@ -281,6 +302,45 @@ function createShelterIcon(maps: any): object {
     scaledSize: new maps.Size(30, 30),
     anchor: new maps.Point(15, 15),
   };
+}
+
+function createLucideCircleStopIcon(
+  durationMinutes: number,
+  maps: MapIconFactory,
+): object {
+  const label = `${durationMinutes} min`;
+  const width = Math.max(66, label.length * 6.4 + 34);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="30" viewBox="0 0 ${width} 30"><rect x="14.5" y="2.5" width="${width - 17}" height="25" rx="7" fill="#fff7f5" stroke="#dc2626" stroke-opacity=".85"/><circle cx="14" cy="15" r="11" fill="#dc2626"/><circle cx="14" cy="15" r="6.5" fill="none" stroke="#fff" stroke-width="2"/><rect x="11" y="12" width="6" height="6" rx="1" fill="#fff"/><text x="${width / 2 + 8}" y="18.5" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#991b1b">${label}</text></svg>`;
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new maps.Size(width, 30),
+    anchor: new maps.Point(14, 15),
+  };
+}
+
+function isParkingStopOutsideOperationalAreas(
+  stop: TrackerParkingStop,
+): boolean {
+  const stopPoint = point([stop.longitude, stop.latitude]);
+  const isInsideFarm = props.geography.some((area) =>
+    area.farms.some(
+      (farm) =>
+        farm.boundary &&
+        booleanPointInPolygon(
+          stopPoint,
+          multiPolygon(farm.boundary.coordinates),
+        ),
+    ),
+  );
+  if (isInsideFarm) return false;
+  return !(props.taskExclusionPoints ?? props.tasks).some(
+    (task) =>
+      task.routePoint &&
+      distance(
+        stopPoint,
+        point([task.routePoint.longitude, task.routePoint.latitude]),
+      ) <= 0.1,
+  );
 }
 
 function updateTrackerMarkerDisplay(): void {
@@ -537,6 +597,10 @@ function renderLayers(): void {
     updateTrackerMarkerDisplay();
   }
   if (isToolEnabled("route")) {
+    const trackerHistoryLine = (props.trackerHistory ?? []).map((point) => ({
+      lat: point.latitude,
+      lng: point.longitude,
+    }));
     const plannedRouteLines = (props.plannedRoutes ?? [])
       .filter((route) => route.geometry)
       .map((route) =>
@@ -545,7 +609,7 @@ function renderLayers(): void {
           lng: longitude,
         })),
       );
-    routeLines = plannedRouteLines
+    routeLines = [trackerHistoryLine, ...plannedRouteLines]
       .filter((routePoints) => routePoints.length > 1)
       .map(
         (routePoints) =>
@@ -553,12 +617,31 @@ function renderLayers(): void {
             map,
             path: routePoints,
             geodesic: false,
-            strokeColor: "#D4A853",
-            strokeOpacity: 0.96,
-            strokeWeight: 4.5,
+            strokeColor:
+              routePoints === trackerHistoryLine ? "#F97316" : "#D4A853",
+            strokeOpacity: routePoints === trackerHistoryLine ? 0.88 : 0.96,
+            strokeWeight: routePoints === trackerHistoryLine ? 4 : 4.5,
             zIndex: seguimientoMapZIndex.route,
           }),
       );
+    buildTrackerParkingStops(
+      props.trackerHistory ?? [],
+      formatPanamaDateTime(new Date(props.trackerHistoryNow ?? Date.now())),
+    )
+      .filter(isParkingStopOutsideOperationalAreas)
+      .forEach((stop) => {
+        creationOverlays.push(
+          new maps.Marker({
+            map,
+            position: { lat: stop.latitude, lng: stop.longitude },
+            clickable: false,
+            title: `Detenido ${stop.durationMinutes} min`,
+            icon: createLucideCircleStopIcon(stop.durationMinutes, maps),
+            zIndex: seguimientoMapZIndex.alert,
+            optimized: false,
+          }),
+        );
+      });
   }
   if (props.selectedTaskDetail?.id === props.selectedTaskId) {
     props.selectedTaskDetail.controlLine?.coordinates.forEach((line) => {
@@ -823,6 +906,7 @@ async function initializeMap(): Promise<void> {
 watch(
   () => [
     props.tasks,
+    props.taskExclusionPoints,
     props.trackers,
     props.geography,
     props.mapTools,
@@ -831,6 +915,8 @@ watch(
     props.creationEditingZoneIndex,
     props.creationLockedBoundary,
     props.plannedRoutes,
+    props.trackerHistory,
+    props.trackerHistoryNow,
     props.selectedTaskDetail,
   ],
   renderLayers,

@@ -23,5 +23,6 @@ export function useSeguimientoTareasView() {
     setMapReady: store.setMapReady,
     setMapError: store.setMapError,
     toggleMapTool: store.toggleMapTool,
+    loadTrackerHistory: store.loadTrackerHistory,
   };
 }

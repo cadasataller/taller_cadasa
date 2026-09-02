@@ -10,9 +10,17 @@ import type {
   SeguimientoTracker,
   TrackerCurrentLocation,
   TrackerLocationBroadcast,
+  SeguimientoTrackerHistoryPoint,
 } from "@/seguimiento/shared/trackers/tracker.types";
 import { trackerCurrentLocationService } from "@/seguimiento/shared/trackers/trackerCurrentLocation.service";
 import { trackerLocationService } from "@/seguimiento/shared/trackers/trackerLocation.service";
+import { navixyTrackerService } from "@/seguimiento/shared/trackers/navixyTracker.service";
+import {
+  createTrackerHistoryWindow,
+  formatPanamaDateTime,
+  isInTrackerHistoryWindow,
+  type TrackerHistoryWindow,
+} from "@/seguimiento/shared/trackers/trackerHistoryWindow";
 import {
   tareaRealtimeService,
   type TareaObservacionRealtimeEvent,
@@ -46,6 +54,8 @@ export const useTareasSeguimientoStore = defineStore(
     const tasks = ref<TareaSeguimientoListItem[]>([]);
     const trackers = ref<SeguimientoTracker[]>([]);
     const trackerLoadObservations = ref<string[]>([]);
+    const trackerHistory = ref<SeguimientoTrackerHistoryPoint[]>([]);
+    const trackerHistoryNow = shallowRef<number | null>(null);
     const trackerLocationError = shallowRef<string | null>(null);
     const realtimeError = shallowRef<string | null>(null);
     const liveBadgeNow = shallowRef<number | null>(null);
@@ -74,6 +84,10 @@ export const useTareasSeguimientoStore = defineStore(
     let trackerLocationSyncRequest: Promise<void> = Promise.resolve();
     let realtimeSyncRequest: Promise<void> = Promise.resolve();
     let liveClock: ReturnType<typeof setInterval> | null = null;
+    let trackerHistoryRequestId = 0;
+    let selectedTrackerHistorySourceId: number | null = null;
+    let selectedTrackerHistoryWindow: TrackerHistoryWindow | null = null;
+    let trackerHistoryClock: ReturnType<typeof setInterval> | null = null;
 
     const visibleTasks = computed(() => {
       const search = filters.value.search.trim().toLocaleLowerCase();
@@ -312,6 +326,85 @@ export const useTareasSeguimientoStore = defineStore(
       );
     }
 
+    function trackerHistoryPointKey(
+      point: SeguimientoTrackerHistoryPoint,
+    ): string {
+      return `${point.capturedAt}:${point.latitude}:${point.longitude}`;
+    }
+
+    function mergeTrackerHistory(
+      points: readonly SeguimientoTrackerHistoryPoint[],
+    ): SeguimientoTrackerHistoryPoint[] {
+      const pointsByKey = new Map<string, SeguimientoTrackerHistoryPoint>();
+      points.forEach((point) => {
+        pointsByKey.set(trackerHistoryPointKey(point), point);
+      });
+      return [...pointsByKey.values()].sort((left, right) =>
+        left.capturedAt.localeCompare(right.capturedAt),
+      );
+    }
+
+    function stopTrackerHistoryClock(): void {
+      if (trackerHistoryClock) clearInterval(trackerHistoryClock);
+      trackerHistoryClock = null;
+      trackerHistoryNow.value = null;
+    }
+
+    function syncTrackerHistoryClock(): void {
+      const lastPoint = trackerHistory.value.at(-1);
+      if (!lastPoint?.isLiveParking) {
+        stopTrackerHistoryClock();
+        return;
+      }
+      if (trackerHistoryClock) return;
+      trackerHistoryNow.value = Date.now();
+      trackerHistoryClock = setInterval(() => {
+        trackerHistoryNow.value = Date.now();
+      }, 60_000);
+    }
+
+    async function loadTrackerHistory(sourceId: number | null): Promise<void> {
+      const requestId = ++trackerHistoryRequestId;
+      selectedTrackerHistorySourceId = sourceId;
+      selectedTrackerHistoryWindow = null;
+      trackerHistory.value = [];
+      stopTrackerHistoryClock();
+      if (sourceId === null) return;
+      const tracker = trackers.value.find(
+        (candidate) => candidate.sourceId === sourceId,
+      );
+      if (!tracker) return;
+      const window = createTrackerHistoryWindow(
+        tracker.id,
+        filters.value.scheduledDate ?? getSeguimientoToday(),
+      );
+      if (!window) return;
+      selectedTrackerHistoryWindow = window;
+      try {
+        const points = await navixyTrackerService.loadTrackHistory({
+          cacheKey: window.cacheKey,
+          trackerId: tracker.id,
+          from: window.from,
+          to: window.to,
+        });
+        if (
+          requestId !== trackerHistoryRequestId ||
+          selectedTrackerHistoryWindow?.cacheKey !== window.cacheKey
+        )
+          return;
+        trackerHistory.value = mergeTrackerHistory([
+          ...points,
+          ...trackerHistory.value,
+        ]);
+        trackerHistory.value.forEach((point) =>
+          navixyTrackerService.appendTrackHistoryPoint(window.cacheKey, point),
+        );
+        syncTrackerHistoryClock();
+      } catch {
+        // El historial es auxiliar: el mapa conserva sus capas operativas.
+      }
+    }
+
     function applyTrackerLocationBroadcast(
       location: TrackerLocationBroadcast,
     ): void {
@@ -330,6 +423,56 @@ export const useTareasSeguimientoStore = defineStore(
         ignitionUpdatedAt: location.ignition_update,
         speed: location.velocidad,
       });
+      if (
+        location.source_id !== selectedTrackerHistorySourceId ||
+        !selectedTrackerHistoryWindow
+      )
+        return;
+      const capturedDate = new Date(location.capturada_en);
+      if (Number.isNaN(capturedDate.valueOf())) return;
+      const capturedAt = formatPanamaDateTime(capturedDate);
+      if (!isInTrackerHistoryWindow(capturedAt, selectedTrackerHistoryWindow))
+        return;
+      const movementStatus = location.movement_status?.toLocaleLowerCase();
+      const parking =
+        movementStatus === "parked" || movementStatus === "stopped"
+          ? true
+          : movementStatus === "moving"
+            ? false
+            : null;
+      const parkingStartedDate = location.movement_status_update
+        ? new Date(location.movement_status_update)
+        : null;
+      const point: SeguimientoTrackerHistoryPoint = {
+        latitude: location.latitud,
+        longitude: location.longitud,
+        capturedAt,
+        parking,
+        parkingStartedAt:
+          parking === true &&
+          parkingStartedDate &&
+          !Number.isNaN(parkingStartedDate.valueOf())
+            ? formatPanamaDateTime(parkingStartedDate)
+            : null,
+        isLiveParking: parking === true,
+        speed: location.velocidad ?? null,
+        heading: null,
+        precisionMeters: location.precision_metros ?? null,
+      };
+      const mergedHistory = mergeTrackerHistory([
+        ...trackerHistory.value,
+        point,
+      ]);
+      if (mergedHistory.length === trackerHistory.value.length) {
+        syncTrackerHistoryClock();
+        return;
+      }
+      trackerHistory.value = mergedHistory;
+      navixyTrackerService.appendTrackHistoryPoint(
+        selectedTrackerHistoryWindow.cacheKey,
+        point,
+      );
+      syncTrackerHistoryClock();
     }
 
     function syncTrackerLocations(): Promise<void> {
@@ -501,6 +644,7 @@ export const useTareasSeguimientoStore = defineStore(
     }
     async function clearTrackerLocationSubscriptions(): Promise<void> {
       if (liveClock) clearInterval(liveClock);
+      stopTrackerHistoryClock();
       liveClock = null;
       liveBadgeNow.value = null;
       liveTaskPermanences.value = {};
@@ -513,6 +657,8 @@ export const useTareasSeguimientoStore = defineStore(
       tasks,
       trackers,
       trackerLoadObservations,
+      trackerHistory,
+      trackerHistoryNow,
       trackerLocationError,
       realtimeError,
       liveBadgeNow,
@@ -535,6 +681,7 @@ export const useTareasSeguimientoStore = defineStore(
       detailError,
       loadWorkspace,
       refreshPlannedRoutes,
+      loadTrackerHistory,
       selectTask,
       closeDetail,
       setFilters,

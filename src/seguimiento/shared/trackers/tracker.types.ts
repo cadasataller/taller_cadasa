@@ -64,6 +64,18 @@ export interface TrackerCurrentLocation {
   speed?: number | null;
 }
 
+export interface SeguimientoTrackerHistoryPoint {
+  latitude: number;
+  longitude: number;
+  capturedAt: string;
+  parking: boolean | null;
+  parkingStartedAt?: string | null;
+  isLiveParking?: boolean;
+  speed: number | null;
+  heading: number | null;
+  precisionMeters: number | null;
+}
+
 export interface TrackerVisitSummary {
   taskId: string;
   trackerId: number;
