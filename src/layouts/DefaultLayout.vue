@@ -329,7 +329,7 @@ const canCreateSolicitudCompra = computed(
     featureAccessStore.tieneFuncionalidad(CREATE_SOLICITUD_FEATURE),
 );
 const canShowMobileFab = computed(() => {
-  if (route.path === "/dashboard") {
+  if (route.path === "/dashboard" || isSeguimientoRoute.value) {
     return false;
   }
 

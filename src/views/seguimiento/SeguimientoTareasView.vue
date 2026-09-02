@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, shallowRef } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  shallowRef,
+  watch,
+} from "vue";
 import { CheckCircle2 } from "lucide-vue-next";
 import Toast from "primevue/toast";
 import { useToast } from "primevue/usetoast";
@@ -136,9 +143,16 @@ const creationLockedFilter = shallowRef<SeguimientoCrossFilter>({
   workerId: null,
   sourceId: null,
 });
-const mobileView = shallowRef<
-  "map" | "filters" | "list" | "view" | "map-focus"
->("map");
+type CompactTrackingView = "map" | "filters" | "list" | "view" | "map-focus";
+
+const mobileView = shallowRef<CompactTrackingView>("map");
+const compactViewFocusTarget: Record<CompactTrackingView, string> = {
+  map: "tracking-compact-map-actions",
+  filters: "tracking-compact-filters",
+  list: "tracking-compact-task-list",
+  view: "tracking-compact-task-detail",
+  "map-focus": "tracking-compact-map-focus",
+};
 const canViewMap = computed(
   () =>
     !featureAccess.isLoaded ||
@@ -206,8 +220,8 @@ const hasActiveFilters = computed(() =>
 );
 const desktopFiltersPosition = computed(() =>
   panelMode.value === "view" || isCreatePanelOpen.value
-    ? "md:right-[23rem]"
-    : "md:right-0",
+    ? "xl:right-[23rem]"
+    : "xl:right-0",
 );
 const locallyFilteredTasks = computed(() =>
   visibleTasks.value.filter(
@@ -517,11 +531,21 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
     life: 5000,
   });
 }
+
+watch(mobileView, (view) => {
+  void nextTick(() => {
+    const targetId =
+      view === "view" && isCreatePanelOpen.value
+        ? "tracking-compact-task-create"
+        : compactViewFocusTarget[view];
+    document.getElementById(targetId)?.focus();
+  });
+});
 </script>
 
 <template>
   <section
-    class="relative isolate min-h-[calc(100dvh-3rem)] overflow-hidden bg-[#8fa281] pb-4 md:pb-0"
+    class="relative min-h-[calc(100dvh-3rem)] overflow-hidden bg-[#8fa281] pb-4 xl:pb-0"
     aria-label="Workspace de seguimiento de tareas"
   >
     <Toast position="top-right" />
@@ -638,14 +662,15 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
     />
     <div
       v-if="createSuccessMessage"
-      class="absolute right-4 top-4 z-[60] flex max-w-[calc(100%-2rem)] items-center gap-2 rounded-xl border border-main/20 bg-white px-3 py-2.5 text-xs font-bold text-main shadow-lg md:right-[24rem]"
+      class="absolute right-4 top-4 z-[60] flex max-w-[calc(100%-2rem)] items-center gap-2 rounded-xl border border-main/20 bg-white px-3 py-2.5 text-xs font-bold text-main shadow-lg xl:right-[24rem]"
+      aria-live="polite"
       role="status"
     >
       <CheckCircle2 class="size-4 shrink-0" aria-hidden="true" />
       {{ createSuccessMessage }}
     </div>
     <TrackingFiltersBar
-      class="absolute left-0 right-0 top-0 z-[45] hidden min-w-0 transition-[right] duration-200 md:grid md:left-[20.5rem]"
+      class="absolute left-0 right-0 top-0 z-[45] hidden min-w-0 transition-[right] duration-200 xl:grid xl:left-[20.5rem]"
       :class="desktopFiltersPosition"
       mode="toolbar"
       :filters="filters"
@@ -663,7 +688,9 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
     />
     <section
       v-if="mobileView === 'filters'"
-      class="fixed inset-0 z-50 flex flex-col bg-[#f8f7f4] md:hidden"
+      id="tracking-compact-filters"
+      class="fixed inset-0 z-50 flex flex-col bg-[#f8f7f4] xl:hidden"
+      tabindex="-1"
       aria-label="Filtros de seguimiento"
     >
       <header
@@ -703,7 +730,7 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
         />
       </div>
       <footer
-        class="grid grid-cols-[1fr_1.25fr] gap-2 border-t border-slate-200 bg-white p-3"
+        class="grid grid-cols-[1fr_1.25fr] gap-2 border-t border-slate-200 bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3"
       >
         <button
           class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
@@ -724,7 +751,7 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
     </section>
     <MapToolsOverlay
       v-if="canViewMap"
-      class="absolute right-4 top-56 z-30 hidden md:grid md:top-[5.5rem]"
+      class="absolute right-4 top-56 z-30 hidden xl:grid xl:top-[5.5rem]"
       :tools="mapTools"
       :disabled="mapStatus === 'error'"
       @reload="reloadMapData"
@@ -734,7 +761,9 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
     />
     <div
       v-if="mobileView === 'map-focus'"
-      class="absolute inset-x-3 top-3 z-30 flex min-h-14 items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-3 shadow-md backdrop-blur md:hidden"
+      id="tracking-compact-map-focus"
+      class="absolute inset-x-3 top-3 z-30 flex min-h-14 items-center gap-3 rounded-xl border border-slate-200 bg-white/95 px-3 shadow-md backdrop-blur xl:hidden"
+      tabindex="-1"
     >
       <button
         class="grid size-11 place-items-center rounded-lg text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
@@ -755,13 +784,17 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
     </div>
     <MobileMapActions
       v-if="mobileView === 'map' || mobileView === 'map-focus'"
+      id="tracking-compact-map-actions"
+      tabindex="-1"
       :task-count="locallyFilteredTasks.length"
       @open-filters="mobileView = 'filters'"
       @open-tasks="mobileView = 'list'"
     />
     <TaskListPanel
-      class="fixed inset-0 z-50 w-full bg-[#f8f7f4] transition md:absolute md:inset-y-0 md:left-0 md:z-40 md:w-[20.5rem]"
-      :class="mobileView === 'list' ? '' : 'max-md:hidden'"
+      id="tracking-compact-task-list"
+      tabindex="-1"
+      class="fixed inset-0 z-50 w-full bg-[#f8f7f4] transition xl:absolute xl:inset-y-0 xl:left-0 xl:z-40 xl:w-[20.5rem]"
+      :class="mobileView === 'list' ? '' : 'max-xl:hidden'"
       :tasks="locallyFilteredTasks"
       :selected-task-id="selectedTaskId"
       :loading="loadingInitial"
@@ -779,8 +812,10 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
     />
     <TaskDetailPanel
       v-show="panelMode === 'view' && !isCreatePanelOpen"
-      class="fixed inset-0 z-50 max-h-none md:absolute md:inset-y-0 md:left-auto md:right-0 md:z-40 md:w-[23rem]"
-      :class="mobileView === 'view' ? '' : 'max-md:hidden'"
+      id="tracking-compact-task-detail"
+      tabindex="-1"
+      class="fixed inset-0 z-50 max-h-none xl:absolute xl:inset-y-0 xl:left-auto xl:right-0 xl:z-40 xl:w-[23rem]"
+      :class="mobileView === 'view' ? '' : 'max-xl:hidden'"
       :task="detail"
       :loading="loadingDetail"
       :error="detailError"
@@ -794,8 +829,10 @@ function notifyCreateSubmitBlocked(reasons: string[]): void {
     />
     <TaskCreatePanel
       v-if="isCreatePanelOpen"
-      class="fixed inset-0 z-50 max-h-none md:absolute md:inset-y-0 md:left-auto md:right-0 md:z-40 md:w-[23rem]"
-      :class="mobileView === 'view' ? '' : 'max-md:hidden'"
+      id="tracking-compact-task-create"
+      tabindex="-1"
+      class="fixed inset-0 z-50 max-h-none xl:absolute xl:inset-y-0 xl:left-auto xl:right-0 xl:z-40 xl:w-[23rem]"
+      :class="mobileView === 'view' ? '' : 'max-xl:hidden'"
       :draft="createDraft"
       :workers="createWorkers"
       :trackers="trackers"

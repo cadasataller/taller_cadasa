@@ -47,7 +47,7 @@ const panelMessage = computed(() =>
     <header class="border-b border-slate-200 px-4 pb-3 pt-4">
       <button
         v-if="showBack"
-        class="mb-3 inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main md:hidden"
+        class="mb-3 inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-bold text-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main xl:hidden"
         type="button"
         @click="emit('back')"
       >
@@ -69,6 +69,8 @@ const panelMessage = computed(() =>
         ><span class="sr-only">Buscar tareas</span
         ><input
           class="w-full rounded-lg border border-slate-300 bg-white py-2 pl-3 pr-9 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-main focus:ring-2 focus:ring-main/15"
+          autocomplete="off"
+          name="task-search"
           :value="search"
           placeholder="Buscar tareas"
           @input="
@@ -82,6 +84,7 @@ const panelMessage = computed(() =>
         ><select
           v-model="localSegment"
           class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 outline-none focus:border-main focus:ring-2 focus:ring-main/15"
+          name="task-segment"
         >
           <option value="all">Todas las tareas</option>
           <option value="active">En curso</option>
