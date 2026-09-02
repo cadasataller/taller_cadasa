@@ -3,6 +3,8 @@ import { booleanPointInPolygon, multiPolygon, point } from "@turf/turf";
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from "vue";
 import { mapsProviderLoader } from "@/seguimiento/shared/maps/mapsProvider.loader";
 import {
+  resolveSeguimientoMapDisplayZoom,
+  resolveSeguimientoMapViewport,
   resolveSeguimientoMapZoomProfile,
   seguimientoMapZIndex,
 } from "@/seguimiento/shared/maps/mapZoomHierarchy.strategy";
@@ -82,8 +84,11 @@ let creationHoverCoordinate: number[] | null = null;
 const isToolEnabled = (tool: SeguimientoMapToolState["tool"]): boolean =>
   props.mapTools.find((item) => item.tool === tool)?.enabled ?? false;
 
-const centeredZoom = (zoom: number): number =>
-  Math.max(1, Math.round(zoom * 0.9));
+const responsiveZoom = (zoom: number): number =>
+  resolveSeguimientoMapDisplayZoom(
+    zoom,
+    resolveSeguimientoMapViewport(window.innerWidth),
+  );
 const toLatLng = (coordinates: SeguimientoCoordinates) => ({
   lat: coordinates.latitude,
   lng: coordinates.longitude,
@@ -119,8 +124,14 @@ const mapWarningColor = (): string =>
 
 const taskPinSize = { width: 29, height: 38 };
 
-function createTaskPinIcon(maps: any, color: string, selected = false): object {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${taskPinSize.width}" height="${taskPinSize.height}" viewBox="0 0 32 42"><path d="M16 1.5C8.5 1.5 2.5 7.6 2.5 15.1c0 10.1 13.5 25.4 13.5 25.4s13.5-15.3 13.5-25.4C29.5 7.6 23.5 1.5 16 1.5Z" fill="${color}" stroke="#fff" stroke-width="${selected ? 3 : 2.5}" stroke-linejoin="round"/><circle cx="16" cy="15" r="5" fill="#fff"/></svg>`;
+function createTaskPinIcon(
+  maps: any,
+  color: string,
+  selected = false,
+  routeOrder: number | null = null,
+): object {
+  const routeOrderLabel = routeOrder?.toString() ?? "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${taskPinSize.width}" height="${taskPinSize.height}" viewBox="0 0 32 42"><path d="M16 1.5C8.5 1.5 2.5 7.6 2.5 15.1c0 10.1 13.5 25.4 13.5 25.4s13.5-15.3 13.5-25.4C29.5 7.6 23.5 1.5 16 1.5Z" fill="${color}" stroke="#fff" stroke-width="${selected ? 3 : 2.5}" stroke-linejoin="round"/><circle cx="16" cy="15" r="7" fill="#fff"/><text x="16" y="18.25" fill="#000" font-family="sans-serif" font-size="${routeOrderLabel.length > 1 ? 8 : 10}" font-weight="700" text-anchor="middle">${routeOrderLabel}</text></svg>`;
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
     scaledSize: new maps.Size(taskPinSize.width, taskPinSize.height),
@@ -497,22 +508,14 @@ function renderLayers(): void {
             position: toLatLng(task.routePoint!),
             clickable: false,
             title: task.instructions ?? "Tarea",
-            label: task.routeOrder?.toString(),
             zIndex: selected
               ? seguimientoMapZIndex.selected
               : seguimientoMapZIndex.task,
             icon: isDoubt
-              ? createTaskPinIcon(maps, warningColor, selected)
+              ? createTaskPinIcon(maps, warningColor, selected, task.routeOrder)
               : selected
-                ? {
-                    path: maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: "#004643",
-                    fillOpacity: 1,
-                    strokeColor: "#ffffff",
-                    strokeWeight: 3,
-                  }
-                : createTaskPinIcon(maps, "#EA4335"),
+                ? createTaskPinIcon(maps, "#004643", true, task.routeOrder)
+                : createTaskPinIcon(maps, "#EA4335", false, task.routeOrder),
           }),
         };
       });
@@ -741,8 +744,8 @@ async function initializeMap(): Promise<void> {
         ? toLatLng(props.mapConfiguration)
         : { lat: 8.538, lng: -80.782 },
       zoom: props.mapConfiguration
-        ? centeredZoom(props.mapConfiguration.zoom)
-        : centeredZoom(8),
+        ? responsiveZoom(props.mapConfiguration.zoom)
+        : responsiveZoom(8),
       mapTypeControl: false,
       mapTypeId: "satellite",
       styles: [
@@ -870,7 +873,7 @@ watch(
   (configuration) => {
     if (map && configuration) {
       map.setCenter(toLatLng(configuration));
-      map.setZoom(centeredZoom(configuration.zoom));
+      map.setZoom(responsiveZoom(configuration.zoom));
     }
   },
 );

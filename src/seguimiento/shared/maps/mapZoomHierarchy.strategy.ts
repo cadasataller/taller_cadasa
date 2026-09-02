@@ -4,6 +4,14 @@ export const seguimientoMapZoomPolicy = {
   nearZoom: 15,
 } as const;
 
+export type SeguimientoMapViewport = "mobile" | "tablet" | "desktop";
+
+const viewportZoomOffset: Record<SeguimientoMapViewport, number> = {
+  mobile: 2,
+  tablet: 1,
+  desktop: 0,
+};
+
 export const seguimientoMapZIndex = {
   farm: 10,
   farmLabel: 15,
@@ -33,6 +41,22 @@ export interface SeguimientoMapZoomProfile {
   zoneFillOpacity: number;
   zoneHaloOpacity: number;
   tasksVisible: boolean;
+}
+
+export function resolveSeguimientoMapViewport(
+  width: number,
+): SeguimientoMapViewport {
+  if (width < 768) return "mobile";
+  if (width < 1280) return "tablet";
+  return "desktop";
+}
+
+export function resolveSeguimientoMapDisplayZoom(
+  configuredZoom: number,
+  viewport: SeguimientoMapViewport,
+): number {
+  const centeredZoom = Math.max(1, Math.round(configuredZoom * 0.9));
+  return Math.max(1, centeredZoom - viewportZoomOffset[viewport]);
 }
 
 function resolveFarmFillOpacity(zoom: number): number {

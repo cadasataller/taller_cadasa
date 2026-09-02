@@ -773,7 +773,7 @@ watch(mobileView, (view) => {
       >
         ←
       </button>
-      <div class="min-w-0">
+      <div class="min-w-0 flex-1">
         <p class="truncate text-xs font-bold text-slate-800">
           {{ selectedTask?.instructions || "Tarea seleccionada" }}
         </p>
@@ -781,9 +781,16 @@ watch(mobileView, (view) => {
           Ubicación de la tarea seleccionada
         </p>
       </div>
+      <button
+        class="min-h-11 shrink-0 rounded-lg border border-main px-3 text-xs font-extrabold text-main transition hover:bg-second focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
+        type="button"
+        @click="mobileView = 'view'"
+      >
+        Volver
+      </button>
     </div>
     <MobileMapActions
-      v-if="mobileView === 'map' || mobileView === 'map-focus'"
+      v-if="mobileView === 'map'"
       id="tracking-compact-map-actions"
       tabindex="-1"
       :task-count="locallyFilteredTasks.length"

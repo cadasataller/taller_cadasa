@@ -1,8 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
+  resolveSeguimientoMapDisplayZoom,
+  resolveSeguimientoMapViewport,
   resolveSeguimientoMapZoomProfile,
   seguimientoMapZoomPolicy,
 } from "./mapZoomHierarchy.strategy";
+
+describe("zoom inicial por viewport", () => {
+  it.each([
+    [390, "mobile"],
+    [1024, "tablet"],
+    [1280, "desktop"],
+  ] as const)("clasifica %i px como %s", (width, viewport) => {
+    expect(resolveSeguimientoMapViewport(width)).toBe(viewport);
+  });
+
+  it("abre más contexto en pantallas compactas", () => {
+    expect(resolveSeguimientoMapDisplayZoom(13, "desktop")).toBe(12);
+    expect(resolveSeguimientoMapDisplayZoom(13, "tablet")).toBe(11);
+    expect(resolveSeguimientoMapDisplayZoom(13, "mobile")).toBe(10);
+  });
+});
 
 describe("resolveSeguimientoMapZoomProfile", () => {
   it("reduce el mapa lejano al contexto esencial", () => {

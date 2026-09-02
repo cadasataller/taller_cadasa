@@ -206,6 +206,14 @@ function visitDuration(
           </h2>
         </div>
         <button
+          v-if="task?.routePoint || task?.visualLocation"
+          class="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border border-main px-2.5 text-[10px] font-extrabold text-main transition hover:bg-second focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main xl:hidden"
+          type="button"
+          @click="emit('focus', task.routePoint ?? task.visualLocation)"
+        >
+          <MapPinned class="size-3.5" aria-hidden="true" />Ver mapa
+        </button>
+        <button
           class="grid size-7 shrink-0 place-items-center rounded-[0.4375rem] bg-slate-100 text-slate-500 transition hover:bg-slate-200 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main"
           aria-label="Cerrar detalle"
           type="button"
