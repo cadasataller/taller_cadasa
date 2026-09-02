@@ -149,6 +149,7 @@ function requestSubmit(): void {
         :order="draft.route.order"
         :total-tasks="totalTasks"
         :error="errorFor('route')"
+        @update:order="emit('update:route', $event)"
       />
       <p
         v-if="remoteError"

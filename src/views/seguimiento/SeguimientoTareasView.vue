@@ -85,6 +85,7 @@ const {
   captureSpatialRoute,
   completeSpatialSelection,
   updateRoute,
+  setMaximumRouteOrder,
   geometryMode,
   editingControlZoneIndex,
   persistDraftOnNavigation,
@@ -272,6 +273,7 @@ function prepareCreationDraft(): void {
       null,
     filters.value.scheduledDate,
   );
+  setMaximumRouteOrder(routableTaskCount.value + 1);
   updateRoute(routableTaskCount.value + 1);
   if (crossFilter.value.workerId)
     selectCreateWorker(crossFilter.value.workerId);

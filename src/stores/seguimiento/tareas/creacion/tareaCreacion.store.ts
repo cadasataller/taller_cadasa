@@ -84,23 +84,22 @@ export const useTareaCreacionStore = defineStore(
     const spatialState = shallowRef<TareaCreacionEstadoEspacial>("idle");
     const wizardStep = shallowRef<TareaCreacionPasoWizard>("ready");
     const lockedFarmId = shallowRef<string | null>(null);
+    const maximumRouteOrder = shallowRef<number | null>(null);
     const isDiscardConfirmationOpen = shallowRef(false);
     const hasUnsavedChanges = computed(
       () => JSON.stringify(draft.value) !== JSON.stringify(originalDraft.value),
     );
     const isSubmitLocked = computed(() => flowState.value === "submitting");
+    const validateDraft = () =>
+      validateTareaCreacionDraft(draft.value, maximumRouteOrder.value);
     const canSubmit = computed(
-      () =>
-        !isSubmitLocked.value &&
-        validateTareaCreacionDraft(draft.value).isValid,
+      () => !isSubmitLocked.value && validateDraft().isValid,
     );
     const submitBlockReasons = computed(() => {
       console.log(draft.value);
 
       if (isSubmitLocked.value) return ["La tarea se está guardando."];
-      const errors = validateTareaCreacionDraft(draft.value).errors.map(
-        (error) => error.message,
-      );
+      const errors = validateDraft().errors.map((error) => error.message);
       return errors.length
         ? errors
         : ["Completa los datos obligatorios antes de guardar."];
@@ -109,7 +108,7 @@ export const useTareaCreacionStore = defineStore(
       () => draft.value.type !== null && !draft.value.validBlocks.geometry,
     );
     function refreshValidation(): void {
-      const result = validateTareaCreacionDraft(draft.value);
+      const result = validateDraft();
       draft.value.validBlocks = result.validBlocks;
       const visibleField = validationErrors.value[0]?.field;
       if (!visibleField) return;
@@ -119,7 +118,7 @@ export const useTareaCreacionStore = defineStore(
       validationErrors.value = currentError ? [currentError] : [];
     }
     function reportSkippedField(nextField: TareaCreacionCampoError): void {
-      const result = validateTareaCreacionDraft(draft.value);
+      const result = validateDraft();
       draft.value.validBlocks = result.validBlocks;
       const nextFieldIndex = creationFieldOrder.indexOf(nextField);
       validationErrors.value = result.errors
@@ -131,7 +130,7 @@ export const useTareaCreacionStore = defineStore(
         .slice(0, 1);
     }
     function revealSubmitRequirements(): TareaCreacionErrorValidacion[] {
-      const result = validateTareaCreacionDraft(draft.value);
+      const result = validateDraft();
       draft.value.validBlocks = result.validBlocks;
       validationErrors.value = result.errors;
       return result.errors;
@@ -145,6 +144,7 @@ export const useTareaCreacionStore = defineStore(
       validationErrors.value = [];
       remoteError.value = null;
       routeProcessingWarning.value = null;
+      maximumRouteOrder.value = null;
       isDiscardConfirmationOpen.value = false;
       isPanelOpen.value = true;
       flowState.value = "editing";
@@ -160,6 +160,7 @@ export const useTareaCreacionStore = defineStore(
       validationErrors.value = [];
       remoteError.value = null;
       routeProcessingWarning.value = null;
+      maximumRouteOrder.value = null;
       isDiscardConfirmationOpen.value = false;
       isPanelOpen.value = false;
       flowState.value = "editing";
@@ -311,6 +312,18 @@ export const useTareaCreacionStore = defineStore(
     function updateRoute(order: number | null): void {
       draft.value.route = { order };
       remoteError.value = null;
+      const result = validateDraft();
+      draft.value.validBlocks = result.validBlocks;
+      const routeError = result.errors.find((error) => error.field === "route");
+      if (routeError) {
+        validationErrors.value = [routeError];
+      } else if (validationErrors.value[0]?.field === "route") {
+        validationErrors.value = [];
+      }
+    }
+    function setMaximumRouteOrder(order: number): void {
+      maximumRouteOrder.value =
+        Number.isInteger(order) && order > 0 ? order : null;
       refreshValidation();
     }
     function beginGeometryEdit(
@@ -325,7 +338,7 @@ export const useTareaCreacionStore = defineStore(
       refreshValidation();
     }
     async function submit(): Promise<TareaCreacionRespuestaRpc | null> {
-      const result = validateTareaCreacionDraft(draft.value);
+      const result = validateDraft();
       draft.value.validBlocks = result.validBlocks;
       if (result.errors.length) {
         validationErrors.value = result.errors.slice(0, 1);
@@ -446,6 +459,7 @@ export const useTareaCreacionStore = defineStore(
       updateControlZone,
       removeControlZone,
       updateRoute,
+      setMaximumRouteOrder,
       beginGeometryEdit,
       finishGeometryEdit,
       submit,

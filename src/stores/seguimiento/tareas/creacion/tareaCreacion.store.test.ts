@@ -37,6 +37,24 @@ describe("useTareaCreacionStore", () => {
     expect(store.canSubmit).toBe(false);
   });
 
+  it("rechaza con Zod un orden superior a la siguiente posición disponible", () => {
+    const store = useTareaCreacionStore();
+    store.open("area-1");
+    store.setMaximumRouteOrder(3);
+    store.updateRoute(4);
+
+    expect(store.submitBlockReasons).toContain(
+      "El orden de ruta no puede ser mayor que 3.",
+    );
+    expect(store.draft.validBlocks.route).toBe(false);
+    expect(store.validationErrors).toEqual([
+      {
+        field: "route",
+        message: "El orden de ruta no puede ser mayor que 3.",
+      },
+    ]);
+  });
+
   it("muestra solo el primer campo pendiente y avanza según el orden del panel", async () => {
     const store = useTareaCreacionStore();
     store.open("area-1");

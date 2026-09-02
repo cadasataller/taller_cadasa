@@ -6,7 +6,16 @@ const props = defineProps<{
   totalTasks: number;
   error?: string | null;
 }>();
-const automaticOrder = computed(() => props.order ?? props.totalTasks + 1);
+const emit = defineEmits<{
+  "update:order": [value: number | null];
+}>();
+
+const displayedOrder = computed(() => props.order ?? props.totalTasks + 1);
+
+function updateOrder(event: Event): void {
+  const value = (event.target as HTMLInputElement).value;
+  emit("update:order", value === "" ? null : Number(value));
+}
 </script>
 
 <template>
@@ -26,13 +35,33 @@ const automaticOrder = computed(() => props.order ?? props.totalTasks + 1);
     <div
       class="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5"
     >
-      <p class="text-xs font-bold text-slate-700">Orden {{ automaticOrder }}</p>
+      <label
+        for="create-task-route-order"
+        class="text-xs font-bold text-slate-700"
+      >
+        Orden de ruta
+      </label>
+      <input
+        id="create-task-route-order"
+        :value="displayedOrder"
+        class="mt-2 min-h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm font-bold text-slate-800 outline-none transition focus:border-main focus:ring-2 focus:ring-main/15"
+        type="number"
+        min="1"
+        :max="totalTasks + 1"
+        step="1"
+        inputmode="numeric"
+        :aria-invalid="Boolean(error)"
+        :aria-describedby="error ? 'create-task-route-order-error' : undefined"
+        @input="updateOrder"
+      />
       <p class="mt-1 text-[11px] leading-5 text-slate-500">
-        Se asigna automáticamente como la siguiente posición de la ruta.
+        Se propone la siguiente posición automáticamente. Puedes cambiarla antes
+        de guardar.
       </p>
     </div>
     <p
       v-if="error"
+      id="create-task-route-order-error"
       class="mt-2 text-[11px] font-medium text-danger"
       role="alert"
     >

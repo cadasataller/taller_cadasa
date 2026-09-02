@@ -227,8 +227,23 @@ const blockForErrorField = (
 
 export const validateTareaCreacionDraft = (
   draft: TareaCreacionBorrador,
+  maximumRouteOrder: number | null = null,
 ): TareaCreacionResultadoValidacion => {
-  const result = creationDraftSchema.safeParse(draft);
+  const result = creationDraftSchema
+    .superRefine((currentDraft, context) => {
+      if (
+        maximumRouteOrder !== null &&
+        currentDraft.route.order !== null &&
+        currentDraft.route.order > maximumRouteOrder
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["route", "order"],
+          message: `El orden de ruta no puede ser mayor que ${maximumRouteOrder}.`,
+        });
+      }
+    })
+    .safeParse(draft);
   const validBlocks = initialValidBlocks();
   (Object.keys(validBlocks) as TareaCreacionCampo[]).forEach((field) => {
     validBlocks[field] = true;

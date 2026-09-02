@@ -32,6 +32,7 @@ export function useSeguimientoTareaCreacion() {
     captureSpatialRoute: store.captureSpatialRoute,
     completeSpatialSelection: store.completeSpatialSelection,
     updateRoute: store.updateRoute,
+    setMaximumRouteOrder: store.setMaximumRouteOrder,
     canSubmitCreate: state.canSubmit,
     reportSkippedCreateField: store.reportSkippedField,
     revealCreateSubmitRequirements: store.revealSubmitRequirements,
