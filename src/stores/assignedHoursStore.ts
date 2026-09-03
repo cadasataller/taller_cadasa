@@ -1,47 +1,48 @@
-import { defineStore } from 'pinia';
-import { ref } from 'vue';
-import { supabase } from '@/lib/supabase'; // Maintenance DB
-import { generateMockWorkOrders } from '@/lib/mockWorkOrderData';
+import { defineStore } from "pinia";
+import { ref } from "vue";
+import { supabase } from "@/lib/supabase"; // Maintenance DB
+import type { AssignedHoursWorkOrder } from "./assignedHoursStore.types";
 
-export const useAssignedHoursStore = defineStore('assignedHours', () => {
+export const useAssignedHoursStore = defineStore("assignedHours", () => {
   // Cache structure: { [area_date_key]: data[] }
   // Example key: "Cosecha Agricola_2026-04-21"
-  const cache = ref<Record<string, any[]>>({});
+  const cache = ref<Record<string, AssignedHoursWorkOrder[]>>({});
   const areaCache = ref<Record<string, string>>({}); // email -> area
 
-  const fetchSupervisorArea = async (email: string, force = false): Promise<string> => {
-    if (!email) return '';
+  const fetchSupervisorArea = async (
+    email: string,
+    force = false,
+  ): Promise<string> => {
+    if (!email) return "";
     if (areaCache.value[email] && !force) return areaCache.value[email];
 
     const { data, error } = await supabase
-      .from('PROFILE')
-      .select('area')
-      .eq('email', email)
+      .from("PROFILE")
+      .select("area")
+      .eq("email", email)
       .maybeSingle();
 
     if (!error && data?.area) {
       areaCache.value[email] = data.area;
       return data.area;
     }
-    return '';
+    return "";
   };
 
-  const fetchHours = async (area: string, date: string, force = false) => {
+  const fetchHours = async (
+    area: string,
+    date: string,
+    force = false,
+  ): Promise<AssignedHoursWorkOrder[]> => {
     if (!area || !date) return [];
-    
+
     const cacheKey = `${area}_${date}`;
     if (cache.value[cacheKey] && !force) {
       return cache.value[cacheKey];
     }
 
     try {
-      let data: any[] | null = [];
-      const useSupabase = true; // Cuando este en true usa supabase, cuando este en false usa datos mock
-
-      if (!useSupabase) {
-        data = generateMockWorkOrders(100, date);
-      } else {
-        const summarySelect = `
+      const summarySelect = `
           ID_OT,
           id_om,
           created,
@@ -71,23 +72,27 @@ export const useAssignedHoursStore = defineStore('assignedHours', () => {
           )
         `;
 
-        const response = await supabase
-          .from('ORDEN_TRABAJO')
-          .select(summarySelect)
-          .eq('Fecha', date);
+      const response = await supabase
+        .from("ORDEN_TRABAJO")
+        .select(summarySelect)
+        .eq("Fecha", date)
+        .overrideTypes<AssignedHoursWorkOrder[], { merge: false }>();
 
-        if (response.error) throw response.error;
-        data = response.data;
-      }
-      
-      const filtered = (data || []).filter((row: any) => {
-         if (area === 'Servicios Generales') {
-            // "USA ID_SG" para Servicios Generales
-            return row.id_sg != null;
-         } else {
-            // "PARA LAS OTRAS AREA USADA ID_OM" y asegurarse que no sea SG
-            return row.id_om != null && row.id_sg == null && row.ORDEN_MANTENIMIENTO?.['Área'] === area;
-         }
+      if (response.error) throw response.error;
+      const data = response.data || [];
+
+      const filtered = data.filter((row) => {
+        if (area === "Servicios Generales") {
+          // "USA ID_SG" para Servicios Generales
+          return row.id_sg != null;
+        } else {
+          // "PARA LAS OTRAS AREA USADA ID_OM" y asegurarse que no sea SG
+          return (
+            row.id_om != null &&
+            row.id_sg == null &&
+            row.ORDEN_MANTENIMIENTO?.["Área"] === area
+          );
+        }
       });
 
       cache.value[cacheKey] = filtered;
@@ -102,6 +107,6 @@ export const useAssignedHoursStore = defineStore('assignedHours', () => {
     cache,
     areaCache,
     fetchSupervisorArea,
-    fetchHours
+    fetchHours,
   };
 });

@@ -1,16 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
+import {
+  ref,
+  shallowRef,
+  onMounted,
+  computed,
+  watch,
+  type CSSProperties,
+} from "vue";
 import { useRoute } from "vue-router";
 import { useRatingsStore } from "@/stores/ratingsStore";
+import { useAssignedHoursStore } from "@/stores/assignedHoursStore";
 import { useUserStore } from "@/stores/userStore";
 import ImageZoomViewer from "@/components/common/ImageZoomViewer.vue";
 import InspectionReadOnlyPanel from "@/components/dashboard/InspectionReadOnlyPanel.vue";
 import { parseMeetingObservation } from "@/utils/meetingRatings";
 import { ratingsService } from "@/stores/ratingsStore.service";
 import type {
+  PuntuacionSupervisorOtArea,
   RatingsCriterio,
   RatingsInspeccionNormalizada,
 } from "@/stores/ratingsStore.types";
+import type {
+  AssignedHoursGroup,
+  AssignedHoursWorkOrder,
+  AssignedHoursWorkerGroup,
+} from "@/stores/assignedHoursStore.types";
 import { Bar } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -42,6 +56,7 @@ ChartJS.register(
 );
 
 const store = useRatingsStore();
+const assignedHoursStore = useAssignedHoursStore();
 const userStore = useUserStore();
 const route = useRoute();
 
@@ -60,6 +75,7 @@ const timeFilters = [
 ];
 
 const supervisorFilter = ref<string | number>("Todos");
+const canViewAllSupervisors = shallowRef(false);
 
 const tzOffset = new Date().getTimezoneOffset() * 60000;
 const today = new Date(Date.now() - tzOffset);
@@ -86,6 +102,7 @@ onMounted(async () => {
   const profile = await userStore.fetchCurrentUserProfile();
   const userArea = (profile?.area || userStore.getArea()).trim().toUpperCase();
   const userEmail = userStore.getEmail().trim().toLowerCase();
+  canViewAllSupervisors.value = userArea === "ALL";
 
   await store.fetchAll(
     false,
@@ -166,6 +183,11 @@ const chartData = computed(() => {
 const selectedDate = ref<string>("");
 const selectedInspection = ref<RatingsInspeccionNormalizada | null>(null);
 const criteria = ref<RatingsCriterio[]>([]);
+const assignedHoursArea = ref("");
+const assignedHours = ref<AssignedHoursWorkOrder[]>([]);
+const isAssignedHoursLoading = ref(false);
+const assignedHoursError = ref<string | null>(null);
+const assignedHoursLoadedKey = ref("");
 
 const chartOptions = {
   responsive: true,
@@ -251,8 +273,183 @@ const selectedInspectionDetails = computed(() => {
   );
 });
 
+const getAssignedMechanic = (
+  order: AssignedHoursWorkOrder,
+): { name: string; team: string } => {
+  const mechanic = Array.isArray(order.MECANICOS)
+    ? order.MECANICOS[0]
+    : order.MECANICOS;
+
+  return {
+    name: mechanic?.NOMBRE || "Sin mecánico asignado",
+    team: mechanic?.["EQUIPO DE TRABAJO"] || "Sin equipo",
+  };
+};
+
+const parseAssignedHours = (value: number | string | null): number => {
+  const hours = typeof value === "number" ? value : Number(value || 0);
+  return Number.isFinite(hours) ? hours : 0;
+};
+
+const assignedHoursGroups = computed<AssignedHoursGroup[]>(() => {
+  const mechanics = new Map<string, AssignedHoursWorkerGroup>();
+
+  assignedHours.value.forEach((order) => {
+    const mechanic = getAssignedMechanic(order);
+    const current = mechanics.get(mechanic.name) || {
+      name: mechanic.name,
+      totalHours: 0,
+      orders: [],
+    };
+
+    current.totalHours += parseAssignedHours(order["Duración (horas)"]);
+    current.orders.push(order);
+    mechanics.set(mechanic.name, current);
+  });
+
+  if (assignedHoursArea.value !== "Servicios Generales") {
+    return Array.from(mechanics.values())
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .map((mechanic) => ({
+        kind: "mechanic",
+        name: mechanic.name,
+        totalHours: mechanic.totalHours,
+        orders: mechanic.orders,
+      }));
+  }
+
+  const teams = new Map<string, AssignedHoursWorkerGroup[]>();
+  assignedHours.value.forEach((order) => {
+    const mechanic = getAssignedMechanic(order);
+    const workers = teams.get(mechanic.team) || [];
+    const worker = workers.find((item) => item.name === mechanic.name);
+
+    if (worker) return;
+
+    const mechanicGroup = mechanics.get(mechanic.name);
+    if (mechanicGroup) workers.push(mechanicGroup);
+    teams.set(mechanic.team, workers);
+  });
+
+  return Array.from(teams.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([team, workers]) => ({
+      kind: "team",
+      name: team,
+      totalHours: workers.reduce(
+        (total, worker) => total + worker.totalHours,
+        0,
+      ),
+      workers: workers.sort((left, right) =>
+        left.name.localeCompare(right.name),
+      ),
+    }));
+});
+
+const selectedSupervisorEmail = computed(() => {
+  if (!selectedInspection.value) return "";
+
+  const supervisor = store.empleados.find(
+    (employee) =>
+      employee.id_empleado === selectedInspection.value?.final_supervisor_id,
+  );
+
+  return (supervisor?.correo || supervisor?.email || "").trim().toLowerCase();
+});
+
+const loadAssignedHours = async (force = false): Promise<void> => {
+  if (!selectedInspection.value || !selectedSupervisorEmail.value) return;
+
+  const nextKey = `${selectedSupervisorEmail.value}_${selectedInspection.value.fecha}`;
+  if (assignedHoursLoadedKey.value === nextKey && !force) return;
+
+  isAssignedHoursLoading.value = true;
+  assignedHoursError.value = null;
+
+  try {
+    const area = await assignedHoursStore.fetchSupervisorArea(
+      selectedSupervisorEmail.value,
+      force,
+    );
+
+    if (!area) {
+      assignedHoursArea.value = "";
+      assignedHours.value = [];
+      assignedHoursError.value =
+        "No se pudo identificar el área del supervisor para consultar sus horas.";
+      return;
+    }
+
+    assignedHoursArea.value = area;
+    assignedHours.value = await assignedHoursStore.fetchHours(
+      area,
+      selectedInspection.value.fecha,
+      force,
+    );
+    assignedHoursLoadedKey.value = nextKey;
+  } catch (error) {
+    assignedHoursError.value =
+      error instanceof Error
+        ? error.message
+        : "No se pudieron cargar las horas asignadas.";
+  } finally {
+    isAssignedHoursLoading.value = false;
+  }
+};
+
+const getPreviousBusinessDate = (dateString: string): string => {
+  const baseDate = new Date(`${dateString}T00:00:00`);
+
+  if (Number.isNaN(baseDate.getTime())) return dateString;
+
+  const daysToSubtract = baseDate.getDay() === 1 ? 3 : 1;
+  baseDate.setDate(baseDate.getDate() - daysToSubtract);
+
+  return baseDate.toISOString().split("T")[0];
+};
+
+const closingDate = computed(() =>
+  selectedInspection.value
+    ? getPreviousBusinessDate(selectedInspection.value.fecha)
+    : "",
+);
+
+const selectedClosingArea = computed<PuntuacionSupervisorOtArea | null>(() => {
+  const response = store.puntuacionSupervisoresOt;
+  const supervisorEmail = selectedSupervisorEmail.value;
+
+  if (
+    !response?.ok ||
+    !supervisorEmail ||
+    store.fechaPuntuacionSupervisoresOt !== closingDate.value
+  ) {
+    return null;
+  }
+
+  return (
+    response.areas.find(
+      (area) =>
+        (area.supervisor.email || "").trim().toLowerCase() === supervisorEmail,
+    ) || null
+  );
+});
+
+const loadClosingCompliance = async (): Promise<void> => {
+  if (!closingDate.value) return;
+
+  try {
+    await store.fetchPuntuacionSupervisoresOt(closingDate.value);
+  } catch (error) {
+    console.error("Error cargando el cierre de jornada", error);
+  }
+};
+
 const openInspectionDetail = (inspection: RatingsInspeccionNormalizada) => {
   selectedInspection.value = inspection;
+  assignedHoursArea.value = "";
+  assignedHours.value = [];
+  assignedHoursError.value = null;
+  assignedHoursLoadedKey.value = "";
 };
 
 const closeInspectionDetail = () => {
@@ -297,6 +494,30 @@ const globalMetrics = computed(() => {
     count: insps.length,
   };
 });
+
+const getInspectionPercentage = (score: number): number =>
+  Number(Math.min(100, Math.max(0, (score / 5) * 100)).toFixed(1));
+
+const getPercentageColor = (percentage: number): string => {
+  if (percentage <= 10) return "var(--color-danger)";
+  if (percentage < 50) {
+    const accentShare = Math.round(((percentage - 10) / 40) * 100);
+    return `color-mix(in srgb, var(--color-danger) ${100 - accentShare}%, var(--color-accent))`;
+  }
+  if (percentage <= 60) return "var(--color-accent)";
+
+  const mainShare = Math.round(((percentage - 60) / 40) * 100);
+  return `color-mix(in srgb, var(--color-accent) ${100 - mainShare}%, var(--color-main-light))`;
+};
+
+const getPercentageSurfaceStyle = (score: number): CSSProperties => {
+  const color = getPercentageColor(getInspectionPercentage(score));
+
+  return {
+    background: `linear-gradient(135deg, color-mix(in srgb, ${color} 76%, white), ${color})`,
+    color: "#ffffff",
+  };
+};
 
 const formatHora = (hora?: string | null): string => {
   if (!hora) return "---";
@@ -370,6 +591,7 @@ const getInspectionObservationText = (observation?: string | null) => {
     <div id="filter-supervisor-container" class="mb-6">
       <div class="flex overflow-x-auto gap-2 no-scrollbar pb-2">
         <button
+          v-if="canViewAllSupervisors"
           @click="supervisorFilter = 'Todos'"
           class="px-4 py-2 text-xs font-bold rounded-full whitespace-nowrap transition-colors border"
           :class="
@@ -507,11 +729,10 @@ const getInspectionObservationText = (observation?: string | null) => {
                 </td>
                 <td class="py-3 text-center">
                   <span
-                    class="px-2 py-1 bg-green-50 text-success text-xs font-bold rounded"
+                    class="px-2 py-1 text-xs font-bold rounded"
+                    :style="getPercentageSurfaceStyle(insp.puntuacion_promedio)"
                   >
-                    {{
-                      Number(((insp.puntuacion_promedio / 5) * 100).toFixed(1))
-                    }}%
+                    {{ getInspectionPercentage(insp.puntuacion_promedio) }}%
                   </span>
                 </td>
                 <td
@@ -598,11 +819,10 @@ const getInspectionObservationText = (observation?: string | null) => {
                   >
                 </div>
                 <div
-                  class="px-3 py-1.5 bg-main text-white text-xs font-bold rounded-lg shadow-sm"
+                  class="px-3 py-1.5 text-xs font-bold rounded-lg shadow-sm"
+                  :style="getPercentageSurfaceStyle(insp.puntuacion_promedio)"
                 >
-                  {{
-                    Number(((insp.puntuacion_promedio / 5) * 100).toFixed(1))
-                  }}%
+                  {{ getInspectionPercentage(insp.puntuacion_promedio) }}%
                 </div>
               </div>
 
@@ -653,8 +873,18 @@ const getInspectionObservationText = (observation?: string | null) => {
       :criteria="criteria"
       :supervisor-name="getSupName(selectedInspection.final_supervisor_id)"
       :inspector-name="getEmployeeName(selectedInspection.final_inspector_id)"
+      :closing-date="closingDate"
+      :closing-area="selectedClosingArea"
+      :closing-loading="store.isPuntuacionSupervisoresOtLoading"
+      :closing-error="store.errorPuntuacionSupervisoresOt"
+      :assigned-hours-area="assignedHoursArea"
+      :assigned-hours-groups="assignedHoursGroups"
+      :assigned-hours-loading="isAssignedHoursLoading"
+      :assigned-hours-error="assignedHoursError"
       @close="closeInspectionDetail"
       @view-photos="openPhotos"
+      @load-closing="loadClosingCompliance"
+      @load-assigned-hours="loadAssignedHours"
     />
 
     <!-- Modal de Fotos -->

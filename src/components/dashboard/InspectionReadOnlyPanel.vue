@@ -1,22 +1,28 @@
 <script setup lang="ts">
-import { computed, type CSSProperties } from "vue";
+import { computed, ref, watch, type CSSProperties } from "vue";
 import {
+  AlertCircle,
   Building2,
   CalendarDays,
+  ChevronRight,
   ClipboardCheck,
   Clock3,
   Eye,
   Images,
+  LoaderCircle,
   MessageSquareText,
   UserRound,
   X,
 } from "lucide-vue-next";
 import { parseMeetingObservation } from "@/utils/meetingRatings";
+import AssignedHoursReadOnlyPanel from "@/components/dashboard/AssignedHoursReadOnlyPanel.vue";
 import type {
   RatingsCriterio,
   RatingsDetalle,
   RatingsInspeccionNormalizada,
 } from "@/stores/ratingsStore.types";
+import type { PuntuacionSupervisorOtArea } from "@/stores/ratingsStore.types";
+import type { AssignedHoursGroup } from "@/stores/assignedHoursStore.types";
 
 const props = defineProps<{
   inspection: RatingsInspeccionNormalizada;
@@ -24,12 +30,33 @@ const props = defineProps<{
   criteria: RatingsCriterio[];
   supervisorName: string;
   inspectorName: string;
+  closingDate: string;
+  closingArea: PuntuacionSupervisorOtArea | null;
+  closingLoading: boolean;
+  closingError: string | null;
+  assignedHoursArea: string;
+  assignedHoursGroups: AssignedHoursGroup[];
+  assignedHoursLoading: boolean;
+  assignedHoursError: string | null;
 }>();
 
 const emit = defineEmits<{
   close: [];
   viewPhotos: [photoUrls: string];
+  loadClosing: [];
+  loadAssignedHours: [force: boolean];
 }>();
+
+type DrawerTab = "evaluation" | "closing";
+
+const activeTab = ref<DrawerTab>("evaluation");
+
+watch(
+  () => props.inspection.id_inspeccion,
+  () => {
+    activeTab.value = "evaluation";
+  },
+);
 
 const meetingCriterionId = 5;
 
@@ -70,46 +97,17 @@ const photoCount = computed(
       .length,
 );
 
-type RgbColor = {
-  red: number;
-  green: number;
-  blue: number;
-};
-
-const badScoreColor: RgbColor = { red: 220, green: 38, blue: 38 };
-const regularScoreColor: RgbColor = { red: 202, green: 138, blue: 4 };
-const goodScoreColor: RgbColor = { red: 22, green: 163, blue: 74 };
-
-const interpolateColor = (
-  start: RgbColor,
-  end: RgbColor,
-  amount: number,
-): RgbColor => ({
-  red: Math.round(start.red + (end.red - start.red) * amount),
-  green: Math.round(start.green + (end.green - start.green) * amount),
-  blue: Math.round(start.blue + (end.blue - start.blue) * amount),
-});
-
-const getScoreColor = (score: number): RgbColor => {
+const getScoreColor = (score: number): string => {
   const normalizedScore = Math.min(5, Math.max(1, score));
 
-  if (normalizedScore <= 3) {
-    return interpolateColor(
-      badScoreColor,
-      regularScoreColor,
-      (normalizedScore - 1) / 2,
-    );
-  }
-
-  return interpolateColor(
-    regularScoreColor,
-    goodScoreColor,
-    (normalizedScore - 3) / 2,
-  );
+  if (normalizedScore <= 1.5) return "var(--color-danger)";
+  if (normalizedScore < 3)
+    return "color-mix(in srgb, var(--color-danger) 45%, var(--color-accent))";
+  if (normalizedScore <= 3.5) return "var(--color-accent)";
+  if (normalizedScore < 5)
+    return "color-mix(in srgb, var(--color-accent) 45%, var(--color-main-light))";
+  return "var(--color-main-light)";
 };
-
-const toRgb = (color: RgbColor): string =>
-  `rgb(${color.red}, ${color.green}, ${color.blue})`;
 
 const getScoreLabel = (score: number | null): string => {
   if (score === null) return "Sin calificación";
@@ -120,18 +118,13 @@ const getScoreLabel = (score: number | null): string => {
 
 const getScoreSurfaceStyle = (score: number | null): CSSProperties => {
   if (score === null) {
-    return { backgroundColor: "#475569", color: "#ffffff" };
+    return { backgroundColor: "var(--color-gray-500)", color: "#ffffff" };
   }
 
   const mainColor = getScoreColor(score);
-  const lightColor = interpolateColor(
-    mainColor,
-    { red: 255, green: 255, blue: 255 },
-    0.2,
-  );
 
   return {
-    background: `linear-gradient(135deg, ${toRgb(lightColor)}, ${toRgb(mainColor)})`,
+    background: `linear-gradient(135deg, color-mix(in srgb, ${mainColor} 78%, white), ${mainColor})`,
     color: "#ffffff",
   };
 };
@@ -142,6 +135,18 @@ const resultSurfaceStyle = computed(() =>
 
 const managementSurfaceStyle = computed(() =>
   getScoreSurfaceStyle(managementScore.value),
+);
+
+const lateClosingOrders = computed(() =>
+  (props.closingArea?.ots || []).filter(
+    (order) => order.cumplimiento.caso === "GESTIONADO_TARDE",
+  ),
+);
+
+const closingOrdersWithoutHistory = computed(() =>
+  (props.closingArea?.ots || []).filter(
+    (order) => order.cumplimiento.caso === "SIN_HISTORIAL",
+  ),
 );
 
 const formatScore = (score: number | null): string =>
@@ -177,6 +182,12 @@ const formatHora = (hora: string): string => {
   const suffix = numericHour >= 12 ? "PM" : "AM";
   const normalizedHour = numericHour % 12 || 12;
   return `${normalizedHour}:${minute.padStart(2, "0")} ${suffix}`;
+};
+
+const selectTab = (tab: DrawerTab): void => {
+  activeTab.value = tab;
+
+  if (tab === "closing") emit("loadClosing");
 };
 </script>
 
@@ -216,7 +227,39 @@ const formatHora = (hora: string): string => {
         </button>
       </header>
 
-      <div class="space-y-5 px-4 py-4">
+      <nav
+        class="sticky top-[69px] z-10 grid grid-cols-2 border-b border-slate-200 bg-[#fbfcfa]/95 px-4 pt-2 backdrop-blur"
+        aria-label="Secciones de la ficha"
+      >
+        <button
+          type="button"
+          class="inline-flex min-h-9 items-center justify-center gap-1.5 border-b-2 px-2 text-[11px] font-bold transition"
+          :class="
+            activeTab === 'evaluation'
+              ? 'border-main text-main'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          "
+          @click="selectTab('evaluation')"
+        >
+          <ClipboardCheck class="h-3.5 w-3.5" />
+          Evaluación
+        </button>
+        <button
+          type="button"
+          class="inline-flex min-h-9 items-center justify-center gap-1.5 border-b-2 px-2 text-[11px] font-bold transition"
+          :class="
+            activeTab === 'closing'
+              ? 'border-main text-main'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          "
+          @click="selectTab('closing')"
+        >
+          <Clock3 class="h-3.5 w-3.5" />
+          Cierre de jornada
+        </button>
+      </nav>
+
+      <div v-if="activeTab === 'evaluation'" class="space-y-5 px-4 py-4">
         <section
           class="overflow-hidden rounded-2xl p-4 shadow-sm"
           :style="resultSurfaceStyle"
@@ -361,6 +404,15 @@ const formatHora = (hora: string): string => {
           </div>
         </section>
 
+        <AssignedHoursReadOnlyPanel
+          :area="assignedHoursArea"
+          :groups="assignedHoursGroups"
+          :is-loading="assignedHoursLoading"
+          :error="assignedHoursError"
+          :inspection-date="inspection.fecha"
+          @load="emit('loadAssignedHours', $event)"
+        />
+
         <section class="rounded-xl p-3" :style="managementSurfaceStyle">
           <div class="flex items-start gap-2">
             <div class="rounded-lg bg-white/15 p-1.5 text-white">
@@ -429,6 +481,194 @@ const formatHora = (hora: string): string => {
             </button>
           </div>
         </section>
+      </div>
+
+      <div v-else class="space-y-4 px-4 py-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <Clock3 class="h-4 w-4 text-main" />
+            <h4 class="text-xs font-black text-slate-900">
+              Cumplimiento de cierre de jornada
+            </h4>
+          </div>
+          <p class="mt-1 text-[11px] leading-relaxed text-slate-500">
+            Resumen del {{ formatFecha(closingDate) }}.
+          </p>
+        </div>
+
+        <div
+          v-if="closingLoading"
+          class="flex min-h-48 flex-col items-center justify-center rounded-xl border border-slate-200 bg-white p-5 text-center"
+        >
+          <LoaderCircle class="h-5 w-5 animate-spin text-main" />
+          <p class="mt-2 text-xs font-semibold text-slate-600">
+            Consultando el cierre de jornada…
+          </p>
+        </div>
+
+        <div
+          v-else-if="closingError"
+          class="rounded-xl border border-danger/25 bg-danger-bg p-3 text-xs leading-relaxed text-danger"
+          role="alert"
+        >
+          <div class="flex items-start gap-2">
+            <AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
+            <p>{{ closingError }}</p>
+          </div>
+        </div>
+
+        <div v-else-if="closingArea" class="space-y-3">
+          <section
+            class="rounded-2xl p-4 shadow-sm"
+            :style="getScoreSurfaceStyle(closingArea.resumen.puntuacion)"
+          >
+            <div class="flex items-end justify-between gap-3">
+              <div>
+                <p
+                  class="text-[10px] font-bold uppercase tracking-[0.14em] text-white/75"
+                >
+                  Puntuación de cierre
+                </p>
+                <p class="mt-1 text-3xl font-black tracking-tighter">
+                  {{ closingArea.resumen.puntuacion?.toFixed(1) ?? "—" }}
+                  <span class="text-xs text-white/75">/ 5</span>
+                </p>
+                <p
+                  class="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/80"
+                >
+                  {{ getScoreLabel(closingArea.resumen.puntuacion) }}
+                </p>
+              </div>
+              <div
+                class="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-right"
+              >
+                <p
+                  class="text-[9px] font-bold uppercase tracking-[0.14em] text-white/70"
+                >
+                  Cumplimiento
+                </p>
+                <p class="mt-1 text-sm font-black">
+                  {{ closingArea.resumen.porcentaje.toFixed(1) }}%
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section class="grid grid-cols-3 gap-2">
+            <div class="rounded-xl border border-slate-200 bg-white p-3">
+              <p
+                class="text-[9px] font-bold uppercase tracking-wide text-slate-400"
+              >
+                OT
+              </p>
+              <p class="mt-1 text-lg font-black text-slate-800">
+                {{ closingArea.resumen.total }}
+              </p>
+              <p class="text-[10px] text-slate-500">procesadas</p>
+            </div>
+            <div class="rounded-xl border border-main/15 bg-main/5 p-3">
+              <p class="text-[9px] font-bold uppercase tracking-wide text-main">
+                A tiempo
+              </p>
+              <p class="mt-1 text-lg font-black text-main">
+                {{ closingArea.resumen.a_tiempo }}
+              </p>
+              <p class="text-[10px] text-slate-500">al corte 23:30</p>
+            </div>
+            <div class="rounded-xl border border-danger/20 bg-danger-bg p-3">
+              <p
+                class="text-[9px] font-bold uppercase tracking-wide text-danger"
+              >
+                Tardías
+              </p>
+              <p class="mt-1 text-lg font-black text-danger">
+                {{ closingArea.resumen.fuera_de_tiempo }}
+              </p>
+              <p class="text-[10px] text-slate-500">después del corte</p>
+            </div>
+          </section>
+
+          <details
+            v-if="lateClosingOrders.length"
+            class="group overflow-hidden rounded-xl border border-danger/25 bg-white"
+          >
+            <summary
+              class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-xs font-bold text-danger outline-none hover:bg-danger-bg [&::-webkit-details-marker]:hidden"
+            >
+              <span>Ver {{ lateClosingOrders.length }} OT tardías</span>
+              <ChevronRight
+                class="h-4 w-4 transition-transform group-open:rotate-90"
+              />
+            </summary>
+            <ul class="divide-y divide-slate-100 border-t border-slate-100">
+              <li
+                v-for="order in lateClosingOrders"
+                :key="order.id"
+                class="px-3 py-2.5"
+              >
+                <p class="text-xs font-bold text-slate-800">
+                  {{ order.origen.descripcion || "Trabajo sin descripción" }}
+                </p>
+                <p class="mt-0.5 text-[10px] text-slate-500">
+                  {{ order.estado_actual || "Sin estado registrado" }}
+                </p>
+              </li>
+            </ul>
+          </details>
+
+          <details
+            v-if="closingOrdersWithoutHistory.length"
+            class="group overflow-hidden rounded-xl border border-accent/30 bg-white"
+          >
+            <summary
+              class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3 text-xs font-bold text-slate-700 outline-none hover:bg-accent/10 [&::-webkit-details-marker]:hidden"
+            >
+              <span
+                >Ver {{ closingOrdersWithoutHistory.length }} OT sin
+                historial</span
+              >
+              <ChevronRight
+                class="h-4 w-4 text-accent-dark transition-transform group-open:rotate-90"
+              />
+            </summary>
+            <ul class="divide-y divide-slate-100 border-t border-slate-100">
+              <li
+                v-for="order in closingOrdersWithoutHistory"
+                :key="order.id"
+                class="px-3 py-2.5"
+              >
+                <p class="text-xs font-bold text-slate-800">
+                  {{ order.origen.descripcion || "Trabajo sin descripción" }}
+                </p>
+                <p class="mt-0.5 text-[10px] text-slate-500">
+                  {{ order.estado_actual || "Sin estado registrado" }}
+                </p>
+              </li>
+            </ul>
+          </details>
+
+          <p
+            v-if="
+              !lateClosingOrders.length && !closingOrdersWithoutHistory.length
+            "
+            class="rounded-xl border border-main/15 bg-main/5 px-3 py-2 text-[11px] text-main"
+          >
+            No hay OT tardías ni OT sin historial en este cierre.
+          </p>
+        </div>
+
+        <div
+          v-else
+          class="rounded-xl border border-slate-200 bg-white p-4 text-center"
+        >
+          <p class="text-xs font-semibold text-slate-700">
+            No hay un cierre de jornada disponible para este supervisor.
+          </p>
+          <p class="mt-1 text-[11px] leading-relaxed text-slate-500">
+            El resumen se muestra cuando el supervisor pertenece al alcance de
+            la consulta.
+          </p>
+        </div>
       </div>
     </article>
   </aside>
