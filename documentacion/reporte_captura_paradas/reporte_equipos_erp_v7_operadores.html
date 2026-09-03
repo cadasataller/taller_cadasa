@@ -1,0 +1,1769 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERP · Captura de tiempos operador/equipo</title>
+
+<!--
+  ======================================================================
+  MOCKUP DOCUMENTADO PARA MIGRACIÓN A VUE 3 + TAILWIND + TYPESCRIPT
+  ======================================================================
+
+  VUE
+  ----
+  Estado recomendado:
+    const activeTab = ref<'resumen' | 'paradas' | 'operadores'>('operadores')
+    const selectedEquipmentCode = ref<string>('484091')
+
+  En la implementación real:
+    <section v-if="activeTab === 'resumen'">...</section>
+    <section v-else-if="activeTab === 'paradas'">...</section>
+
+  Este HTML usa data-tab + JavaScript solo para previsualizar la navegación.
+
+  TYPESCRIPT
+  ----------
+  Datos mínimos para Paradas:
+
+    type HhMm = string
+
+    interface StopSummary {
+      stoppedTime: HhMm
+      stoppedPercentage: number
+      stopCount: number
+      averageStopTime: HhMm
+    }
+
+    interface StopClassificationRow {
+      classification: 'OPERATIVO' | 'TALLER' | 'IMPONDERABLE'
+      time: HhMm
+      occurrences: number
+      percentage: number
+    }
+
+    interface StopOriginRow {
+      origin: 'equipo' | 'implemento' | 'otro'
+      time: HhMm
+      occurrences: number
+      percentage: number
+    }
+
+    interface StopDetailRow {
+      startAt: string
+      endAt: string
+      duration: HhMm
+      reason: string
+      origin: string
+      classification: string
+      engineOn: boolean
+      implementLabel: string | null
+    }
+
+    interface EngineUsageRow {
+      engineOn: boolean
+      time: HhMm
+      percentage: number
+      periods: number
+    }
+
+
+
+  DATOS MÍNIMOS PARA OPERADORES
+  -----------------------------
+    interface OperatorUsageRow {
+      operatorId: string
+      operatorLabel: string
+      journeys: number | null
+      totalTime: HhMm
+      workingTime: HhMm | null
+      stoppedTime: HhMm | null
+      participation: number
+    }
+
+    interface OperatorClassificationRow {
+      classification: 'EFECTIVO' | 'OPERATIVO' | 'TALLER' | 'IMPONDERABLE'
+      time: HhMm
+      percentage: number
+    }
+
+    interface OperatorStopRow {
+      reason: string
+      occurrences: number
+      time: HhMm
+      stoppedPercentage: number
+    }
+
+    interface OperatorImplementRow {
+      implementCode: string
+      implementLabel: string
+      journeys: number
+      time: HhMm
+    }
+
+    interface OperatorHistoryRow {
+      startAt: string
+      endAt: string
+      detail: string
+      duration: HhMm
+    }
+
+  REGLA DE CONTEXTO DE OPERADORES
+  -------------------------------
+  La pestaña Operadores SIEMPRE se interpreta dentro del equipo seleccionado:
+
+    selectedEquipmentCode
+      ↓
+    operadores que utilizaron ese equipo
+      ↓
+    selectedOperatorId
+      ↓
+    distribución / paradas / implementos / historial
+
+  En Vue:
+    const selectedOperatorId = ref<string | null>(null)
+
+    const selectedOperator = computed(() =>
+      operatorUsage.value.find(row => row.operatorId === selectedOperatorId.value)
+    )
+
+  TAILWIND
+  --------
+  Los comentarios CSS indican la composición equivalente en Tailwind.
+  Deben reutilizarse los tokens del @theme del proyecto:
+    bg-main, text-main, bg-second, border-gray-200, text-xs, text-sm, etc.
+
+  SCROLL
+  ------
+  - viewport: h-dvh overflow-hidden
+  - workspace: overflow-hidden
+  - listado izquierdo: overflow-y-auto
+  - columna derecha: overflow-y-auto
+  - historial resumen: overflow-y-auto
+  - detalle de paradas: overflow-y-auto
+-->
+
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap");
+:root {
+  --color-main:#004643;--color-main-light:#006b65;--color-main-dark:#002e2c;--color-main-muted:#004643cc;
+  --color-second:#f0ede5;--color-second-dark:#e2ddd3;--color-second-deep:#c9c3b4;
+  --color-accent:#d4a853;--color-accent-light:#e8c47a;--color-accent-dark:#b8892f;
+  --color-success:#2d8a4e;--color-success-bg:#e8f5ed;--color-warning:#c97b2f;--color-warning-bg:#fdf3e3;
+  --color-danger:#c0392b;--color-danger-bg:#fdecea;--color-info:#1a6b9a;--color-info-bg:#e3f0fa;
+  --color-white:#fff;--color-gray-50:#f8f7f4;--color-gray-100:#efede7;--color-gray-200:#d8d4ca;
+  --color-gray-300:#b8b3a7;--color-gray-400:#8f8a7f;--color-gray-500:#6b6660;--color-gray-600:#4a4640;
+  --color-gray-700:#2e2b26;--color-gray-900:#1a1917;
+  --font-body:"DM Sans","Segoe UI",sans-serif;--shadow-sm:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --radius-md:8px;--radius-lg:14px;--radius-full:9999px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--font-body);font-size:.875rem;line-height:1.35;background:var(--color-second);color:var(--color-gray-900)}
+button,input,select{font:inherit} button{cursor:pointer}
+
+/* Tailwind: h-dvh min-h-0 overflow-hidden flex flex-col */
+.app{height:100dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+
+/* Tailwind: h-12 shrink-0 flex items-center justify-between px-5 bg-white border-b border-gray-200 */
+.topbar{height:48px;flex:0 0 48px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:white;border-bottom:1px solid var(--color-gray-200)}
+.breadcrumbs{display:flex;gap:7px;align-items:center;font-size:.75rem;font-weight:600;color:var(--color-gray-500)} .breadcrumbs b{color:var(--color-gray-900)}
+.user{display:flex;align-items:center;gap:9px;font-size:.75rem;text-align:right} .user small{display:block;font-size:10px;color:var(--color-gray-500)}
+.avatar{width:30px;height:30px;display:grid;place-items:center;border-radius:9999px;background:var(--color-accent);font-size:10px;font-weight:800}
+
+/* Tailwind: shrink-0 flex items-end justify-between gap-3 px-5 py-2 */
+.toolbar{flex:0 0 auto;display:flex;align-items:end;justify-content:space-between;gap:12px;padding:8px 20px}
+.toolbar-left,.toolbar-right{display:flex;align-items:end;gap:8px} .field{display:flex;flex-direction:column;gap:3px} .field label{font-size:10px;color:var(--color-gray-500)}
+.control{height:32px;min-width:176px;padding:0 9px;display:flex;align-items:center;border:1px solid var(--color-gray-200);border-radius:var(--radius-md);background:white;box-shadow:var(--shadow-sm);font-size:.75rem}
+.control input,.control select{width:100%;border:0;outline:0;background:transparent}
+.tabs{height:32px;display:flex;overflow:hidden;border:1px solid var(--color-gray-200);border-radius:var(--radius-md);background:white}
+.tab{min-width:100px;padding:0 14px;border:0;border-right:1px solid var(--color-gray-200);background:transparent;font-size:.75rem;font-weight:600;color:var(--color-gray-600)} .tab.active{background:var(--color-main);color:white} .tab:last-child{border-right:0}
+.btn{height:32px;padding:0 11px;border:1px solid var(--color-gray-200);border-radius:var(--radius-md);background:white;font-size:.75rem;font-weight:600;color:var(--color-gray-600)} .btn.emphasis{border-color:var(--color-main);color:var(--color-main)}
+
+/* Tailwind: flex-1 min-h-0 grid grid-cols-[250px_minmax(0,1fr)_300px] gap-3 px-5 pb-4 overflow-hidden items-stretch */
+.workspace{flex:1;min-height:0;display:grid;grid-template-columns:250px minmax(0,1fr) 300px;gap:12px;padding:0 20px 16px;overflow:hidden;align-items:stretch}
+.panel{min-height:0;border:1px solid var(--color-gray-200);border-radius:10px;background:white;box-shadow:var(--shadow-sm)}
+.panel-head{padding:10px 11px 7px} .panel-title{font-size:.75rem;font-weight:700;color:var(--color-main)}
+
+/* Tailwind: h-full min-h-0 overflow-hidden flex flex-col */
+.left-panel{height:100%;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.left-fixed{flex:0 0 auto;padding:0 10px 8px}
+.search{height:31px;display:flex;align-items:center;padding:0 8px;border:1px solid var(--color-gray-200);border-radius:var(--radius-md);background:white}
+.search input{width:100%;border:0;outline:0;font-size:.75rem}
+/* Tailwind: flex-1 min-h-0 overflow-y-auto px-2 pb-2 */
+.equipment-scroll{flex:1;min-height:0;overflow-y:auto;padding:0 8px 8px}
+.equipment-row{width:100%;min-height:50px;padding:7px 8px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--color-gray-200);border-radius:7px;background:white;text-align:left;margin-bottom:5px}
+.equipment-row.selected{border-color:color-mix(in srgb,var(--color-main) 42%,var(--color-gray-200));background:var(--color-success-bg);box-shadow:inset 3px 0 0 var(--color-main)}
+.equipment-row-main strong,.equipment-row-meta strong{display:block;font-size:.75rem} .equipment-row-main span,.equipment-row-meta span{display:block;margin-top:2px;font-size:10px;color:var(--color-gray-500)} .equipment-row-meta{text-align:right;white-space:nowrap}
+
+/* Tailwind: h-full min-h-0 grid grid-rows-[auto_auto_minmax(0,1fr)] gap-2 overflow-hidden */
+.center{height:100%;min-height:0;display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:8px;overflow:hidden}
+.summary{padding:9px}
+.summary-grid{display:grid;grid-template-columns:minmax(280px,1.55fr) repeat(3,minmax(120px,.75fr));gap:7px;align-items:stretch}
+/* Tailwind: min-w-0 grid grid-cols-[76px_minmax(0,1fr)] gap-3 items-center */
+.identity{min-width:0;display:grid;grid-template-columns:76px minmax(0,1fr);gap:10px;align-items:center;padding:5px}
+.identity-image{width:76px;height:58px;display:grid;place-items:center;overflow:hidden;border-radius:8px;background:var(--color-gray-50);border:1px solid var(--color-gray-200);color:var(--color-gray-500);font-size:10px;text-align:center}
+.identity-code{font-size:1.05rem;font-weight:800;color:var(--color-main)} .identity-sub{margin-top:2px;font-size:.75rem;color:var(--color-gray-600)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px} .chip{padding:2px 6px;border:1px solid var(--color-gray-200);border-radius:9999px;background:var(--color-gray-50);font-size:10px;color:var(--color-gray-600)} .chip.ok{background:var(--color-success-bg);color:var(--color-success)}
+/* Tailwind: self-center min-h-[70px] flex flex-col justify-center */
+.metric{min-width:0;align-self:center;min-height:70px;padding:8px 9px;display:flex;flex-direction:column;justify-content:center;border:1px solid var(--color-gray-200);border-radius:8px}
+.metric label{font-size:10px;color:var(--color-gray-500)} .metric strong{display:block;margin-top:2px;font-size:1rem;color:var(--color-main)} .metric small{font-size:10px;color:var(--color-gray-500)}
+
+/* Tailwind: grid grid-cols-3 gap-2 items-stretch */
+.analytics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:stretch}
+.analytics>.panel{height:100%;padding:9px 10px} .analytics h3,.implements-panel h3,.history h3{margin-bottom:6px;font-size:.75rem;color:var(--color-main)}
+.data-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.data-table th,.data-table td{padding:5px 3px;border-bottom:1px solid var(--color-gray-100);font-size:10px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.data-table th{color:var(--color-gray-500);font-weight:600} .data-table th:nth-child(2),.data-table td:nth-child(2){width:58px;text-align:right} .data-table th:nth-child(3),.data-table td:nth-child(3){width:96px}
+.legend{display:inline-flex;align-items:center;gap:5px} .dot{width:7px;height:7px;border-radius:50%;background:var(--color-main)} .dot.success{background:var(--color-success)} .dot.warning{background:var(--color-warning)} .dot.gray{background:var(--color-gray-400)}
+.percent{display:flex;align-items:center;gap:5px} .percent>span{width:31px;text-align:right;font-size:9.5px;color:var(--color-gray-600)} .bar{flex:1;height:5px;border-radius:9999px;background:var(--color-gray-100);overflow:hidden} .bar i{display:block;height:100%;background:var(--color-main)} .bar.success i{background:var(--color-success)} .bar.warning i{background:var(--color-warning)} .bar.accent i{background:var(--color-accent)}
+.wrap-cell{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.2}
+
+/* Tailwind: min-h-0 grid grid-cols-[0.42fr_0.58fr] gap-2 */
+.bottom-row{min-height:0;display:grid;grid-template-columns:minmax(0,.42fr) minmax(0,.58fr);gap:8px;overflow:hidden}
+.implements-panel{min-height:0;padding:9px 10px;overflow:hidden}
+.implements-table{width:100%;border-collapse:collapse;table-layout:fixed} .implements-table th,.implements-table td{padding:5px 6px;border-bottom:1px solid var(--color-gray-100);font-size:10px;text-align:left} .implements-table th{color:var(--color-gray-500);font-weight:600}
+.implements-table th:nth-child(1){width:66px} .implements-table th:nth-child(3){width:58px;text-align:right} .implements-table th:nth-child(4){width:62px;text-align:right} .implements-table th:nth-child(5){width:104px} .implements-table td:nth-child(3),.implements-table td:nth-child(4){text-align:right}
+
+/* Tailwind: min-h-0 flex flex-col overflow-hidden */
+.history{min-height:0;padding:9px 10px;display:flex;flex-direction:column;overflow:hidden}
+/* Tailwind: flex-1 min-h-0 overflow-y-auto rounded-md border border-gray-100 */
+.history-scroll{flex:1;min-height:0;overflow-y:auto;border:1px solid var(--color-gray-100);border-radius:7px}
+.history table{width:100%;border-collapse:collapse;table-layout:fixed} .history th,.history td{padding:6px;border-right:1px solid var(--color-gray-100);border-bottom:1px solid var(--color-gray-100);font-size:10px;text-align:left;vertical-align:top;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history th{position:sticky;top:0;z-index:2;background:var(--color-gray-50);color:var(--color-gray-600);font-weight:700}
+.history th:nth-child(1),.history td:nth-child(1),.history th:nth-child(2),.history td:nth-child(2){width:112px} .history th:nth-child(4),.history td:nth-child(4){width:54px;text-align:right}
+/* Tailwind: whitespace-normal break-words leading-tight */
+.history-detail{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;line-height:1.2}
+
+/* Tailwind: h-full min-h-0 overflow-y-auto flex flex-col gap-2 */
+.right-scroll{height:100%;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px}
+.detail-list{margin:0 11px 10px;border-top:1px solid var(--color-gray-100)} .detail-row{min-height:27px;padding:5px 0;display:grid;grid-template-columns:43% 57%;gap:7px;border-bottom:1px solid var(--color-gray-100);font-size:10.5px} .detail-row dt{color:var(--color-gray-500)} .detail-row dd{min-width:0;color:var(--color-gray-700);font-weight:500;overflow-wrap:anywhere}
+.kpis{padding:0 10px 10px;display:grid;gap:5px} .kpi{min-height:48px;padding:6px 7px;display:grid;grid-template-columns:28px minmax(0,1fr);gap:7px;align-items:center;border:1px solid var(--color-gray-100);border-radius:7px;background:var(--color-gray-50)} .kpi-icon{width:28px;height:28px;display:grid;place-items:center;border-radius:7px;background:white;border:1px solid var(--color-gray-200);color:var(--color-main);font-size:10px;font-weight:800} .kpi label{font-size:10px;color:var(--color-gray-500)} .kpi strong{display:block;font-size:.75rem} .kpi small{font-size:9.5px;color:var(--color-gray-500)}
+
+
+/* ==================================================================
+   VISTAS
+   Vue: usar v-if / v-else-if. data-view solo existe para el mockup.
+   ================================================================== */
+
+/* Tailwind: h-full min-h-0 overflow-hidden */
+.center-shell{height:100%;min-height:0;overflow:hidden}
+.view{height:100%;min-height:0}
+.view[hidden]{display:none!important}
+
+/* PARADAS
+   Tailwind:
+   h-full min-h-0 grid
+   grid-rows-[auto_auto_auto_minmax(0,1fr)]
+   gap-2 overflow-hidden
+*/
+.stops-view{
+  display:grid;
+  grid-template-rows:auto auto auto minmax(0,1fr);
+  gap:8px;
+  overflow:hidden;
+}
+
+/* Tailwind: grid grid-cols-4 gap-2 */
+.stop-kpis{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+.stop-kpi{
+  min-height:68px;
+  padding:9px 10px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.stop-kpi label{font-size:10px;color:var(--color-gray-500)}
+.stop-kpi strong{margin-top:2px;font-size:1.05rem;color:var(--color-main)}
+.stop-kpi small{margin-top:2px;font-size:10px;color:var(--color-gray-500)}
+
+/* Tailwind: grid grid-cols-2 gap-2 items-stretch */
+.stop-breakdown{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  align-items:stretch;
+}
+.stop-card{padding:9px 10px}
+.stop-card h3,.stop-motives h3,.stop-detail h3{
+  margin-bottom:6px;
+  font-size:.75rem;
+  color:var(--color-main);
+}
+
+.stop-table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+.stop-table th,.stop-table td{
+  padding:5px;
+  border-bottom:1px solid var(--color-gray-100);
+  font-size:10px;
+  text-align:left;
+}
+.stop-table th{color:var(--color-gray-500);font-weight:600}
+.stop-table th:nth-child(2),.stop-table td:nth-child(2){width:68px;text-align:right}
+.stop-table th:nth-child(3),.stop-table td:nth-child(3){width:58px;text-align:right}
+.stop-table th:nth-child(4),.stop-table td:nth-child(4){width:118px}
+
+.stop-motives{padding:9px 10px}
+.stop-motives-table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+.stop-motives-table th,.stop-motives-table td{
+  padding:5px 6px;
+  border-bottom:1px solid var(--color-gray-100);
+  font-size:10px;
+  text-align:left;
+}
+.stop-motives-table th{color:var(--color-gray-500);font-weight:600}
+.stop-motives-table th:nth-child(2),.stop-motives-table td:nth-child(2){width:74px;text-align:right}
+.stop-motives-table th:nth-child(3),.stop-motives-table td:nth-child(3){width:76px;text-align:right}
+.stop-motives-table th:nth-child(4),.stop-motives-table td:nth-child(4){width:150px}
+
+/* Tailwind: min-h-0 flex flex-col overflow-hidden */
+.stop-detail{
+  min-height:0;
+  padding:9px 10px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+/* Tailwind: flex-1 min-h-0 overflow-y-auto rounded-md border border-gray-100 */
+.stop-detail-scroll{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  border:1px solid var(--color-gray-100);
+  border-radius:7px;
+}
+.stop-detail table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+.stop-detail th,.stop-detail td{
+  padding:6px;
+  border-right:1px solid var(--color-gray-100);
+  border-bottom:1px solid var(--color-gray-100);
+  font-size:10px;
+  text-align:left;
+  vertical-align:top;
+}
+.stop-detail th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:var(--color-gray-50);
+  color:var(--color-gray-600);
+  font-weight:700;
+}
+.stop-detail th:nth-child(1),.stop-detail td:nth-child(1),
+.stop-detail th:nth-child(2),.stop-detail td:nth-child(2){
+  width:112px;
+  white-space:nowrap;
+}
+.stop-detail th:nth-child(3),.stop-detail td:nth-child(3){
+  width:62px;
+  text-align:right;
+  white-space:nowrap;
+}
+.stop-detail th:nth-child(5),.stop-detail td:nth-child(5){width:70px}
+.stop-detail th:nth-child(6),.stop-detail td:nth-child(6){width:82px}
+.stop-detail th:nth-child(7),.stop-detail td:nth-child(7){width:64px}
+.stop-detail th:nth-child(8),.stop-detail td:nth-child(8){width:92px}
+
+/* Tailwind: whitespace-normal break-words leading-tight */
+.stop-motive,.stop-implement{
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.2;
+}
+
+/* OPERADORES: placeholder solo para evitar romper las tabs del mockup. */
+.operators-placeholder{
+  height:100%;
+  display:grid;
+  place-items:center;
+  color:var(--color-gray-500);
+  font-size:.75rem;
+}
+
+/* ==================================================================
+   USO DE MOTOR
+   Tailwind: px-2.5 pb-2.5
+   ================================================================== */
+.engine-wrap{padding:0 10px 10px}
+
+/* Tailwind: w-full table-fixed text-xs */
+.engine-table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+.engine-table th,.engine-table td{
+  padding:7px 5px;
+  border-bottom:1px solid var(--color-gray-100);
+  font-size:10px;
+  text-align:left;
+}
+.engine-table th{color:var(--color-gray-500);font-weight:600}
+.engine-table th:nth-child(2),.engine-table td:nth-child(2){width:62px;text-align:right}
+.engine-table th:nth-child(3),.engine-table td:nth-child(3){width:48px;text-align:right}
+.engine-table th:nth-child(4),.engine-table td:nth-child(4){width:52px;text-align:right}
+
+/* Tailwind: mt-2 p-2 rounded-md bg-gray-50 text-[10px] text-gray-500 */
+.engine-note{
+  margin-top:7px;
+  padding:7px;
+  border-radius:7px;
+  background:var(--color-gray-50);
+  color:var(--color-gray-500);
+  font-size:9.5px;
+  line-height:1.35;
+}
+
+/* Tailwind breakpoint conceptual:
+   max-lg:grid-cols-2 para KPIs; luego una columna.
+*/
+@media(max-width:1050px){
+  .center-shell{height:auto;overflow:visible}
+  .stop-kpis{grid-template-columns:1fr 1fr}
+  .stop-breakdown{grid-template-columns:1fr}
+}
+
+
+/* ==================================================================
+   OPERADORES
+   Contexto: operador DENTRO del equipo seleccionado.
+
+   Tailwind del centro:
+   h-full min-h-0
+   grid
+   grid-rows-[auto_auto_auto_minmax(0,1fr)]
+   gap-2
+   overflow-hidden
+   ================================================================== */
+
+.operators-view{
+  display:grid;
+  grid-template-rows:auto auto auto minmax(0,1fr);
+  gap:8px;
+  overflow:hidden;
+}
+
+/* Tailwind: grid grid-cols-4 gap-2 */
+.operator-kpis{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+
+.operator-kpi{
+  min-height:68px;
+  padding:9px 10px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+
+.operator-kpi label{
+  font-size:10px;
+  color:var(--color-gray-500);
+}
+
+.operator-kpi strong{
+  margin-top:2px;
+  font-size:1.05rem;
+  color:var(--color-main);
+}
+
+.operator-kpi small{
+  margin-top:2px;
+  font-size:10px;
+  color:var(--color-gray-500);
+}
+
+/* Tabla principal
+   Tailwind: min-h-0 overflow-hidden flex flex-col
+*/
+.operator-main-card{
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+.operator-main-head{
+  flex:0 0 auto;
+  padding:9px 10px 6px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.operator-main-head h3{
+  font-size:.75rem;
+  color:var(--color-main);
+}
+
+.operator-main-head small{
+  font-size:9.5px;
+  color:var(--color-gray-500);
+}
+
+.operator-main-scroll{
+  min-height:0;
+  overflow-y:auto;
+  padding:0 10px 8px;
+}
+
+.operator-table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+.operator-table th,
+.operator-table td{
+  padding:6px 7px;
+  border-bottom:1px solid var(--color-gray-100);
+  font-size:10px;
+  text-align:left;
+}
+
+.operator-table th{
+  color:var(--color-gray-500);
+  font-weight:600;
+}
+
+.operator-table th:nth-child(2),
+.operator-table td:nth-child(2),
+.operator-table th:nth-child(3),
+.operator-table td:nth-child(3),
+.operator-table th:nth-child(4),
+.operator-table td:nth-child(4),
+.operator-table th:nth-child(5),
+.operator-table td:nth-child(5){
+  width:80px;
+  text-align:right;
+}
+
+.operator-table th:nth-child(6),
+.operator-table td:nth-child(6){
+  width:118px;
+}
+
+.operator-select-row{
+  cursor:pointer;
+  transition:background-color 150ms ease;
+}
+
+.operator-select-row:hover{
+  background:var(--color-gray-50);
+}
+
+.operator-select-row.selected{
+  background:var(--color-success-bg);
+  box-shadow:inset 3px 0 0 var(--color-main);
+}
+
+.operator-label{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:600;
+  color:var(--color-gray-900);
+}
+
+.operator-muted{
+  color:var(--color-gray-400);
+}
+
+/* Tailwind: grid grid-cols-3 gap-2 items-stretch */
+.operator-analysis{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  align-items:stretch;
+}
+
+.operator-analysis-card{
+  padding:9px 10px;
+}
+
+.operator-analysis-card h3{
+  margin-bottom:3px;
+  font-size:.75rem;
+  color:var(--color-main);
+}
+
+.operator-context{
+  margin-bottom:6px;
+  font-size:9.5px;
+  color:var(--color-gray-500);
+}
+
+/* Tailwind:
+   min-h-0 grid grid-cols-[0.38fr_0.62fr] gap-2 overflow-hidden
+*/
+.operator-bottom{
+  min-height:0;
+  display:grid;
+  grid-template-columns:minmax(0,.38fr) minmax(0,.62fr);
+  gap:8px;
+  overflow:hidden;
+}
+
+.operator-implements{
+  min-height:0;
+  padding:9px 10px;
+  overflow:hidden;
+}
+
+.operator-implements h3,
+.operator-history h3{
+  margin-bottom:6px;
+  font-size:.75rem;
+  color:var(--color-main);
+}
+
+.operator-implements-table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+.operator-implements-table th,
+.operator-implements-table td{
+  padding:5px 5px;
+  border-bottom:1px solid var(--color-gray-100);
+  font-size:10px;
+  text-align:left;
+}
+
+.operator-implements-table th{
+  color:var(--color-gray-500);
+  font-weight:600;
+}
+
+.operator-implements-table th:nth-child(1){width:68px}
+.operator-implements-table th:nth-child(3),
+.operator-implements-table td:nth-child(3){
+  width:56px;
+  text-align:right;
+}
+.operator-implements-table th:nth-child(4),
+.operator-implements-table td:nth-child(4){
+  width:62px;
+  text-align:right;
+}
+
+/* Tailwind: min-h-0 flex flex-col overflow-hidden p-2.5 */
+.operator-history{
+  min-height:0;
+  padding:9px 10px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+/* Tailwind: flex-1 min-h-0 overflow-y-auto rounded-md border border-gray-100 */
+.operator-history-scroll{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  border:1px solid var(--color-gray-100);
+  border-radius:7px;
+}
+
+.operator-history table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+
+.operator-history th,
+.operator-history td{
+  padding:6px;
+  border-right:1px solid var(--color-gray-100);
+  border-bottom:1px solid var(--color-gray-100);
+  font-size:10px;
+  text-align:left;
+  vertical-align:top;
+}
+
+.operator-history th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:var(--color-gray-50);
+  color:var(--color-gray-600);
+  font-weight:700;
+}
+
+.operator-history th:nth-child(1),
+.operator-history td:nth-child(1),
+.operator-history th:nth-child(2),
+.operator-history td:nth-child(2){
+  width:112px;
+  white-space:nowrap;
+}
+
+.operator-history th:nth-child(4),
+.operator-history td:nth-child(4){
+  width:58px;
+  text-align:right;
+  white-space:nowrap;
+}
+
+/* Tailwind: whitespace-normal break-words leading-tight */
+.operator-history-detail{
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.2;
+}
+
+@media(max-width:1050px){
+  .operator-kpis{grid-template-columns:1fr 1fr}
+  .operator-analysis{grid-template-columns:1fr}
+  .operator-bottom{grid-template-columns:1fr}
+}
+
+::-webkit-scrollbar{width:6px;height:6px} ::-webkit-scrollbar-track{background:var(--color-gray-100)} ::-webkit-scrollbar-thumb{background:var(--color-gray-300);border-radius:9999px}
+
+@media(max-width:1050px){
+  html,body{overflow:auto} .app{height:auto;overflow:visible} .workspace{grid-template-columns:1fr;overflow:visible}
+  .left-panel,.center,.center-shell,.right-scroll{height:auto;overflow:visible} .equipment-scroll{max-height:360px} .summary-grid{grid-template-columns:1fr 1fr}
+  .identity{grid-column:1/-1} .analytics{grid-template-columns:1fr} .bottom-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="breadcrumbs"><span>☰</span><span>MÓDULO</span><span>/</span><span>REPORTES DE EQUIPOS</span><span>/</span><b>CAPTURA DE TIEMPOS OPERADOR/EQUIPO</b></div>
+    <div class="user"><div><b>SUPERVISOR</b><small>ERP · CAPTURA OPERADOR</small></div><div class="avatar">S</div></div>
+  </header>
+
+  <section class="toolbar">
+    <div class="toolbar-left">
+      <div class="field"><label>Rango de fechas</label><div class="control"><input value="17/08/2026 - 02/09/2026"></div></div>
+      <div class="field"><label>Agrupar por</label><div class="control" style="min-width:145px"><select><option>Equipos</option></select></div></div>
+      <!--
+        Vue:
+          @click="activeTab = 'paradas'"
+          :class="{ 'bg-main text-white': activeTab === 'paradas' }"
+    -->
+    <div class="tabs">
+      <button class="tab" data-tab="resumen">Resumen</button>
+      <button class="tab" data-tab="paradas">Paradas</button>
+      <button class="tab active" data-tab="operadores">Operadores</button>
+    </div>
+    </div>
+    <div class="toolbar-right"><button class="btn emphasis">Filtros</button><button class="btn">Limpiar</button></div>
+  </section>
+
+  <main class="workspace">
+    <aside class="panel left-panel">
+      <div class="panel-head"><h2 class="panel-title">Equipos</h2></div>
+      <div class="left-fixed"><div class="search"><input placeholder="Buscar equipo..."></div></div>
+      <div class="equipment-scroll"><button class="equipment-row selected" type="button">
+              <div class="equipment-row-main">
+                <strong>484091</strong>
+                <span>Tractor</span>
+              </div>
+              <div class="equipment-row-meta">
+                <strong>14:39</strong>
+                <span>6 jornadas</span>
+              </div>
+            </button>
+<button class="equipment-row" type="button">
+              <div class="equipment-row-main">
+                <strong>484095</strong>
+                <span>Tractor</span>
+              </div>
+              <div class="equipment-row-meta">
+                <strong>14:59</strong>
+                <span>4 jornadas</span>
+              </div>
+            </button>
+<button class="equipment-row" type="button">
+              <div class="equipment-row-main">
+                <strong>484041</strong>
+                <span>Tractor</span>
+              </div>
+              <div class="equipment-row-meta">
+                <strong>21:40</strong>
+                <span>29 jornadas</span>
+              </div>
+            </button>
+<button class="equipment-row" type="button">
+              <div class="equipment-row-main">
+                <strong>484044</strong>
+                <span>Tractor</span>
+              </div>
+              <div class="equipment-row-meta">
+                <strong>01:13</strong>
+                <span>11 jornadas</span>
+              </div>
+            </button>
+<button class="equipment-row" type="button">
+              <div class="equipment-row-main">
+                <strong>484051</strong>
+                <span>Tractor</span>
+              </div>
+              <div class="equipment-row-meta">
+                <strong>00:11</strong>
+                <span>5 jornadas</span>
+              </div>
+            </button>
+<button class="equipment-row" type="button">
+              <div class="equipment-row-main">
+                <strong>484047</strong>
+                <span>Tractor</span>
+              </div>
+              <div class="equipment-row-meta">
+                <strong>00:09</strong>
+                <span>3 jornadas</span>
+              </div>
+            </button>
+<button class="equipment-row" type="button">
+              <div class="equipment-row-main">
+                <strong>484057</strong>
+                <span>Tractor</span>
+              </div>
+              <div class="equipment-row-meta">
+                <strong>00:00</strong>
+                <span>1 jornadas</span>
+              </div>
+            </button>
+<button class="equipment-row" type="button">
+              <div class="equipment-row-main">
+                <strong>484056</strong>
+                <span>Tractor</span>
+              </div>
+              <div class="equipment-row-meta">
+                <strong>00:03</strong>
+                <span>1 jornadas</span>
+              </div>
+            </button>
+<button class="equipment-row" type="button">
+              <div class="equipment-row-main">
+                <strong>484096</strong>
+                <span>Tractor</span>
+              </div>
+              <div class="equipment-row-meta">
+                <strong>00:08</strong>
+                <span>1 jornadas</span>
+              </div>
+            </button></div>
+    </aside>
+
+    <section class="center-shell">
+      <!-- Vue: v-if="activeTab === 'resumen'" -->
+      <section class="view center" data-view="resumen" hidden>
+      <article class="panel summary">
+        <div class="summary-grid">
+          <div class="identity">
+            <div class="identity-image">IMAGEN</div>
+            <div>
+              <div class="identity-code">484091</div>
+              <div class="identity-sub">Tractor</div>
+              <div class="chips"><span class="chip ok">6 jornadas</span><span class="chip">Activo</span></div>
+            </div>
+          </div>
+          <div class="metric"><label>Horas registradas</label><strong>14:39</strong><small>Total acumulado</small></div>
+          <div class="metric"><label>Horas efectivas</label><strong>11:39</strong><small>Tiempo trabajando</small></div>
+          <div class="metric"><label>Efectividad</label><strong>79.5%</strong><small>03:00 detenido</small></div>
+        </div>
+      </article>
+
+      <section class="analytics">
+        <article class="panel"><h3>Distribución por clasificación</h3><table class="data-table"><thead><tr><th>Clasificación</th><th>Tiempo</th><th>%</th></tr></thead><tbody><tr>
+              <td><span class="legend"><i class="dot main"></i>EFECTIVO</span></td>
+              <td>11:39</td>
+              <td><div class="percent"><span>79.5%</span><div class="bar main"><i style="width:79.5%"></i></div></div></td>
+            </tr>
+<tr>
+              <td><span class="legend"><i class="dot success"></i>OPERATIVO</span></td>
+              <td>02:36</td>
+              <td><div class="percent"><span>17.7%</span><div class="bar success"><i style="width:17.7%"></i></div></div></td>
+            </tr>
+<tr>
+              <td><span class="legend"><i class="dot warning"></i>TALLER</span></td>
+              <td>00:24</td>
+              <td><div class="percent"><span>2.7%</span><div class="bar warning"><i style="width:2.7%"></i></div></div></td>
+            </tr></tbody></table></article>
+        <article class="panel"><h3>Principales paradas</h3><table class="data-table"><thead><tr><th>Motivo</th><th>Tiempo</th><th>%</th></tr></thead><tbody><tr>
+              <td class="wrap-cell">Alimentos</td>
+              <td>01:24</td>
+              <td><div class="percent"><span>46.7%</span><div class="bar accent"><i style="width:46.7%"></i></div></div></td>
+            </tr>
+<tr>
+              <td class="wrap-cell">Desbarre/Limpieza</td>
+              <td>01:13</td>
+              <td><div class="percent"><span>40.3%</span><div class="bar accent"><i style="width:40.3%"></i></div></div></td>
+            </tr>
+<tr>
+              <td class="wrap-cell">Falta de combustible</td>
+              <td>00:23</td>
+              <td><div class="percent"><span>13.0%</span><div class="bar accent"><i style="width:13.0%"></i></div></div></td>
+            </tr>
+<tr>
+              <td class="wrap-cell">Mantenimiento</td>
+              <td>00:01</td>
+              <td><div class="percent"><span>0.3%</span><div class="bar accent"><i style="width:0.3%"></i></div></div></td>
+            </tr></tbody></table></article>
+        <article class="panel"><h3>Uso por operador</h3><table class="data-table"><thead><tr><th>Operador</th><th>Tiempo</th><th>%</th></tr></thead><tbody><tr>
+              <td>amilcarm@cadasa.com</td>
+              <td>13:28</td>
+              <td><div class="percent"><span>91.9%</span><div class="bar main"><i style="width:91.9%"></i></div></div></td>
+            </tr>
+<tr>
+              <td>soniap@cadasa.com</td>
+              <td>01:09</td>
+              <td><div class="percent"><span>7.8%</span><div class="bar main"><i style="width:7.8%"></i></div></div></td>
+            </tr>
+<tr>
+              <td>operadorget@cadasa.com</td>
+              <td>00:02</td>
+              <td><div class="percent"><span>0.2%</span><div class="bar main"><i style="width:0.2%"></i></div></div></td>
+            </tr></tbody></table></article>
+      </section>
+
+      <section class="bottom-row">
+        <article class="panel implements-panel">
+          <h3>Implementos usados por equipo</h3>
+          <table class="implements-table">
+            <thead><tr><th>Implemento</th><th>Descripción</th><th>Jornadas</th><th>Tiempo</th><th>% uso</th></tr></thead>
+            <tbody><tr>
+              <td><strong>439011</strong></td>
+              <td>Rastra pesada</td>
+              <td>3</td>
+              <td>14:38</td>
+              <td><div class="percent"><span>99.8%</span><div class="bar main"><i style="width:99.8%"></i></div></div></td>
+            </tr>
+<tr>
+              <td><strong>439013</strong></td>
+              <td>Rastra liviana</td>
+              <td>2</td>
+              <td>00:01</td>
+              <td><div class="percent"><span>0.1%</span><div class="bar main"><i style="width:0.5%"></i></div></div></td>
+            </tr>
+<tr>
+              <td><strong>439012</strong></td>
+              <td>Rastra pesada</td>
+              <td>1</td>
+              <td>00:01</td>
+              <td><div class="percent"><span>0.0%</span><div class="bar main"><i style="width:0.5%"></i></div></div></td>
+            </tr></tbody>
+          </table>
+        </article>
+
+        <article class="panel history">
+          <h3>Historial reciente · 10 últimos · hora de Panamá</h3>
+          <div class="history-scroll">
+            <table>
+              <thead><tr><th>Inicio</th><th>Fin</th><th>Labor / Motivo</th><th>Tiempo</th></tr></thead>
+              <tbody><tr>
+              <td>02/09/2026 13:56</td>
+              <td>02/09/2026 14:53</td>
+              <td class="history-detail">Rastra pesada</td>
+              <td>00:56</td>
+            </tr>
+<tr>
+              <td>02/09/2026 13:33</td>
+              <td>02/09/2026 13:56</td>
+              <td class="history-detail">Máquina parada por falta de combustible</td>
+              <td>00:23</td>
+            </tr>
+<tr>
+              <td>02/09/2026 12:47</td>
+              <td>02/09/2026 13:33</td>
+              <td class="history-detail">Rastra pesada</td>
+              <td>00:47</td>
+            </tr>
+<tr>
+              <td>02/09/2026 11:57</td>
+              <td>02/09/2026 12:47</td>
+              <td class="history-detail">Alimentos</td>
+              <td>00:49</td>
+            </tr>
+<tr>
+              <td>02/09/2026 09:23</td>
+              <td>02/09/2026 11:57</td>
+              <td class="history-detail">Rastra pesada</td>
+              <td>02:34</td>
+            </tr>
+<tr>
+              <td>02/09/2026 08:22</td>
+              <td>02/09/2026 09:23</td>
+              <td class="history-detail">Desbarre/Limpieza</td>
+              <td>01:01</td>
+            </tr>
+<tr>
+              <td>02/09/2026 06:15</td>
+              <td>02/09/2026 08:22</td>
+              <td class="history-detail">Rastra pesada</td>
+              <td>02:07</td>
+            </tr>
+<tr>
+              <td>01/09/2026 13:45</td>
+              <td>01/09/2026 14:07</td>
+              <td class="history-detail">Rastra pesada</td>
+              <td>00:22</td>
+            </tr>
+<tr>
+              <td>01/09/2026 13:34</td>
+              <td>01/09/2026 13:45</td>
+              <td class="history-detail">Desbarre/Limpieza</td>
+              <td>00:11</td>
+            </tr>
+<tr>
+              <td>01/09/2026 12:34</td>
+              <td>01/09/2026 13:34</td>
+              <td class="history-detail">Rastra pesada</td>
+              <td>01:00</td>
+            </tr></tbody>
+            </table>
+          </div>
+        </article>
+
+      </section>
+      </section>
+
+      <!-- ==========================================================
+           VISTA PARADAS
+           Vue: v-else-if="activeTab === 'paradas'"
+
+           Tailwind del contenedor:
+           h-full min-h-0 grid
+           grid-rows-[auto_auto_auto_minmax(0,1fr)]
+           gap-2 overflow-hidden
+           ========================================================== -->
+      <section class="view stops-view" data-view="paradas" hidden>
+
+        <!-- Tailwind: grid grid-cols-4 gap-2 -->
+        <section class="stop-kpis">
+          <article class="panel stop-kpi">
+            <label>Tiempo parado</label>
+            <strong>03:00</strong>
+            <small>Total acumulado</small>
+          </article>
+
+          <article class="panel stop-kpi">
+            <label>% parado</label>
+            <strong>20.5%</strong>
+            <small>Sobre 14:39 registrados</small>
+          </article>
+
+          <article class="panel stop-kpi">
+            <label>N.º de paradas</label>
+            <strong>12</strong>
+            <small>Períodos con causa principal</small>
+          </article>
+
+          <article class="panel stop-kpi">
+            <label>Duración promedio</label>
+            <strong>00:15</strong>
+            <small>Tiempo parado / paradas</small>
+          </article>
+        </section>
+
+        <!-- Tailwind: grid grid-cols-2 gap-2 items-stretch -->
+        <section class="stop-breakdown">
+          <article class="panel stop-card">
+            <h3>Paradas por clasificación</h3>
+            <table class="stop-table">
+              <thead>
+                <tr>
+                  <th>Clasificación</th>
+                  <th>Tiempo</th>
+                  <th>N.º</th>
+                  <th>% parada</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="legend"><i class="dot success"></i>OPERATIVO</span></td>
+                  <td>02:36</td>
+                  <td>6</td>
+                  <td>
+                    <div class="percent">
+                      <span>86.8%</span>
+                      <div class="bar success"><i style="width:86.8%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="legend"><i class="dot warning"></i>TALLER</span></td>
+                  <td>00:24</td>
+                  <td>6</td>
+                  <td>
+                    <div class="percent">
+                      <span>13.2%</span>
+                      <div class="bar warning"><i style="width:13.2%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
+
+          <article class="panel stop-card">
+            <h3>Paradas por origen</h3>
+            <table class="stop-table">
+              <thead>
+                <tr>
+                  <th>Origen</th>
+                  <th>Tiempo</th>
+                  <th>N.º</th>
+                  <th>% parada</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="legend"><i class="dot main"></i>Otro</span></td>
+                  <td>02:36</td>
+                  <td>4</td>
+                  <td>
+                    <div class="percent">
+                      <span>86.8%</span>
+                      <div class="bar main"><i style="width:86.8%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="legend"><i class="dot warning"></i>Equipo</span></td>
+                  <td>00:24</td>
+                  <td>6</td>
+                  <td>
+                    <div class="percent">
+                      <span>13.2%</span>
+                      <div class="bar warning"><i style="width:13.2%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="legend"><i class="dot success"></i>Implemento</span></td>
+                  <td>00:00</td>
+                  <td>2</td>
+                  <td>
+                    <div class="percent">
+                      <span>0.1%</span>
+                      <div class="bar success"><i style="width:.5%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
+        </section>
+
+        <article class="panel stop-motives">
+          <h3>Principales motivos de parada</h3>
+          <table class="stop-motives-table">
+            <thead>
+              <tr>
+                <th>Motivo</th>
+                <th>Ocurrencias</th>
+                <th>Tiempo</th>
+                <th>% parada</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="wrap-cell">Alimentos</td>
+                <td>2</td>
+                <td>01:24</td>
+                <td>
+                  <div class="percent">
+                    <span>46.7%</span>
+                    <div class="bar accent"><i style="width:46.7%"></i></div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="wrap-cell">Desbarre/Limpieza</td>
+                <td>2</td>
+                <td>01:13</td>
+                <td>
+                  <div class="percent">
+                    <span>40.3%</span>
+                    <div class="bar accent"><i style="width:40.3%"></i></div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="wrap-cell">Máquina parada por falta de combustible</td>
+                <td>1</td>
+                <td>00:23</td>
+                <td>
+                  <div class="percent">
+                    <span>13.0%</span>
+                    <div class="bar accent"><i style="width:13%"></i></div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="wrap-cell">Mantenimiento</td>
+                <td>4</td>
+                <td>00:01</td>
+                <td>
+                  <div class="percent">
+                    <span>0.3%</span>
+                    <div class="bar accent"><i style="width:.5%"></i></div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <!--
+          Vue:
+            <tr v-for="stop in stopDetails" :key="stop.id">
+
+          Tailwind:
+            flex-1 min-h-0 overflow-y-auto
+        -->
+        <article class="panel stop-detail">
+          <h3>Detalle de paradas · 10 últimas · hora de Panamá</h3>
+
+          <div class="stop-detail-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Inicio</th>
+                  <th>Fin</th>
+                  <th>Duración</th>
+                  <th>Motivo</th>
+                  <th>Origen</th>
+                  <th>Clasificación</th>
+                  <th>Motor</th>
+                  <th>Implemento</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>02/09/2026 13:33</td><td>02/09/2026 13:56</td><td>00:23</td>
+                  <td class="stop-motive">Máquina parada por falta de combustible</td>
+                  <td>Equipo</td><td>TALLER</td><td>Apagado</td><td>—</td>
+                </tr>
+                <tr>
+                  <td>02/09/2026 11:57</td><td>02/09/2026 12:47</td><td>00:49</td>
+                  <td class="stop-motive">Alimentos</td>
+                  <td>Otro</td><td>OPERATIVO</td><td>Apagado</td><td>—</td>
+                </tr>
+                <tr>
+                  <td>02/09/2026 08:22</td><td>02/09/2026 09:23</td><td>01:01</td>
+                  <td class="stop-motive">Desbarre/Limpieza</td>
+                  <td>Otro</td><td>OPERATIVO</td><td>Apagado</td><td>—</td>
+                </tr>
+                <tr>
+                  <td>01/09/2026 13:34</td><td>01/09/2026 13:45</td><td>00:11</td>
+                  <td class="stop-motive">Desbarre/Limpieza</td>
+                  <td>Otro</td><td>OPERATIVO</td><td>Apagado</td><td>—</td>
+                </tr>
+                <tr>
+                  <td>01/09/2026 11:59</td><td>01/09/2026 12:34</td><td>00:34</td>
+                  <td class="stop-motive">Alimentos</td>
+                  <td>Otro</td><td>OPERATIVO</td><td>Apagado</td><td>—</td>
+                </tr>
+                <tr>
+                  <td>01/09/2026 09:17</td><td>01/09/2026 09:17</td><td>00:00</td>
+                  <td class="stop-motive">Mantenimiento</td>
+                  <td>Equipo</td><td>TALLER</td><td>Apagado</td><td>—</td>
+                </tr>
+                <tr>
+                  <td>20/08/2026 15:15</td><td>20/08/2026 15:15</td><td>00:00</td>
+                  <td class="stop-motive">Mantenimiento</td>
+                  <td>Equipo</td><td>TALLER</td><td>Apagado</td><td>—</td>
+                </tr>
+                <tr>
+                  <td>19/08/2026 15:41</td><td>19/08/2026 15:41</td><td>00:00</td>
+                  <td class="stop-motive">Cambio/Calibre implemento</td>
+                  <td>Implemento</td><td>OPERATIVO</td><td>Encendido</td><td class="stop-implement">Rastra 439013</td>
+                </tr>
+                <tr>
+                  <td>19/08/2026 15:40</td><td>19/08/2026 15:40</td><td>00:00</td>
+                  <td class="stop-motive">Mantenimiento</td>
+                  <td>Equipo</td><td>TALLER</td><td>Apagado</td><td>—</td>
+                </tr>
+                <tr>
+                  <td>19/08/2026 15:38</td><td>19/08/2026 15:38</td><td>00:00</td>
+                  <td class="stop-motive">Máquina parada por implemento varado</td>
+                  <td>Implemento</td><td>TALLER</td><td>Apagado</td><td class="stop-implement">Rastra 439013</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+      <!-- ==========================================================
+           VISTA OPERADORES
+           Vue: v-else-if="activeTab === 'operadores'"
+
+           El equipo sigue seleccionado desde la columna izquierda.
+           Esta vista NO sustituye el contexto del equipo:
+             Equipo 484091
+               ↓
+             operadores que lo utilizaron
+               ↓
+             operador seleccionado
+           ========================================================== -->
+      <section class="view operators-view" data-view="operadores">
+
+        <!-- Tailwind: grid grid-cols-4 gap-2 -->
+        <section class="operator-kpis">
+          <article class="panel operator-kpi">
+            <label>Operadores únicos</label>
+            <strong>3</strong>
+            <small>Equipo 484091</small>
+          </article>
+
+          <article class="panel operator-kpi">
+            <label>Tiempo registrado</label>
+            <strong>14:39</strong>
+            <small>Participación acumulada</small>
+          </article>
+
+          <article class="panel operator-kpi">
+            <label>Jornadas del equipo</label>
+            <strong>6</strong>
+            <small>Rango consultado</small>
+          </article>
+
+          <article class="panel operator-kpi">
+            <label>Mayor participación</label>
+            <strong>91.9%</strong>
+            <small>amilcarm@cadasa.com</small>
+          </article>
+        </section>
+
+        <!--
+          TABLA PRINCIPAL DE OPERADORES
+
+          Vue:
+            <tr
+              v-for="operator in operatorUsage"
+              :key="operator.operatorId"
+              @click="selectedOperatorId = operator.operatorId"
+              :class="{ 'bg-success-bg': selectedOperatorId === operator.operatorId }"
+            >
+
+          Nota:
+          workingTime / stoppedTime / jornadas se dejan "—" cuando no existe
+          todavía una agregación exacta por operador. No deben inventarse.
+        -->
+        <article class="panel operator-main-card">
+          <div class="operator-main-head">
+            <h3>Uso del equipo por operador</h3>
+            <small>Selecciona un operador para analizar su actividad</small>
+          </div>
+
+          <div class="operator-main-scroll">
+            <table class="operator-table">
+              <thead>
+                <tr>
+                  <th>Operador</th>
+                  <th>Jornadas</th>
+                  <th>Total</th>
+                  <th>Trabajando</th>
+                  <th>Parado</th>
+                  <th>% uso</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="operator-select-row selected" data-operator="amilcarm">
+                  <td class="operator-label">amilcarm@cadasa.com</td>
+                  <td class="operator-muted">—</td>
+                  <td>13:28</td>
+                  <td class="operator-muted">—</td>
+                  <td class="operator-muted">—</td>
+                  <td>
+                    <div class="percent">
+                      <span>91.9%</span>
+                      <div class="bar main"><i style="width:91.9%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr class="operator-select-row" data-operator="sonia">
+                  <td class="operator-label">soniap@cadasa.com</td>
+                  <td class="operator-muted">—</td>
+                  <td>01:09</td>
+                  <td class="operator-muted">—</td>
+                  <td class="operator-muted">—</td>
+                  <td>
+                    <div class="percent">
+                      <span>7.8%</span>
+                      <div class="bar success"><i style="width:7.8%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr class="operator-select-row" data-operator="operadorget">
+                  <td class="operator-label">operadorget@cadasa.com</td>
+                  <td class="operator-muted">—</td>
+                  <td>00:02</td>
+                  <td class="operator-muted">—</td>
+                  <td class="operator-muted">—</td>
+                  <td>
+                    <div class="percent">
+                      <span>0.2%</span>
+                      <div class="bar gray"><i style="width:.5%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!--
+          ANÁLISIS DEL OPERADOR SELECCIONADO
+
+          Vue:
+            selectedEquipmentCode + selectedOperatorId + dateRange
+
+          Tailwind:
+            grid grid-cols-3 gap-2 items-stretch
+        -->
+        <section class="operator-analysis">
+
+          <article class="panel operator-analysis-card">
+            <h3>Distribución del tiempo</h3>
+            <div class="operator-context">
+              amilcarm@cadasa.com · últimos 10 registros
+            </div>
+
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Tiempo</th>
+                  <th>% muestra</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="legend"><i class="dot main"></i>Trabajando</span></td>
+                  <td>07:46</td>
+                  <td>
+                    <div class="percent">
+                      <span>76.2%</span>
+                      <div class="bar main"><i style="width:76.2%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="legend"><i class="dot warning"></i>Parado</span></td>
+                  <td>02:25</td>
+                  <td>
+                    <div class="percent">
+                      <span>23.8%</span>
+                      <div class="bar warning"><i style="width:23.8%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
+
+          <article class="panel operator-analysis-card">
+            <h3>Principales paradas</h3>
+            <div class="operator-context">
+              amilcarm@cadasa.com · últimos 10 registros
+            </div>
+
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Motivo</th>
+                  <th>Tiempo</th>
+                  <th>% detenido</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="wrap-cell">Desbarre/Limpieza</td>
+                  <td>01:13</td>
+                  <td>
+                    <div class="percent">
+                      <span>50.3%</span>
+                      <div class="bar accent"><i style="width:50.3%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="wrap-cell">Alimentos</td>
+                  <td>00:49</td>
+                  <td>
+                    <div class="percent">
+                      <span>33.8%</span>
+                      <div class="bar accent"><i style="width:33.8%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="wrap-cell">Falta de combustible</td>
+                  <td>00:23</td>
+                  <td>
+                    <div class="percent">
+                      <span>15.9%</span>
+                      <div class="bar accent"><i style="width:15.9%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
+
+          <!--
+            USO DE MOTOR DEL OPERADOR
+
+            Producción:
+              trabajando -> labor.motor_encendido
+              parado     -> tipo_parada.motor_encendido
+          -->
+          <article class="panel operator-analysis-card">
+            <h3>Uso de motor del operador</h3>
+            <div class="operator-context">
+              amilcarm@cadasa.com · últimos 10 registros
+            </div>
+
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Tiempo</th>
+                  <th>% muestra</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="legend"><i class="dot success"></i>Encendido</span></td>
+                  <td>07:46</td>
+                  <td>
+                    <div class="percent">
+                      <span>76.2%</span>
+                      <div class="bar success"><i style="width:76.2%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="legend"><i class="dot gray"></i>Apagado</span></td>
+                  <td>02:25</td>
+                  <td>
+                    <div class="percent">
+                      <span>23.8%</span>
+                      <div class="bar gray"><i style="width:23.8%"></i></div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
+        </section>
+
+        <!--
+          FILA INFERIOR
+          Tailwind:
+            min-h-0
+            grid grid-cols-[0.38fr_0.62fr]
+            gap-2 overflow-hidden
+        -->
+        <section class="operator-bottom">
+
+          <article class="panel operator-implements">
+            <h3>Implementos usados por operador</h3>
+
+            <!--
+              Vue:
+                <tr
+                  v-for="implement in operatorImplements"
+                  :key="implement.implementCode"
+                >
+            -->
+            <table class="operator-implements-table">
+              <thead>
+                <tr>
+                  <th>Implemento</th>
+                  <th>Tipo / Nombre</th>
+                  <th>Jornadas</th>
+                  <th>Tiempo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>439011</strong></td>
+                  <td>Rastra pesada</td>
+                  <td>2</td>
+                  <td>07:46</td>
+                </tr>
+              </tbody>
+            </table>
+          </article>
+
+          <article class="panel operator-history">
+            <h3>Historial reciente · 10 últimos · hora de Panamá</h3>
+
+            <!--
+              Vue:
+                <tr v-for="row in operatorHistory" :key="row.id">
+
+              Tailwind del scroll:
+                flex-1 min-h-0 overflow-y-auto
+
+              Labor/Motivo:
+                whitespace-normal break-words leading-tight
+            -->
+            <div class="operator-history-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>Labor / Motivo</th>
+                    <th>Tiempo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>02/09/2026 13:56</td><td>02/09/2026 14:53</td><td class="operator-history-detail">Rastra pesada</td><td>00:56</td></tr>
+                  <tr><td>02/09/2026 13:33</td><td>02/09/2026 13:56</td><td class="operator-history-detail">Máquina parada por falta de combustible</td><td>00:23</td></tr>
+                  <tr><td>02/09/2026 12:47</td><td>02/09/2026 13:33</td><td class="operator-history-detail">Rastra pesada</td><td>00:47</td></tr>
+                  <tr><td>02/09/2026 11:57</td><td>02/09/2026 12:47</td><td class="operator-history-detail">Alimentos</td><td>00:49</td></tr>
+                  <tr><td>02/09/2026 09:23</td><td>02/09/2026 11:57</td><td class="operator-history-detail">Rastra pesada</td><td>02:34</td></tr>
+                  <tr><td>02/09/2026 08:22</td><td>02/09/2026 09:23</td><td class="operator-history-detail">Desbarre/Limpieza</td><td>01:01</td></tr>
+                  <tr><td>02/09/2026 06:15</td><td>02/09/2026 08:22</td><td class="operator-history-detail">Rastra pesada</td><td>02:07</td></tr>
+                  <tr><td>01/09/2026 13:45</td><td>01/09/2026 14:07</td><td class="operator-history-detail">Rastra pesada</td><td>00:22</td></tr>
+                  <tr><td>01/09/2026 13:34</td><td>01/09/2026 13:45</td><td class="operator-history-detail">Desbarre/Limpieza</td><td>00:11</td></tr>
+                  <tr><td>01/09/2026 12:34</td><td>01/09/2026 13:34</td><td class="operator-history-detail">Rastra pesada</td><td>01:00</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </section>
+    </section>
+<aside class="right-scroll">
+      <article class="panel">
+        <div class="panel-head"><h2 class="panel-title">Perfil del equipo</h2></div>
+        <dl class="detail-list">
+          <div class="detail-row"><dt>Tipo</dt><dd>Tractor</dd></div>
+          <div class="detail-row"><dt>Modelo</dt><dd>—</dd></div>
+          <div class="detail-row"><dt>Marca</dt><dd>—</dd></div>
+          <div class="detail-row"><dt>Código</dt><dd>484091</dd></div>
+          <div class="detail-row"><dt>Total jornadas</dt><dd>6</dd></div>
+          <div class="detail-row"><dt>Primera actividad</dt><dd>19/08/2026 15:38</dd></div>
+          <div class="detail-row"><dt>Última actividad</dt><dd>02/09/2026 14:53</dd></div>
+        </dl>
+      </article>
+
+      <!--
+        USO DE MOTOR
+        Reemplaza a Indicadores clave.
+
+        Fuente de datos:
+        - jornada_periodo.estado = trabajando -> labor.motor_encendido
+        - jornada_periodo.estado = parado -> tipo_parada.motor_encendido
+
+        Vue:
+          <tr v-for="row in engineUsage" :key="String(row.engineOn)">
+
+        Tailwind:
+          w-full table-fixed text-xs
+      -->
+      <article class="panel">
+        <div class="panel-head"><h2 class="panel-title">Uso de motor</h2></div>
+
+        <div class="engine-wrap">
+          <table class="engine-table">
+            <thead>
+              <tr>
+                <th>Estado</th>
+                <th>Tiempo</th>
+                <th>%</th>
+                <th>Períodos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="legend"><i class="dot success"></i>Encendido</span></td>
+                <td>11:39</td>
+                <td>79.5%</td>
+                <td>19</td>
+              </tr>
+              <tr>
+                <td><span class="legend"><i class="dot gray"></i>Apagado</span></td>
+                <td>03:00</td>
+                <td>20.5%</td>
+                <td>11</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="engine-note">
+            El estado se toma de la labor cuando trabaja y de la causa de parada cuando está detenido.
+          </div>
+        </div>
+      </article>
+    </aside>
+  </main>
+</div>
+
+<script>
+  /*
+    SOLO PREVISUALIZACIÓN DEL HTML.
+
+    Vue equivalente:
+      const activeTab = ref<'resumen' | 'paradas' | 'operadores'>('operadores')
+  */
+  const tabButtons = document.querySelectorAll('[data-tab]');
+  const views = document.querySelectorAll('[data-view]');
+
+  tabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = button.dataset.tab;
+
+      tabButtons.forEach((item) => {
+        item.classList.toggle('active', item === button);
+      });
+
+      views.forEach((view) => {
+        view.hidden = view.dataset.view !== target;
+      });
+    });
+  });
+  /*
+    SOLO PARA PREVISUALIZAR LA SELECCIÓN DE OPERADOR.
+
+    Vue:
+      @click="selectedOperatorId = operator.operatorId"
+      :class="{ 'bg-success-bg': selectedOperatorId === operator.operatorId }"
+  */
+  document.querySelectorAll('.operator-select-row').forEach((row) => {
+    row.addEventListener('click', () => {
+      document.querySelectorAll('.operator-select-row').forEach((item) => {
+        item.classList.toggle('selected', item === row);
+      });
+    });
+  });
+
+</script>
+
+</body>
+</html>
