@@ -619,15 +619,15 @@ onUnmounted(() => {
       <section class="col-span-12">
         <div class="flex flex-col gap-1.5 rounded-[14px] border border-[#f0ede6] bg-white/70 px-3 py-1.5 text-[0.7rem] text-[#7a7a7a] shadow-[0_4px_14px_rgba(20,20,20,0.03)] lg:flex-row lg:items-center lg:justify-between lg:gap-3">
           <p class="min-w-0">
-            <span class="font-medium text-[#6c6c6c]">Momento captura:</span>
+            <span class="font-medium text-[#6c6c6c]">Momen. capt:</span>
             <span class="ml-1 break-words">{{ captureTimestampLabel }}</span>
           </p>
           <p class="min-w-0">
-            <span class="font-medium text-[#6c6c6c]">Ultima vista ordenes:</span>
+            <span class="font-medium text-[#6c6c6c]">Ult. vista ords.:</span>
             <span class="ml-1 break-words">{{ formatUsageDateTime(areaUsageActivity?.ultima_entrada_ordenes_at ?? null) }}</span>
           </p>
           <p class="min-w-0">
-            <span class="font-medium text-[#6c6c6c]">Ultimo cambio estado:</span>
+            <span class="font-medium text-[#6c6c6c]">Ult. cambio estado:</span>
             <span class="ml-1 break-words">{{ formatUsageDateTime(areaUsageActivity?.ultima_actualizacion_om_at ?? null) }}</span>
           </p>
           <p class="min-w-0 lg:max-w-[42%]">

@@ -216,6 +216,14 @@ const closeDesktopFloatingGroup = (): void => {
   desktopFloatingGroup.value = null;
 };
 
+const closeDesktopFloatingGroupOnOutsideClick = (event: Event): void => {
+  if (!(event.target instanceof Element)) return;
+
+  if (!event.target.closest(".desktop-navigation-group")) {
+    closeDesktopFloatingGroup();
+  }
+};
+
 const showSidebarTooltip = (label: string, event: Event): void => {
   if (isSidebarOpen.value) return;
 
@@ -424,6 +432,7 @@ watch(
 onMounted(async () => {
   window.addEventListener("resize", updateSidebarNavScrollState);
   window.addEventListener("click", closeDashboardOverflowMenu);
+  window.addEventListener("click", closeDesktopFloatingGroupOnOutsideClick);
   window.addEventListener(
     "prepare-open-solicitud-compra",
     handlePrepareSolicitudCompraCreate,
@@ -463,6 +472,7 @@ watch(menuItems, () => requestAnimationFrame(updateSidebarNavScrollState), {
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateSidebarNavScrollState);
   window.removeEventListener("click", closeDashboardOverflowMenu);
+  window.removeEventListener("click", closeDesktopFloatingGroupOnOutsideClick);
   window.removeEventListener(
     "prepare-open-solicitud-compra",
     handlePrepareSolicitudCompraCreate,
@@ -609,7 +619,10 @@ const isActive = (path: string) =>
               }}</span>
               <span v-else class="sidebar-tooltip">{{ item.name }}</span>
             </router-link>
-            <div v-if="canSeeEngrase" class="relative space-y-1">
+            <div
+              v-if="canSeeEngrase"
+              class="desktop-navigation-group relative space-y-1"
+            >
               <button
                 type="button"
                 class="group relative flex w-full items-center rounded-xl transition-all"
@@ -667,7 +680,10 @@ const isActive = (path: string) =>
                 >
               </div>
             </div>
-            <div v-if="canSeeSeguimiento" class="relative space-y-1">
+            <div
+              v-if="canSeeSeguimiento"
+              class="desktop-navigation-group relative space-y-1"
+            >
               <button
                 type="button"
                 class="group relative flex w-full items-center rounded-xl transition-all"
@@ -784,7 +800,7 @@ const isActive = (path: string) =>
 
       <div
         v-if="sidebarTooltipLabel"
-        class="pointer-events-none absolute left-full z-[60] ml-3 -translate-y-1/2 rounded-lg border border-accent/30 bg-main-dark px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-second shadow-xl"
+        class="pointer-events-none absolute left-full z-[100000] ml-3 -translate-y-1/2 rounded-lg border border-accent/30 bg-main-dark px-3 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-second shadow-xl"
         :style="{ top: `${sidebarTooltipTop}px` }"
         role="tooltip"
       >
@@ -793,7 +809,7 @@ const isActive = (path: string) =>
 
       <div
         v-if="!isSidebarOpen && desktopFloatingGroup"
-        class="absolute left-full z-50 ml-3 w-52 rounded-xl border border-white/10 bg-main-dark p-2 shadow-2xl"
+        class="desktop-navigation-group absolute left-full z-50 ml-3 w-52 rounded-xl border border-white/10 bg-main-dark p-2 shadow-2xl"
         :style="{ top: `${desktopFloatingPanelTop}px` }"
       >
         <p
@@ -1286,7 +1302,7 @@ const isActive = (path: string) =>
   pointer-events: none;
   position: absolute;
   left: calc(100% + 0.75rem);
-  z-index: 50;
+  z-index: 100000;
   white-space: nowrap;
   border: 1px solid rgb(255 255 255 / 0.14);
   border-radius: 0.5rem;

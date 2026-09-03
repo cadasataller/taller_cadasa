@@ -46,17 +46,17 @@ export interface DeleteMeetingRatingPayload {
 }
 
 export interface RatingsFetchScopeAll {
-  mode: 'all';
+  mode: "all";
 }
 
 export interface RatingsFetchScopeDateRange {
-  mode: 'date-range';
+  mode: "date-range";
   from: string;
   to: string;
 }
 
 export interface RatingsFetchScopeSingleDate {
-  mode: 'single-date';
+  mode: "single-date";
   date: string;
 }
 
@@ -64,6 +64,18 @@ export type RatingsFetchScope =
   | RatingsFetchScopeAll
   | RatingsFetchScopeDateRange
   | RatingsFetchScopeSingleDate;
+
+export interface RatingsAccessScopeAll {
+  mode: "all";
+}
+
+export interface RatingsAccessScopeCurrentEmployee {
+  mode: "current-employee";
+  email: string;
+}
+
+export type RatingsAccessScope =
+  RatingsAccessScopeAll | RatingsAccessScopeCurrentEmployee;
 
 export interface RatingsInspeccionNormalizada extends RatingsInspeccion {
   final_supervisor_id: number;
@@ -89,23 +101,18 @@ export interface PuntuacionSupervisorOtPayload {
 }
 
 export type PuntuacionSupervisorOtCaso =
-  | 'CUMPLIO_MODIFICADO_DESPUES'
-  | 'CUMPLIO_A_TIEMPO'
-  | 'GESTIONADO_TARDE'
-  | 'SIN_HISTORIAL';
+  | "CUMPLIO_MODIFICADO_DESPUES"
+  | "CUMPLIO_A_TIEMPO"
+  | "GESTIONADO_TARDE"
+  | "SIN_HISTORIAL";
 
 export type PuntuacionSupervisorOtEtiqueta =
-  | 'SIN_OT'
-  | 'BUENO'
-  | 'REGULAR'
-  | 'MALO';
+  "SIN_OT" | "BUENO" | "REGULAR" | "MALO";
 
 export type PuntuacionSupervisorOtModoUsuario =
-  | 'TODAS_LAS_AREAS'
-  | 'SERVICIOS_GENERALES'
-  | 'AREA_PROPIA';
+  "TODAS_LAS_AREAS" | "SERVICIOS_GENERALES" | "AREA_PROPIA";
 
-export type PuntuacionSupervisorOtTipoOrigen = 'OM' | 'SG';
+export type PuntuacionSupervisorOtTipoOrigen = "OM" | "SG";
 
 export interface PuntuacionSupervisorOtPerfil {
   email: string | null;
@@ -147,8 +154,7 @@ export interface PuntuacionSupervisorOtMovimiento {
   hora: string | null;
 }
 
-export interface PuntuacionSupervisorOtActualizacion
-  extends PuntuacionSupervisorOtMovimiento {
+export interface PuntuacionSupervisorOtActualizacion extends PuntuacionSupervisorOtMovimiento {
   id: string;
 }
 
@@ -179,7 +185,7 @@ export interface PuntuacionSupervisorOtArea {
 export interface PuntuacionSupervisoresOtSuccessResponse {
   ok: true;
   fecha: string;
-  zona_horaria: 'America/Panama';
+  zona_horaria: "America/Panama";
   hora_corte: string;
   usuario: PuntuacionSupervisorOtUsuario;
   resumen: PuntuacionSupervisorOtResumen;

@@ -1,6 +1,11 @@
-import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
-import { supabase, supabaseCompras, supabaseEquipos, supabaseRatings } from '@/lib/supabase';
+import { defineStore } from "pinia";
+import { computed, ref } from "vue";
+import {
+  supabase,
+  supabaseCompras,
+  supabaseEquipos,
+  supabaseRatings,
+} from "@/lib/supabase";
 
 export interface UserProfile {
   id: number;
@@ -18,9 +23,9 @@ export interface UserAuthDatabaseIds {
   calificaciones: string | null;
 }
 
-export const useUserStore = defineStore('user', () => {
+export const useUserStore = defineStore("user", () => {
   const profile = ref<UserProfile | null>(null);
-  const email = ref('');
+  const email = ref("");
   const idsUser = ref<UserAuthDatabaseIds>({
     compras: null,
     mantenimiento: null,
@@ -32,73 +37,89 @@ export const useUserStore = defineStore('user', () => {
   const isLoading = ref(false);
   const isLoaded = ref(false);
   const error = ref<string | null>(null);
+  let profileLoadPromise: Promise<UserProfile | null> | null = null;
 
-  const nombre = computed(() => profile.value?.nombre || '');
-  const area = computed(() => (profile.value?.area || '').toUpperCase());
-  const role = computed(() => profile.value?.role || '');
+  const nombre = computed(() => profile.value?.nombre || "");
+  const area = computed(() => (profile.value?.area || "").toUpperCase());
+  const role = computed(() => profile.value?.role || "");
 
   const fetchCurrentUserProfile = async (force = false) => {
     if (isLoaded.value && !force) return profile.value;
 
-    isLoading.value = true;
-    error.value = null;
+    if (profileLoadPromise) {
+      return profileLoadPromise;
+    }
+
+    profileLoadPromise = (async (): Promise<UserProfile | null> => {
+      isLoading.value = true;
+      error.value = null;
+
+      try {
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
+        if (authError) throw authError;
+
+        const [comprasAuth, equiposAuth, ratingsAuth] = await Promise.all([
+          supabaseCompras.auth.getUser(),
+          supabaseEquipos.auth.getUser(),
+          supabaseRatings.auth.getUser(),
+        ]);
+
+        idsUser.value = {
+          mantenimiento: user?.id || null,
+          compras: comprasAuth.data.user?.id || null,
+          equipos: equiposAuth.data.user?.id || null,
+          calificaciones: ratingsAuth.data.user?.id || null,
+        };
+
+        email.value = user?.email || "";
+        profile.value = null;
+        allProfiles.value = [];
+        emailsFilter.value = [];
+
+        if (!email.value) {
+          isLoaded.value = true;
+          return null;
+        }
+
+        const { data: currentProfile, error: profileError } = await supabase
+          .from("PROFILE")
+          .select("*")
+          .eq("email", email.value)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        profile.value = currentProfile || null;
+        await buildEmailsFilter();
+
+        isLoaded.value = true;
+        return profile.value;
+      } catch (err: any) {
+        console.error("Error fetching user profile:", err);
+        error.value = err.message || "No se pudo cargar el perfil de usuario";
+        throw err;
+      } finally {
+        isLoading.value = false;
+      }
+    })();
 
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
-
-      const [comprasAuth, equiposAuth, ratingsAuth] = await Promise.all([
-        supabaseCompras.auth.getUser(),
-        supabaseEquipos.auth.getUser(),
-        supabaseRatings.auth.getUser(),
-      ]);
-
-      idsUser.value = {
-        mantenimiento: user?.id || null,
-        compras: comprasAuth.data.user?.id || null,
-        equipos: equiposAuth.data.user?.id || null,
-        calificaciones: ratingsAuth.data.user?.id || null,
-      };
-
-      email.value = user?.email || '';
-      profile.value = null;
-      allProfiles.value = [];
-      emailsFilter.value = [];
-
-      if (!email.value) {
-        isLoaded.value = true;
-        return null;
-      }
-
-      const { data: currentProfile, error: profileError } = await supabase
-        .from('PROFILE')
-        .select('*')
-        .eq('email', email.value)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-
-      profile.value = currentProfile || null;
-      await buildEmailsFilter();
-
-      isLoaded.value = true;
-      return profile.value;
-    } catch (err: any) {
-      console.error('Error fetching user profile:', err);
-      error.value = err.message || 'No se pudo cargar el perfil de usuario';
-      throw err;
+      return await profileLoadPromise;
     } finally {
-      isLoading.value = false;
+      profileLoadPromise = null;
     }
   };
 
   const buildEmailsFilter = async () => {
     const userArea = area.value;
 
-    if (userArea === 'ALL' || userArea === 'ALMACEN') {
+    if (userArea === "ALL" || userArea === "ALMACEN") {
       const { data: profiles, error: profilesError } = await supabase
-        .from('PROFILE')
-        .select('*');
+        .from("PROFILE")
+        .select("*");
 
       if (profilesError) throw profilesError;
 
@@ -113,8 +134,8 @@ export const useUserStore = defineStore('user', () => {
     }
 
     const { data: profiles, error: profilesError } = await supabase
-      .from('PROFILE')
-      .select('*')
+      .from("PROFILE")
+      .select("*")
       .or(`area.ilike.${userArea},email.eq.${email.value}`);
 
     if (profilesError) throw profilesError;
@@ -122,10 +143,12 @@ export const useUserStore = defineStore('user', () => {
     allProfiles.value = profiles || [];
 
     const profileEmails = allProfiles.value
-      .map(item => item.email)
+      .map((item) => item.email)
       .filter((item): item is string => Boolean(item));
 
-    emailsFilter.value = Array.from(new Set([...profileEmails, email.value].filter(Boolean)));
+    emailsFilter.value = Array.from(
+      new Set([...profileEmails, email.value].filter(Boolean)),
+    );
     return emailsFilter.value;
   };
 
@@ -142,7 +165,7 @@ export const useUserStore = defineStore('user', () => {
 
   const reset = () => {
     profile.value = null;
-    email.value = '';
+    email.value = "";
     idsUser.value = {
       compras: null,
       mantenimiento: null,

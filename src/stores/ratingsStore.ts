@@ -1,8 +1,9 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
-import { ratingsService } from './ratingsStore.service';
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import { ratingsService } from "./ratingsStore.service";
 import type {
   DeleteMeetingRatingPayload,
+  RatingsAccessScope,
   RatingsFetchScope,
   PuntuacionSupervisoresOtResponse,
   RatingsDetalle,
@@ -10,38 +11,46 @@ import type {
   RatingsInspeccion,
   RatingsInspeccionNormalizada,
   UpsertMeetingRatingPayload,
-} from './ratingsStore.types';
+} from "./ratingsStore.types";
 
-export const useRatingsStore = defineStore('ratings', () => {
+export const useRatingsStore = defineStore("ratings", () => {
   const empleados = ref<RatingsEmpleado[]>([]);
   const inspecciones = ref<RatingsInspeccion[]>([]);
   const detalles = ref<RatingsDetalle[]>([]);
-  const puntuacionSupervisoresOt = ref<PuntuacionSupervisoresOtResponse | null>(null);
+  const puntuacionSupervisoresOt = ref<PuntuacionSupervisoresOtResponse | null>(
+    null,
+  );
   const fechaPuntuacionSupervisoresOt = ref<string | null>(null);
-  
+
   const isLoaded = ref(false);
   const isLoading = ref(false);
   const isPuntuacionSupervisoresOtLoading = ref(false);
   const errorPuntuacionSupervisoresOt = ref<string | null>(null);
-  const loadedScopeKey = ref('');
+  const loadedScopeKey = ref("");
 
   const fetchAll = async (
     force = false,
-    scope: RatingsFetchScope = { mode: 'all' }
+    scope: RatingsFetchScope = { mode: "all" },
+    access: RatingsAccessScope = { mode: "all" },
   ) => {
-    const nextScopeKey = JSON.stringify(scope);
+    const nextScopeKey = JSON.stringify({ scope, access });
 
-    if (isLoaded.value && !force && loadedScopeKey.value === nextScopeKey) return;
-    
+    if (isLoaded.value && !force && loadedScopeKey.value === nextScopeKey)
+      return;
+
     isLoading.value = true;
     try {
-      const [empleadosData, inspeccionesData] = await Promise.all([
-        ratingsService.fetchEmpleados(),
-        ratingsService.fetchInspecciones(scope),
-      ]);
+      const [empleadosData, inspeccionesData] =
+        access.mode === "all"
+          ? await Promise.all([
+              ratingsService.fetchEmpleados(),
+              ratingsService.fetchInspecciones(scope),
+            ])
+          : await loadCurrentEmployeeRatings(scope, access.email);
       const detallesData = await ratingsService.fetchDetalles(
-        scope,
-        inspeccionesData.map((inspeccion) => inspeccion.id_inspeccion || inspeccion.id || 0)
+        inspeccionesData.map(
+          (inspeccion) => inspeccion.id_inspeccion || inspeccion.id || 0,
+        ),
       );
 
       empleados.value = empleadosData;
@@ -51,15 +60,33 @@ export const useRatingsStore = defineStore('ratings', () => {
       isLoaded.value = true;
       loadedScopeKey.value = nextScopeKey;
     } catch (e) {
-      console.error('Error fetching ratings state', e);
+      console.error("Error fetching ratings state", e);
     } finally {
       isLoading.value = false;
     }
   };
 
+  const loadCurrentEmployeeRatings = async (
+    scope: RatingsFetchScope,
+    email: string,
+  ): Promise<[RatingsEmpleado[], RatingsInspeccion[]]> => {
+    const employee = await ratingsService.fetchEmpleadoActivoPorEmail(email);
+
+    if (!employee) {
+      return [[], []];
+    }
+
+    const inspections = await ratingsService.fetchInspecciones(
+      scope,
+      employee.id_empleado,
+    );
+
+    return [[employee], inspections];
+  };
+
   const fetchPuntuacionSupervisoresOt = async (
     fecha: string,
-    force = false
+    force = false,
   ): Promise<PuntuacionSupervisoresOtResponse> => {
     if (
       puntuacionSupervisoresOt.value &&
@@ -73,7 +100,8 @@ export const useRatingsStore = defineStore('ratings', () => {
     errorPuntuacionSupervisoresOt.value = null;
 
     try {
-      const response = await ratingsService.fetchPuntuacionSupervisoresOt(fecha);
+      const response =
+        await ratingsService.fetchPuntuacionSupervisoresOt(fecha);
       puntuacionSupervisoresOt.value = response;
       fechaPuntuacionSupervisoresOt.value = fecha;
 
@@ -83,9 +111,10 @@ export const useRatingsStore = defineStore('ratings', () => {
 
       return response;
     } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : 'No se pudo cargar la puntuación de supervisores OT';
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo cargar la puntuación de supervisores OT";
 
       errorPuntuacionSupervisoresOt.value = message;
       throw error;
@@ -95,32 +124,36 @@ export const useRatingsStore = defineStore('ratings', () => {
   };
 
   const normalizedInspections = computed<RatingsInspeccionNormalizada[]>(() => {
-    return inspecciones.value.map(insp => {
+    return inspecciones.value.map((insp) => {
       const inspId = insp.id_inspeccion || insp.id;
-      const misDetalles = detalles.value.filter((d) => d.id_inspeccion === inspId);
-      
+      const misDetalles = detalles.value.filter(
+        (d) => d.id_inspeccion === inspId,
+      );
+
       let sum = 0;
       let count = 0;
       misDetalles.forEach((d) => {
-        if (typeof d.puntuacion === 'number') {
-           sum += d.puntuacion;
-           count++;
+        if (typeof d.puntuacion === "number") {
+          sum += d.puntuacion;
+          count++;
         }
       });
       const avg = count > 0 ? Number((sum / count).toFixed(1)) : 0;
-      
+
       return {
         ...insp,
         final_supervisor_id: insp.id_supervisor || insp.supervisor_id || 0,
         final_inspector_id: insp.id_inspector || insp.inspector_id || 0,
         puntuacion_promedio: avg,
-        id_inspeccion: inspId || 0
+        id_inspeccion: inspId || 0,
       };
     });
   });
 
   const validSupervisors = computed(() => {
-    return empleados.value.filter(e => e.rol && e.rol.toLowerCase().trim() === 'supervisor');
+    return empleados.value.filter(
+      (e) => e.rol && e.rol.toLowerCase().trim() === "supervisor",
+    );
   });
 
   const removeInspectionFromState = (inspectionId: number) => {
@@ -129,7 +162,9 @@ export const useRatingsStore = defineStore('ratings', () => {
       return currentInspectionId !== inspectionId;
     });
 
-    detalles.value = detalles.value.filter((detalle) => detalle.id_inspeccion !== inspectionId);
+    detalles.value = detalles.value.filter(
+      (detalle) => detalle.id_inspeccion !== inspectionId,
+    );
   };
 
   const deleteInspection = async (inspectionId: number) => {
@@ -161,6 +196,6 @@ export const useRatingsStore = defineStore('ratings', () => {
     upsertMeetingRating,
     deleteMeetingRating,
     normalizedInspections,
-    validSupervisors
+    validSupervisors,
   };
 });
