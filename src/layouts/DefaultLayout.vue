@@ -59,6 +59,7 @@ const desktopFloatingPanelTop = shallowRef(0);
 const sidebarTooltipLabel = shallowRef<string | null>(null);
 const sidebarTooltipTop = shallowRef(0);
 const isPreparingSolicitudCompraCreate = ref(false);
+const isDashboardOverflowMenuOpen = shallowRef(false);
 const { dashboardHeaderNavState, selectDashboardHeaderSlide } =
   useDashboardHeaderNav();
 
@@ -76,6 +77,7 @@ const MODULE_COMPRAS_FEATURE = "module_compras";
 const PANEL_ADMIN_FEATURE = "panel_admin";
 const MODULE_CATALOG_FEATURE = "module_catalog";
 const CREATE_SOLICITUD_FEATURE = "crear_solicitud_compra";
+const VIEW_PROFILE_FEATURE = "ver_datos_perfil";
 const MODULE_ENGRASE_FEATURE = "module_engrase";
 const VIEW_FILTROS_ENGRASE_FEATURE = "ver_filtros_engrase";
 const engraseDesktopOpen = ref(false);
@@ -151,6 +153,11 @@ const canSeeSeguimientoTareas = computed(
   () =>
     canSeeSeguimiento.value &&
     featureAccessStore.tieneFuncionalidad(SEGUIMIENTO_FEATURES.viewTasks),
+);
+const canViewProfile = computed(
+  () =>
+    isFeatureAccessLoaded.value &&
+    featureAccessStore.tieneFuncionalidad(VIEW_PROFILE_FEATURE),
 );
 const isSeguimientoRoute = computed(() =>
   route.path.startsWith("/seguimiento"),
@@ -309,6 +316,21 @@ const isDashboardRoute = computed(() => route.path.startsWith("/dashboard"));
 const showDashboardHeaderNav = computed(
   () => isDashboardRoute.value && dashboardHeaderNavState.isVisible,
 );
+const dashboardPrimarySlides = computed(() => {
+  const { slides } = dashboardHeaderNavState;
+
+  return slides.length >= 8 ? slides.slice(0, 6) : slides;
+});
+const dashboardOverflowSlides = computed(() =>
+  dashboardHeaderNavState.slides.length >= 8
+    ? dashboardHeaderNavState.slides.slice(6)
+    : [],
+);
+const isDashboardOverflowSlideActive = computed(
+  () =>
+    dashboardHeaderNavState.currentSlideIndex >=
+    dashboardPrimarySlides.value.length,
+);
 const mobileTopBarSpacerClass = computed(() =>
   showDashboardHeaderNav.value ? "h-[124px]" : "h-[68px]",
 );
@@ -357,6 +379,22 @@ const handleCancelSolicitudCompraCreate = (): void => {
   isPreparingSolicitudCompraCreate.value = false;
 };
 
+const selectDashboardSlide = (index: number): void => {
+  isDashboardOverflowMenuOpen.value = false;
+  selectDashboardHeaderSlide(index);
+};
+
+const closeDashboardOverflowMenu = (event: MouseEvent): void => {
+  const target = event.target;
+
+  if (
+    target instanceof Element &&
+    !target.closest(".dashboard-overflow-menu")
+  ) {
+    isDashboardOverflowMenuOpen.value = false;
+  }
+};
+
 const mobileFabVisibilityClass = computed(() => {
   if (route.path.startsWith("/compras")) {
     return isSolicitudCompraCreateRoute.value
@@ -385,6 +423,7 @@ watch(
 
 onMounted(async () => {
   window.addEventListener("resize", updateSidebarNavScrollState);
+  window.addEventListener("click", closeDashboardOverflowMenu);
   window.addEventListener(
     "prepare-open-solicitud-compra",
     handlePrepareSolicitudCompraCreate,
@@ -423,6 +462,7 @@ watch(menuItems, () => requestAnimationFrame(updateSidebarNavScrollState), {
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateSidebarNavScrollState);
+  window.removeEventListener("click", closeDashboardOverflowMenu);
   window.removeEventListener(
     "prepare-open-solicitud-compra",
     handlePrepareSolicitudCompraCreate,
@@ -829,7 +869,7 @@ const isActive = (path: string) =>
           class="flex min-w-0 max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-gray-200/20 bg-gray-100 p-1 shadow-inner hide-scrollbar"
         >
           <button
-            v-for="(slide, index) in dashboardHeaderNavState.slides"
+            v-for="(slide, index) in dashboardPrimarySlides"
             :key="slide.id"
             type="button"
             class="flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-1.5 text-center text-[11px] font-bold transition-all"
@@ -838,18 +878,80 @@ const isActive = (path: string) =>
                 ? 'bg-white text-main shadow-md'
                 : 'text-gray-400 hover:text-gray-600'
             "
-            @click="selectDashboardHeaderSlide(index)"
+            @click="selectDashboardSlide(index)"
           >
             {{ slide.label }}
           </button>
+          <div
+            v-if="dashboardOverflowSlides.length > 0"
+            class="dashboard-overflow-menu relative"
+          >
+            <button
+              type="button"
+              class="flex items-center gap-1 whitespace-nowrap rounded-lg px-4 py-1.5 text-center text-[11px] font-bold transition-all"
+              :class="
+                isDashboardOverflowSlideActive
+                  ? 'bg-white text-main shadow-md'
+                  : 'text-gray-400 hover:text-gray-600'
+              "
+              :aria-expanded="isDashboardOverflowMenuOpen"
+              aria-haspopup="menu"
+              @click.stop="
+                isDashboardOverflowMenuOpen = !isDashboardOverflowMenuOpen
+              "
+            >
+              Ver más
+              <ChevronDown
+                class="size-3 transition-transform"
+                :class="isDashboardOverflowMenuOpen ? 'rotate-180' : ''"
+              />
+            </button>
+            <div
+              v-if="isDashboardOverflowMenuOpen"
+              role="menu"
+              class="fixed right-38 top-11 z-50 w-56 overflow-hidden rounded-xl border border-gray-100 bg-white py-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100"
+            >
+              <button
+                v-for="(slide, index) in dashboardOverflowSlides"
+                :key="slide.id"
+                type="button"
+                role="menuitem"
+                class="flex w-full items-center justify-between px-4 py-2.5 text-left text-xs font-bold transition-colors"
+                :class="
+                  index + dashboardPrimarySlides.length ===
+                  dashboardHeaderNavState.currentSlideIndex
+                    ? 'bg-main/5 text-main'
+                    : 'text-gray-500 hover:bg-gray-50'
+                "
+                @click="
+                  selectDashboardSlide(index + dashboardPrimarySlides.length)
+                "
+              >
+                {{ slide.label }}
+                <Check
+                  v-if="
+                    index + dashboardPrimarySlides.length ===
+                    dashboardHeaderNavState.currentSlideIndex
+                  "
+                  class="size-3.5"
+                />
+              </button>
+            </div>
+          </div>
         </div>
 
         <p v-else class="text-xs font-normal text-gray-500">
-          Bienvenido
-          <span class="font-medium text-main">{{ currentUserName }}</span>
+          <template v-if="canViewProfile">
+            Bienvenido
+            <span class="font-medium text-main">{{ currentUserName }}</span>
+          </template>
+          <template v-else>Bienvenido</template>
         </p>
 
-        <div class="flex items-center justify-self-end gap-2">
+        <div
+          v-if="canViewProfile"
+          class="flex items-center justify-self-end gap-2"
+        >
           <span
             class="text-[9px] font-medium uppercase tracking-[0.1em] text-gray-500"
             >{{ userProfile?.area || "Sin área" }}</span
@@ -890,14 +992,17 @@ const isActive = (path: string) =>
             >
               <LogOut class="w-5 h-5 text-danger" />
             </button>
-            <div
+            <button
+              v-if="canViewProfile"
+              type="button"
               class="w-8 h-8 rounded-full bg-accent-light flex items-center justify-center font-display text-xs text-main cursor-pointer"
+              aria-label="Ir al perfil"
               @click="router.push('/perfil')"
             >
               {{
                 (userProfile?.nombre || userEmail).substring(0, 2).toUpperCase()
               }}
-            </div>
+            </button>
           </div>
         </div>
 
@@ -906,9 +1011,9 @@ const isActive = (path: string) =>
             class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl shadow-inner border border-gray-200/20 overflow-x-auto hide-scrollbar"
           >
             <button
-              v-for="(slide, index) in dashboardHeaderNavState.slides"
+              v-for="(slide, index) in dashboardPrimarySlides"
               :key="slide.id"
-              @click="selectDashboardHeaderSlide(index)"
+              @click="selectDashboardSlide(index)"
               class="px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center text-center whitespace-nowrap flex-shrink-0"
               :class="
                 index === dashboardHeaderNavState.currentSlideIndex
@@ -918,6 +1023,62 @@ const isActive = (path: string) =>
             >
               {{ slide.label }}
             </button>
+            <div
+              v-if="dashboardOverflowSlides.length > 0"
+              class="dashboard-overflow-menu relative flex-shrink-0"
+            >
+              <button
+                type="button"
+                class="flex items-center gap-1 rounded-lg px-3 py-1.5 text-[10px] font-bold transition-all"
+                :class="
+                  isDashboardOverflowSlideActive
+                    ? 'bg-white text-main shadow-md'
+                    : 'text-gray-400 hover:text-gray-600'
+                "
+                :aria-expanded="isDashboardOverflowMenuOpen"
+                aria-haspopup="menu"
+                @click.stop="
+                  isDashboardOverflowMenuOpen = !isDashboardOverflowMenuOpen
+                "
+              >
+                Ver más
+                <ChevronDown
+                  class="size-3 transition-transform"
+                  :class="isDashboardOverflowMenuOpen ? 'rotate-180' : ''"
+                />
+              </button>
+              <div
+                v-if="isDashboardOverflowMenuOpen"
+                role="menu"
+                class="fixed right-4 top-[112px] z-50 w-52 overflow-hidden rounded-xl border border-gray-100 bg-white py-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-100"
+              >
+                <button
+                  v-for="(slide, index) in dashboardOverflowSlides"
+                  :key="slide.id"
+                  type="button"
+                  role="menuitem"
+                  class="flex w-full items-center justify-between px-4 py-2.5 text-left text-xs font-bold transition-colors"
+                  :class="
+                    index + dashboardPrimarySlides.length ===
+                    dashboardHeaderNavState.currentSlideIndex
+                      ? 'bg-main/5 text-main'
+                      : 'text-gray-500 hover:bg-gray-50'
+                  "
+                  @click="
+                    selectDashboardSlide(index + dashboardPrimarySlides.length)
+                  "
+                >
+                  {{ slide.label }}
+                  <Check
+                    v-if="
+                      index + dashboardPrimarySlides.length ===
+                      dashboardHeaderNavState.currentSlideIndex
+                    "
+                    class="size-3.5"
+                  />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
