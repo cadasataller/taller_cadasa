@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
-import { storeToRefs } from 'pinia';
-import { Copy, Download, Loader2, RefreshCw } from 'lucide-vue-next';
-import ProductividadSemanalAreaSlideLegacy from '@/components/dashboard/ProductividadSemanalAreaSlide.vue';
-import ProductividadSemanalAreaSlideV2 from '@/components/dashboard/ProductividadSemanalAreaSlideV2.vue';
-import { useProductividadSlidePngExport } from '@/composables/useProductividadSlidePngExport';
-import { useHorasTrabajoStore } from '@/stores/horasTrabajoStore';
-import { useMaintenanceStore } from '@/stores/maintenanceStore';
-import { useHorasPerdidasAreaMotivoStore } from '@/stores/db_mantenimiento/horas_perdidas_area_motivo/horasPerdidasAreaMotivo.store';
-import type { ProductividadSemanalArea } from '@/stores/horasTrabajo.types';
-import { getWeekNumber } from '@/utils/dateUtils';
+import {
+  computed,
+  onMounted,
+  onUnmounted,
+  ref,
+  useTemplateRef,
+  watch,
+} from "vue";
+import { storeToRefs } from "pinia";
+import { Copy, Download, Loader2, RefreshCw } from "lucide-vue-next";
+import ProductividadSemanalAreaSlideLegacy from "@/components/dashboard/ProductividadSemanalAreaSlide.vue";
+import ProductividadSemanalAreaSlideV2 from "@/components/dashboard/ProductividadSemanalAreaSlideV2.vue";
+import { useProductividadSlidePngExport } from "@/composables/useProductividadSlidePngExport";
+import { useHorasTrabajoStore } from "@/stores/horasTrabajoStore";
+import { useMaintenanceStore } from "@/stores/maintenanceStore";
+import { useHorasPerdidasAreaMotivoStore } from "@/stores/db_mantenimiento/horas_perdidas_area_motivo/horasPerdidasAreaMotivo.store";
+import type { ProductividadSemanalArea } from "@/stores/horasTrabajo.types";
+import { getWeekNumber } from "@/utils/dateUtils";
 
 const horasTrabajoStore = useHorasTrabajoStore();
 const maintenanceStore = useMaintenanceStore();
@@ -21,94 +28,63 @@ const {
   productividadSemanalDashboardTablas,
   error: horasTrabajoError,
 } = storeToRefs(horasTrabajoStore);
-const {
-  error: maintenanceError,
-  hasLoaded: maintenanceHasLoaded,
-} = storeToRefs(maintenanceStore);
+const { error: maintenanceError, hasLoaded: maintenanceHasLoaded } =
+  storeToRefs(maintenanceStore);
 const {
   error: horasPerdidasAreaMotivoError,
   isLoaded: horasPerdidasAreaMotivoLoaded,
 } = storeToRefs(horasPerdidasAreaMotivoStore);
 
 const currentWeek = String(getWeekNumber(new Date()));
-const horasPerdidasFechaDesde = '2026-04-06';
-const areaSortOrder = [
-  'cosecha mecanizada',
-  'cosecha agricola',
-  'equipo pesado',
-  'engrase',
-  'servicios generales',
-];
+const horasPerdidasFechaDesde = "2026-04-06";
 
-const normalizeAreaKey = (areaName: string) => String(areaName || '')
-  .trim()
-  .toLowerCase()
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '');
-
-const buildEmptyAreaSlide = (areaName: string): ProductividadSemanalArea => ({
-  area: areaName,
-  supervisor: {
-    area: areaName,
-    email: null,
-    nombre: 'Sin supervisor',
-  },
-  totales: {
-    retraso: 0,
-    horas_asignadas: 0,
-    horas_trabajadas: 0,
-    equipos_atendidos: 0,
-    equipo_con_mas_horas: null,
-  },
-  causas_retraso: [],
-  top_equipos: [],
-  resto: null,
-});
+const normalizeAreaKey = (areaName: string) =>
+  String(areaName || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
 const currentSlideIndex = ref(0);
-const slideCaptureRef = useTemplateRef<HTMLElement>('slideCaptureRef');
+const slideCaptureRef = useTemplateRef<HTMLElement>("slideCaptureRef");
 const dashboardTablesLoading = ref(false);
 const dashboardTablesLoaded = ref(false);
 const dashboardTablesError = ref<string | null>(null);
 
-const productivitySlides = computed(() => {
-  const areas = [...(productividadSemanal.value?.areas ?? [])];
-  const areaMap = new Map(
-    areas.map((area) => [normalizeAreaKey(area.area), area] as const)
-  );
-  const orderedSlides = areaSortOrder.map((areaName) => (
-    areaMap.get(normalizeAreaKey(areaName)) ?? buildEmptyAreaSlide(areaName)
-  ));
-  const additionalSlides = areas.filter((area) => (
-    !areaSortOrder.some((sortedArea) => (
-      normalizeAreaKey(sortedArea) === normalizeAreaKey(area.area)
-    ))
-  ));
-
-  return [...orderedSlides, ...additionalSlides];
-});
-const activeSlide = computed(() => productivitySlides.value[currentSlideIndex.value] ?? null);
-const dashboardTables = computed(() => productividadSemanalDashboardTablas.value);
+const productivitySlides = computed(
+  () => productividadSemanal.value?.areas ?? [],
+);
+const activeSlide = computed(
+  () => productivitySlides.value[currentSlideIndex.value] ?? null,
+);
+const dashboardTables = computed(
+  () => productividadSemanalDashboardTablas.value,
+);
 const availableAreas = computed(() => productivitySlides.value);
 const activeSlideComponent = computed(() => {
-  const areaName = normalizeAreaKey(activeSlide.value?.area || '');
-  return areaName === 'servicios generales'
+  const areaName = normalizeAreaKey(activeSlide.value?.area || "");
+  return areaName === "servicios generales"
     ? ProductividadSemanalAreaSlideLegacy
     : ProductividadSemanalAreaSlideV2;
 });
 const canGoPrevious = computed(() => currentSlideIndex.value > 0);
-const canGoNext = computed(() => currentSlideIndex.value < productivitySlides.value.length - 1);
-const weekLabel = computed(() => productividadSemanal.value?.semana || currentWeek);
-const loadingError = computed(() => productividadSemanalError.value || dashboardTablesError.value);
-const isSlideDataLoading = computed(() => (
-  !loadingError.value &&
-  (
-    productividadSemanalLoading.value ||
-    dashboardTablesLoading.value ||
-    !productividadSemanal.value ||
-    !dashboardTablesLoaded.value
-  )
-));
+const canGoNext = computed(
+  () => currentSlideIndex.value < productivitySlides.value.length - 1,
+);
+const weekLabel = computed(
+  () => productividadSemanal.value?.semana || currentWeek,
+);
+const loadingError = computed(
+  () => productividadSemanalError.value || dashboardTablesError.value,
+);
+const isSlideDataLoading = computed(
+  () =>
+    !loadingError.value &&
+    (productividadSemanalLoading.value ||
+      dashboardTablesLoading.value ||
+      !productividadSemanal.value ||
+      !dashboardTablesLoaded.value),
+);
 
 const {
   copyActiveSlideToClipboard,
@@ -143,33 +119,32 @@ const loadDashboardTables = async () => {
       horasPerdidasAreaMotivoStore.cargarResumen(horasPerdidasFechaDesde),
     ]);
 
-    const silentError = maintenanceError.value
-      || horasTrabajoError.value
-      || horasPerdidasAreaMotivoError.value;
+    const silentError =
+      maintenanceError.value ||
+      horasTrabajoError.value ||
+      horasPerdidasAreaMotivoError.value;
 
     if (silentError) {
       throw new Error(silentError);
     }
 
     if (!maintenanceHasLoaded.value || !horasPerdidasAreaMotivoLoaded.value) {
-      throw new Error('No llegaron todos los datos de productividad semanal');
+      throw new Error("No llegaron todos los datos de productividad semanal");
     }
 
     dashboardTablesLoaded.value = true;
   } catch (error) {
-    dashboardTablesError.value = error instanceof Error
-      ? error.message
-      : 'No se pudieron cargar todos los datos de productividad semanal';
+    dashboardTablesError.value =
+      error instanceof Error
+        ? error.message
+        : "No se pudieron cargar todos los datos de productividad semanal";
   } finally {
     dashboardTablesLoading.value = false;
   }
 };
 
 const loadAllProductivityData = () => {
-  void Promise.allSettled([
-    loadProductividad(),
-    loadDashboardTables(),
-  ]);
+  void Promise.allSettled([loadProductividad(), loadDashboardTables()]);
 };
 
 const goPrevious = () => {
@@ -189,9 +164,10 @@ const goNext = () => {
 };
 
 const selectAreaSlide = (selectedArea: ProductividadSemanalArea) => {
-  const targetIndex = productivitySlides.value.findIndex((slide) => (
-    normalizeAreaKey(slide.area) === normalizeAreaKey(selectedArea.area)
-  ));
+  const targetIndex = productivitySlides.value.findIndex(
+    (slide) =>
+      normalizeAreaKey(slide.area) === normalizeAreaKey(selectedArea.area),
+  );
 
   if (targetIndex < 0) return;
   currentSlideIndex.value = targetIndex;
@@ -201,10 +177,12 @@ const isEditableTarget = (target: EventTarget | null) => {
   if (!(target instanceof HTMLElement)) return false;
 
   const tagName = target.tagName.toLowerCase();
-  return target.isContentEditable
-    || tagName === 'input'
-    || tagName === 'textarea'
-    || tagName === 'select';
+  return (
+    target.isContentEditable ||
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select"
+  );
 };
 
 const handleKeyNavigation = (event: KeyboardEvent) => {
@@ -213,17 +191,20 @@ const handleKeyNavigation = (event: KeyboardEvent) => {
 
   const pressedKey = event.key.toLowerCase();
 
-  if (pressedKey === 's') {
+  if (pressedKey === "s") {
     event.preventDefault();
     goNext();
     return;
   }
 
-  if (pressedKey === 'a') {
+  if (pressedKey === "a") {
     event.preventDefault();
 
     if (!canGoPrevious.value) {
-      currentSlideIndex.value = Math.max(productivitySlides.value.length - 1, 0);
+      currentSlideIndex.value = Math.max(
+        productivitySlides.value.length - 1,
+        0,
+      );
       return;
     }
 
@@ -239,11 +220,11 @@ watch(productivitySlides, (slides) => {
 
 onMounted(() => {
   loadAllProductivityData();
-  window.addEventListener('keydown', handleKeyNavigation);
+  window.addEventListener("keydown", handleKeyNavigation);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyNavigation);
+  window.removeEventListener("keydown", handleKeyNavigation);
 });
 </script>
 
@@ -275,7 +256,11 @@ onUnmounted(() => {
       </button>
     </div>
 
-    <div v-else-if="activeSlide" ref="slideCaptureRef" class="weekly-productivity-frame">
+    <div
+      v-else-if="activeSlide"
+      ref="slideCaptureRef"
+      class="weekly-productivity-frame"
+    >
       <ProductividadSemanalAreaSlideV2
         v-if="activeSlideComponent === ProductividadSemanalAreaSlideV2"
         :key="activeSlide.area"
@@ -311,7 +296,7 @@ onUnmounted(() => {
       >
         <Loader2 v-if="isCopying" class="h-4 w-4 animate-spin" />
         <Copy v-else class="h-4 w-4" />
-        {{ isCopying ? 'Copiando...' : '' }}
+        {{ isCopying ? "Copiando..." : "" }}
       </button>
 
       <button
@@ -322,7 +307,7 @@ onUnmounted(() => {
       >
         <Loader2 v-if="isExporting" class="h-4 w-4 animate-spin" />
         <Download v-else class="h-4 w-4" />
-        {{ isExporting ? 'Generando PNG...' : '' }}
+        {{ isExporting ? "Generando PNG..." : "" }}
       </button>
 
       <p
