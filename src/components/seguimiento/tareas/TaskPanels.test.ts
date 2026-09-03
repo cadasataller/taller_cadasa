@@ -162,7 +162,7 @@ describe("paneles de seguimiento de tareas", () => {
     });
 
     expect(wrapper.text()).toContain("Zona asociada 1");
-    expect(wrapper.text()).toContain("15 min");
+    expect(wrapper.text()).toContain("00:15");
     await wrapper.get("details").trigger("toggle");
     expect(wrapper.text()).toContain("Historial de la zona");
     expect(wrapper.text()).toContain("Visita 1");

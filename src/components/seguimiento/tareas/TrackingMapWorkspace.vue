@@ -137,6 +137,13 @@ const mapWarningColor = (): string =>
         .getPropertyValue("--color-warning")
         .trim() || "#402823"
     : "#AD44AD";
+const mapThemeColor = (token: "--color-main" | "--color-main-light"): string =>
+  mapCanvas.value
+    ? getComputedStyle(mapCanvas.value).getPropertyValue(token).trim() ||
+      (token === "--color-main" ? "#004643" : "#006B65")
+    : token === "--color-main"
+      ? "#004643"
+      : "#006B65";
 
 const taskPinSize = { width: 29, height: 38 };
 
@@ -413,6 +420,8 @@ function renderLayers(): void {
   clearLayers();
   const maps = window.google.maps;
   const warningColor = mapWarningColor();
+  const mainColor = mapThemeColor("--color-main");
+  const mainLightColor = mapThemeColor("--color-main-light");
   if (isToolEnabled("zones")) {
     farmBoundaries = props.geography.flatMap((area) =>
       area.farms.flatMap((farm) => {
@@ -561,6 +570,12 @@ function renderLayers(): void {
       .map((task) => {
         const selected = task.id === props.selectedTaskId;
         const isDoubt = task.type === "duda";
+        const taskPinColor =
+          task.status === "visitada"
+            ? mainLightColor
+            : selected
+              ? mainColor
+              : "#EA4335";
         return {
           selected,
           marker: new maps.Marker({
@@ -573,9 +588,12 @@ function renderLayers(): void {
               : seguimientoMapZIndex.task,
             icon: isDoubt
               ? createTaskPinIcon(maps, warningColor, selected, task.routeOrder)
-              : selected
-                ? createTaskPinIcon(maps, "#004643", true, task.routeOrder)
-                : createTaskPinIcon(maps, "#EA4335", false, task.routeOrder),
+              : createTaskPinIcon(
+                  maps,
+                  taskPinColor,
+                  selected,
+                  task.routeOrder,
+                ),
           }),
         };
       });
@@ -717,7 +735,10 @@ function renderLayers(): void {
               : {
                   path: maps.SymbolPath.CIRCLE,
                   scale: 8,
-                  fillColor: "#004643",
+                  fillColor:
+                    props.selectedTaskDetail.status === "visitada"
+                      ? mainLightColor
+                      : mainColor,
                   fillOpacity: 1,
                   strokeColor: "#ffffff",
                   strokeWeight: 2.5,

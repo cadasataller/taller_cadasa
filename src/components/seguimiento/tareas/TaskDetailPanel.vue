@@ -127,17 +127,10 @@ const liveTotalSeconds = computed(() => {
   );
 });
 
-function formatDuration(seconds: number, includeSeconds = false): string {
-  if (!seconds) return "0 min";
-  if (includeSeconds) {
-    const totalSeconds = Math.max(0, Math.floor(seconds));
-    const pad = (value: number) => value.toString().padStart(2, "0");
-    return `${pad(Math.floor(totalSeconds / 3600))}:${pad(
-      Math.floor((totalSeconds % 3600) / 60),
-    )}:${pad(totalSeconds % 60)}`;
-  }
-  const minutes = Math.round(seconds / 60);
-  return minutes ? `${minutes} min` : `${seconds} s`;
+function formatDuration(seconds: number): string {
+  const totalMinutes = Math.max(0, Math.floor(seconds / 60));
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${pad(Math.floor(totalMinutes / 60))}:${pad(totalMinutes % 60)}`;
 }
 
 function formatDate(value: string | null): string {
@@ -345,7 +338,7 @@ function visitDuration(
                 Tiempo total
               </p>
               <p class="mt-1 font-mono text-[11px] font-bold text-slate-700">
-                {{ formatDuration(liveTotalSeconds, isCounting) }}
+                {{ formatDuration(liveTotalSeconds) }}
               </p>
             </div>
             <div class="rounded-lg border border-slate-100 bg-slate-50 p-2">
@@ -355,7 +348,7 @@ function visitDuration(
                 Visita actual
               </p>
               <p class="mt-1 font-mono text-[11px] font-bold text-slate-700">
-                {{ formatDuration(liveCurrentVisitSeconds, isCounting) }}
+                {{ formatDuration(liveCurrentVisitSeconds) }}
               </p>
               <p
                 v-if="isCounting"

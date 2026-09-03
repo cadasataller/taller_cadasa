@@ -16,17 +16,10 @@ const zoneDescription = computed(() => {
 });
 const visitHistory = computed(() => [...props.zone.visitas].reverse());
 
-function formatDuration(seconds: number, includeSeconds = false): string {
-  if (!seconds) return "0 min";
-  const totalSeconds = Math.max(0, Math.floor(seconds));
-  if (includeSeconds) {
-    const pad = (value: number) => value.toString().padStart(2, "0");
-    return `${pad(Math.floor(totalSeconds / 3600))}:${pad(
-      Math.floor((totalSeconds % 3600) / 60),
-    )}:${pad(totalSeconds % 60)}`;
-  }
-  const minutes = Math.round(totalSeconds / 60);
-  return minutes ? `${minutes} min` : `${totalSeconds} s`;
+function formatDuration(seconds: number): string {
+  const totalMinutes = Math.max(0, Math.floor(seconds / 60));
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return `${pad(Math.floor(totalMinutes / 60))}:${pad(totalMinutes % 60)}`;
 }
 
 function formatTime(value: string | null): string {
@@ -107,7 +100,7 @@ function visitDuration(
             Total
           </p>
           <p class="mt-0.5 font-mono text-[10px] font-bold text-slate-700">
-            {{ formatDuration(zone.tiempo.segundos_totales, true) }}
+            {{ formatDuration(zone.tiempo.segundos_totales) }}
           </p>
         </div>
         <div class="rounded-md bg-slate-50 p-2">
@@ -123,7 +116,7 @@ function visitDuration(
             Cerradas
           </p>
           <p class="mt-0.5 font-mono text-[10px] font-bold text-slate-700">
-            {{ formatDuration(zone.tiempo.segundos_visitas_cerradas, true) }}
+            {{ formatDuration(zone.tiempo.segundos_visitas_cerradas) }}
           </p>
         </div>
         <div class="rounded-md bg-slate-50 p-2">
@@ -131,7 +124,7 @@ function visitDuration(
             Actual
           </p>
           <p class="mt-0.5 font-mono text-[10px] font-bold text-slate-700">
-            {{ formatDuration(zone.tiempo.segundos_visita_abierta, true) }}
+            {{ formatDuration(zone.tiempo.segundos_visita_abierta) }}
           </p>
         </div>
         <div class="rounded-md bg-slate-50 p-2">
@@ -149,7 +142,7 @@ function visitDuration(
             Sin datos
           </p>
           <p class="mt-0.5 font-mono text-[10px] font-bold text-slate-700">
-            {{ formatDuration(zone.tiempo.segundos_sin_datos, true) }}
+            {{ formatDuration(zone.tiempo.segundos_sin_datos) }}
           </p>
         </div>
         <div class="rounded-md bg-slate-50 p-2">

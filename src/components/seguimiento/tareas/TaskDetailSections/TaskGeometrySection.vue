@@ -54,7 +54,10 @@ const zoneDetails = computed(() => props.task.zoneDetails);
             <Crosshair class="size-4" />
           </button>
         </div>
-        <div v-if="zoneDetails.length" class="mt-2 grid gap-2">
+        <div
+          v-if="task.type === 'finca' && zoneDetails.length"
+          class="mt-2 grid gap-2"
+        >
           <TaskZoneDetailCard
             v-for="(zone, index) in zoneDetails"
             :key="zone.id"
