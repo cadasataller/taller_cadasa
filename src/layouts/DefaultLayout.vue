@@ -38,6 +38,7 @@ import {
   Droplets,
   ChevronDown,
   ChevronUp,
+  Check,
   X,
   MapPinned,
   MoreHorizontal,

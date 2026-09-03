@@ -4,6 +4,7 @@ import type {
   RatingsFetchScope,
   PuntuacionSupervisoresOtResponse,
   RatingsDetalle,
+  RatingsCriterio,
   RatingsEmpleado,
   RatingsInspeccion,
   UpsertMeetingRatingPayload,
@@ -119,6 +120,19 @@ const fetchPagedData = async <T>(
 };
 
 export const ratingsService = {
+  async fetchCriterios(): Promise<RatingsCriterio[]> {
+    const { data, error } = await supabaseRatings
+      .from("criterios_evaluacion")
+      .select("id_criterio, descripcion_tarea")
+      .order("id_criterio", { ascending: true });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as RatingsCriterio[];
+  },
+
   async fetchEmpleados(): Promise<RatingsEmpleado[]> {
     return fetchTableData<RatingsEmpleado>("empleados");
   },

@@ -29,6 +29,11 @@ export interface RatingsDetalle {
   puntuacion: number;
 }
 
+export interface RatingsCriterio {
+  id_criterio: number;
+  descripcion_tarea: string;
+}
+
 export interface UpsertMeetingRatingPayload {
   inspectionId?: number | null;
   fecha: string;

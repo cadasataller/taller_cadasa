@@ -4,7 +4,13 @@ import { useRoute } from "vue-router";
 import { useRatingsStore } from "@/stores/ratingsStore";
 import { useUserStore } from "@/stores/userStore";
 import ImageZoomViewer from "@/components/common/ImageZoomViewer.vue";
+import InspectionReadOnlyPanel from "@/components/dashboard/InspectionReadOnlyPanel.vue";
 import { parseMeetingObservation } from "@/utils/meetingRatings";
+import { ratingsService } from "@/stores/ratingsStore.service";
+import type {
+  RatingsCriterio,
+  RatingsInspeccionNormalizada,
+} from "@/stores/ratingsStore.types";
 import { Bar } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -17,6 +23,7 @@ import {
 } from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import {
+  Eye,
   X,
   Image as ImageIcon,
   Star,
@@ -87,6 +94,7 @@ onMounted(async () => {
       ? { mode: "all" }
       : { mode: "current-employee", email: userEmail },
   );
+  criteria.value = await ratingsService.fetchCriterios().catch(() => []);
 });
 
 const filteredInspections = computed(() => {
@@ -156,6 +164,8 @@ const chartData = computed(() => {
 });
 
 const selectedDate = ref<string>("");
+const selectedInspection = ref<RatingsInspeccionNormalizada | null>(null);
+const criteria = ref<RatingsCriterio[]>([]);
 
 const chartOptions = {
   responsive: true,
@@ -223,6 +233,30 @@ const displayedInspections = computed(() => {
 const getSupName = (id: number) => {
   const sup = allSupervisors.value.find((s) => s.id_empleado === id);
   return sup ? sup.nombre_completo || sup.correo : "Desconocido";
+};
+
+const getEmployeeName = (id: number) => {
+  const employee = store.empleados.find((item) => item.id_empleado === id);
+  return employee
+    ? employee.nombre_completo || employee.correo
+    : "No disponible";
+};
+
+const selectedInspectionDetails = computed(() => {
+  if (!selectedInspection.value) return [];
+
+  return store.detalles.filter(
+    (detail) =>
+      detail.id_inspeccion === selectedInspection.value?.id_inspeccion,
+  );
+});
+
+const openInspectionDetail = (inspection: RatingsInspeccionNormalizada) => {
+  selectedInspection.value = inspection;
+};
+
+const closeInspectionDetail = () => {
+  selectedInspection.value = null;
 };
 
 const showPhotosModal = ref(false);
@@ -459,7 +493,17 @@ const getInspectionObservationText = (observation?: string | null) => {
                   {{ insp.fecha }} | {{ formatHora(insp.hora) }}
                 </td>
                 <td class="py-3 text-sm text-gray-800 font-medium">
-                  {{ getSupName(insp.final_supervisor_id) }}
+                  <div class="flex items-center justify-between gap-2">
+                    <span>{{ getSupName(insp.final_supervisor_id) }}</span>
+                    <button
+                      type="button"
+                      class="inline-flex cursor items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold text-main transition hover:bg-main/5"
+                      @click="openInspectionDetail(insp)"
+                    >
+                      <Eye class="h-3.5 w-3.5" />
+                      Ver ficha
+                    </button>
+                  </div>
                 </td>
                 <td class="py-3 text-center">
                   <span
@@ -577,6 +621,15 @@ const getInspectionObservationText = (observation?: string | null) => {
                   }}
                 </p>
               </div>
+
+              <button
+                type="button"
+                class="inline-flex items-center justify-center gap-2 rounded-xl border border-main/15 bg-white px-3 py-2 text-xs font-bold text-main transition hover:border-main/30 hover:bg-main/5"
+                @click="openInspectionDetail(insp)"
+              >
+                <Eye class="h-4 w-4" />
+                Ver ficha completa
+              </button>
             </div>
 
             <div
@@ -592,6 +645,17 @@ const getInspectionObservationText = (observation?: string | null) => {
         </div>
       </div>
     </div>
+
+    <InspectionReadOnlyPanel
+      v-if="selectedInspection"
+      :inspection="selectedInspection"
+      :details="selectedInspectionDetails"
+      :criteria="criteria"
+      :supervisor-name="getSupName(selectedInspection.final_supervisor_id)"
+      :inspector-name="getEmployeeName(selectedInspection.final_inspector_id)"
+      @close="closeInspectionDetail"
+      @view-photos="openPhotos"
+    />
 
     <!-- Modal de Fotos -->
     <div
