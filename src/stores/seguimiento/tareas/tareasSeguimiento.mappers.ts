@@ -120,6 +120,7 @@ export function mapTareaSeguimientoDetail(
     priorityLabel: estado.prioridad_nombre,
     time: response.tiempo,
     visits: response.visitas,
+    zoneDetails: response.zonas_detalle,
     observations: response.observaciones ?? [],
     route: response.ruta
       ? {

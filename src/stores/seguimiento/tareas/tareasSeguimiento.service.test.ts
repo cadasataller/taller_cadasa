@@ -233,6 +233,34 @@ describe("tareasSeguimientoService", () => {
                   ultima_salida_en: null,
                 },
                 visitas: [],
+                zonas_detalle: [
+                  {
+                    id: "control-zone-1",
+                    rol: "control",
+                    tipo_zona: "control",
+                    origen: "tarea_supervisor",
+                    tiempo: {
+                      cantidad_visitas: 1,
+                      segundos_visitas_cerradas: 0,
+                      segundos_visita_abierta: 300,
+                      segundos_totales: 300,
+                      visita_abierta: true,
+                      visita_actual_id: "zone-visit-1",
+                      llegada_actual_en: "2026-08-29T00:00:00Z",
+                      primera_llegada_en: "2026-08-29T00:00:00Z",
+                      ultima_salida_en: null,
+                      ultima_actualizacion_tracker_en: "2026-08-29T00:05:00Z",
+                      segundos_sin_datos: 0,
+                    },
+                    visitas: [
+                      {
+                        id: "zone-visit-1",
+                        entrada_en: "2026-08-29T00:00:00Z",
+                        salida_en: null,
+                      },
+                    ],
+                  },
+                ],
                 ruta: {
                   ruta_planificada_id: null,
                   estado_calculo: null,
@@ -265,6 +293,12 @@ describe("tareasSeguimientoService", () => {
       permanenceZones: [
         {
           type: "MultiPolygon",
+        },
+      ],
+      zoneDetails: [
+        {
+          id: "control-zone-1",
+          tiempo: { segundos_totales: 300 },
         },
       ],
     });

@@ -128,6 +128,36 @@ export const tareaRastreoDetalleSchema = z.object({
       salida_en: z.string().nullable(),
     }),
   ),
+  zonas_detalle: z
+    .array(
+      z.object({
+        id: z.string(),
+        rol: z.string(),
+        tipo_zona: z.string(),
+        origen: z.string(),
+        tiempo: z.object({
+          cantidad_visitas: z.number(),
+          segundos_visitas_cerradas: z.number(),
+          segundos_visita_abierta: z.number(),
+          segundos_totales: z.number(),
+          visita_abierta: z.boolean(),
+          visita_actual_id: z.string().nullable(),
+          llegada_actual_en: z.string().nullable(),
+          primera_llegada_en: z.string().nullable(),
+          ultima_salida_en: z.string().nullable(),
+          ultima_actualizacion_tracker_en: z.string().nullable(),
+          segundos_sin_datos: z.number(),
+        }),
+        visitas: z.array(
+          z.object({
+            id: z.string(),
+            entrada_en: z.string(),
+            salida_en: z.string().nullable(),
+          }),
+        ),
+      }),
+    )
+    .default([]),
   observaciones: z
     .array(
       z.object({

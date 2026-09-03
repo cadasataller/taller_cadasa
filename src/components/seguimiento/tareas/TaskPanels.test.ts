@@ -3,6 +3,7 @@ import { mount } from "@vue/test-utils";
 import TaskCard from "./TaskCard.vue";
 import TaskDetailPanel from "./TaskDetailPanel.vue";
 import TaskListPanel from "./TaskListPanel.vue";
+import TaskZoneDetailCard from "./TaskDetailSections/TaskZoneDetailCard.vue";
 import type { TareaSeguimientoListItem } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 
 const task = (
@@ -125,5 +126,45 @@ describe("paneles de seguimiento de tareas", () => {
     expect(wrapper.text()).toContain("No se pudo cargar el detalle.");
     await wrapper.findAll("button").at(-1)!.trigger("click");
     expect(wrapper.emitted("retry")).toHaveLength(1);
+  });
+
+  it("muestra el resumen y despliega el detalle de una zona asociada", async () => {
+    const wrapper = mount(TaskZoneDetailCard, {
+      props: {
+        index: 0,
+        zone: {
+          id: "zone-1",
+          rol: "control",
+          tipo_zona: "control",
+          origen: "tarea_supervisor",
+          tiempo: {
+            cantidad_visitas: 1,
+            segundos_visitas_cerradas: 600,
+            segundos_visita_abierta: 300,
+            segundos_totales: 900,
+            visita_abierta: true,
+            visita_actual_id: "visit-2",
+            llegada_actual_en: "2026-08-29T12:20:00Z",
+            primera_llegada_en: "2026-08-29T12:00:00Z",
+            ultima_salida_en: "2026-08-29T12:10:00Z",
+            ultima_actualizacion_tracker_en: "2026-08-29T12:25:00Z",
+            segundos_sin_datos: 0,
+          },
+          visitas: [
+            {
+              id: "visit-1",
+              entrada_en: "2026-08-29T12:00:00Z",
+              salida_en: "2026-08-29T12:10:00Z",
+            },
+          ],
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain("Zona asociada 1");
+    expect(wrapper.text()).toContain("15 min");
+    await wrapper.get("details").trigger("toggle");
+    expect(wrapper.text()).toContain("Historial de la zona");
+    expect(wrapper.text()).toContain("Visita 1");
   });
 });

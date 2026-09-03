@@ -160,6 +160,29 @@ export interface ConfiguracionInicialTrackersDto {
   }>;
 }
 
+export interface TareaRastreoZonaTiempoDto {
+  cantidad_visitas: number;
+  segundos_visitas_cerradas: number;
+  segundos_visita_abierta: number;
+  segundos_totales: number;
+  visita_abierta: boolean;
+  visita_actual_id: string | null;
+  llegada_actual_en: string | null;
+  primera_llegada_en: string | null;
+  ultima_salida_en: string | null;
+  ultima_actualizacion_tracker_en: string | null;
+  segundos_sin_datos: number;
+}
+
+export interface TareaRastreoZonaDetalleDto {
+  id: string;
+  rol: string;
+  tipo_zona: string;
+  origen: string;
+  tiempo: TareaRastreoZonaTiempoDto;
+  visitas: Array<{ id: string; entrada_en: string; salida_en: string | null }>;
+}
+
 /** DTO JSON de public.obtener_tarea_detalle_v2. */
 export interface TareaRastreoDetalleDto {
   tarea: {
@@ -220,6 +243,7 @@ export interface TareaRastreoDetalleDto {
     ultima_salida_en: string | null;
   };
   visitas: Array<{ id: string; entrada_en: string; salida_en: string | null }>;
+  zonas_detalle: TareaRastreoZonaDetalleDto[];
   observaciones?: TareaRastreoObservacionDto[];
   ruta: {
     ruta_planificada_id: string | null;
@@ -297,6 +321,7 @@ export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
   priorityLabel: string | null;
   time: TareaRastreoDetalleDto["tiempo"];
   visits: TareaRastreoDetalleDto["visitas"];
+  zoneDetails: TareaRastreoZonaDetalleDto[];
   observations: TareaRastreoObservacionDto[];
   route: { id: string | null; estado_calculo: string | null };
   permissions: TareaRastreoDetalleDto["permisos"];

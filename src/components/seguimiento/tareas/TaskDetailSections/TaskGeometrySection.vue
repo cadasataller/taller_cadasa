@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { Crosshair, MapPin } from "lucide-vue-next";
+import TaskZoneDetailCard from "./TaskZoneDetailCard.vue";
 import type { SeguimientoCoordinates } from "@/seguimiento/shared/seguimiento.types";
 import type { TareaSeguimientoDetail } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 
@@ -26,6 +27,7 @@ const pointLabel = computed(() =>
 );
 const controlZoneCount = computed(() => props.task.controlZones?.length ?? 0);
 const permanenceZoneCount = computed(() => props.task.permanenceZones.length);
+const zoneDetails = computed(() => props.task.zoneDetails);
 </script>
 
 <template>
@@ -51,6 +53,14 @@ const permanenceZoneCount = computed(() => props.task.permanenceZones.length);
           >
             <Crosshair class="size-4" />
           </button>
+        </div>
+        <div v-if="zoneDetails.length" class="mt-2 grid gap-2">
+          <TaskZoneDetailCard
+            v-for="(zone, index) in zoneDetails"
+            :key="zone.id"
+            :zone="zone"
+            :index="index"
+          />
         </div>
       </div>
       <div

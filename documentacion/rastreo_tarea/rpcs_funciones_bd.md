@@ -586,6 +586,7 @@ asignacion
 estado
 tiempo
 visitas
+zonas_detalle
 ruta
 permisos
 ```
@@ -616,6 +617,49 @@ Trabajador, tracker, source, label y todos los acompañantes activos en
 ### `tiempo`
 
 Resumen acumulado de permanencia.
+
+### `zonas_detalle`
+
+Desglose de permanencia por cada zona asociada a la tarea. No requiere una
+consulta adicional: para cada elemento, `tiempo` contiene el resumen específico
+de la zona y `visitas` su historial.
+
+```json
+{
+  "zonas_detalle": [
+    {
+      "id": "uuid",
+      "rol": "control",
+      "tipo_zona": "control",
+      "origen": "tarea_supervisor",
+      "tiempo": {
+        "cantidad_visitas": 1,
+        "segundos_visitas_cerradas": 0,
+        "segundos_visita_abierta": 3144,
+        "segundos_totales": 3144,
+        "visita_abierta": true,
+        "visita_actual_id": "uuid | null",
+        "llegada_actual_en": "timestamptz | null",
+        "primera_llegada_en": "timestamptz | null",
+        "ultima_salida_en": "timestamptz | null",
+        "ultima_actualizacion_tracker_en": "timestamptz | null",
+        "segundos_sin_datos": 0
+      },
+      "visitas": [
+        {
+          "id": "uuid",
+          "entrada_en": "timestamptz",
+          "salida_en": "timestamptz | null"
+        }
+      ]
+    }
+  ]
+}
+```
+
+En tareas `finca`, este tiempo se origina en `visitas_zona_tarea_tracker`; para
+tareas `zona`, la zona de control usa `visitas_tarea_tracker` porque la tarea
+representa la propia zona.
 
 ### `ruta`
 

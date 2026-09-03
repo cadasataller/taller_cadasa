@@ -92,6 +92,7 @@ const taskDetail = (
     ultima_salida_en: null,
   },
   visitas: [],
+  zonas_detalle: [],
   ruta: null,
   permisos: {
     puede_editar: false,
@@ -203,6 +204,40 @@ describe("tareasSeguimiento mappers", () => {
       controlZones: [zone],
       operationalStatusLabel: "Sin iniciar",
     });
+  });
+
+  it("preserva el desglose de tiempo e historial de cada zona asociada", () => {
+    const zoneDetail = {
+      id: "control-zone-1",
+      rol: "control",
+      tipo_zona: "control",
+      origen: "tarea_supervisor",
+      tiempo: {
+        cantidad_visitas: 1,
+        segundos_visitas_cerradas: 600,
+        segundos_visita_abierta: 300,
+        segundos_totales: 900,
+        visita_abierta: true,
+        visita_actual_id: "visit-2",
+        llegada_actual_en: "2026-08-29T12:20:00Z",
+        primera_llegada_en: "2026-08-29T12:00:00Z",
+        ultima_salida_en: "2026-08-29T12:10:00Z",
+        ultima_actualizacion_tracker_en: "2026-08-29T12:25:00Z",
+        segundos_sin_datos: 0,
+      },
+      visitas: [
+        {
+          id: "visit-1",
+          entrada_en: "2026-08-29T12:00:00Z",
+          salida_en: "2026-08-29T12:10:00Z",
+        },
+      ],
+    };
+
+    expect(
+      mapTareaSeguimientoDetail(taskDetail({ zonas_detalle: [zoneDetail] }))
+        .zoneDetails,
+    ).toEqual([zoneDetail]);
   });
 
   it("preserva la ubicación y zona de permanencia de una duda automática", () => {
