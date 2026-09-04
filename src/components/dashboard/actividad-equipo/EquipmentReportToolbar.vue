@@ -12,6 +12,7 @@ import type {
 interface Props {
   filters: ReportFilters;
   activeTab: ReportTab;
+  availableTabs: readonly ReportTab[];
 }
 
 const props = defineProps<Props>();
@@ -26,6 +27,9 @@ const tabs: { key: ReportTab; label: string }[] = [
   { key: "paradas", label: "Paradas" },
   { key: "operadores", label: "Operadores" },
 ];
+const visibleTabs = computed(() =>
+  tabs.filter((tab) => props.availableTabs.includes(tab.key)),
+);
 
 function dateFromIso(value: string): Date {
   const [year, month, day] = value.split("-").map(Number);
@@ -75,11 +79,7 @@ function updateRange(value: Date | Date[] | null): void {
   >
     <div class="flex min-w-0 flex-wrap items-end gap-2">
       <div id="equipment-report-date-filter" class="flex flex-col gap-1">
-        
-        <div
-          class="flex h-8 min-w-56 items-center  "
-        >
-          
+        <div class="flex h-8 min-w-56 items-center">
           <VueDatePicker
             :model-value="selectedRange"
             range
@@ -93,14 +93,13 @@ function updateRange(value: Date | Date[] | null): void {
         </div>
       </div>
 
-      
       <nav
         id="equipment-report-tabs"
         class="flex h-8 overflow-hidden rounded-md border border-gray-200 bg-white"
         aria-label="Análisis de equipo"
       >
         <button
-          v-for="tab in tabs"
+          v-for="tab in visibleTabs"
           :key="tab.key"
           type="button"
           class="min-w-24 cursor-pointer border-r border-gray-200 px-3 text-xs font-semibold transition-colors last:border-r-0"

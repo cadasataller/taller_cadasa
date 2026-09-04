@@ -1,9 +1,25 @@
 <script setup lang="ts">
+import { computed } from "vue";
+import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 import EquipmentReportCenter from "@/components/dashboard/actividad-equipo/EquipmentReportCenter.vue";
 import EquipmentReportDetailSidebar from "@/components/dashboard/actividad-equipo/EquipmentReportDetailSidebar.vue";
 import EquipmentReportSidebar from "@/components/dashboard/actividad-equipo/EquipmentReportSidebar.vue";
 import EquipmentReportToolbar from "@/components/dashboard/actividad-equipo/EquipmentReportToolbar.vue";
 import { useReporteEquiposView } from "@/composables/dashboard/useReporteEquiposView";
+import type { ReportTab } from "@/stores/dashboard/reporte-equipos/reporteEquipos.types";
+
+const REPORT_SECTION_FEATURES: Record<ReportTab, string> = {
+  resumen: "ver_dashboard_actividad_equipo_resumen",
+  paradas: "ver_dashboard_actividad_equipo_paradas",
+  operadores: "ver_dashboard_actividad_equipo_operadores",
+};
+
+const featureAccessStore = useFeatureAccessStore();
+const availableTabs = computed<ReportTab[]>(() =>
+  (Object.keys(REPORT_SECTION_FEATURES) as ReportTab[]).filter((tab) =>
+    featureAccessStore.tieneFuncionalidad(REPORT_SECTION_FEATURES[tab]),
+  ),
+);
 
 const {
   activeTab,
@@ -26,8 +42,14 @@ const {
   selectEquipment,
   setDateRange,
   setSearch,
-  setTab,
+  setTab: updateActiveTab,
 } = useReporteEquiposView();
+
+function setTab(tab: ReportTab): void {
+  if (availableTabs.value.includes(tab)) {
+    updateActiveTab(tab);
+  }
+}
 </script>
 
 <template>
@@ -38,6 +60,7 @@ const {
     <EquipmentReportToolbar
       :filters="filters"
       :active-tab="activeTab"
+      :available-tabs="availableTabs"
       @update-date-range="setDateRange"
       @set-tab="setTab"
       @clear="clearFilters"

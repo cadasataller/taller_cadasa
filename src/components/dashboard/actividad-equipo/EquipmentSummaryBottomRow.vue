@@ -61,6 +61,11 @@ const historyByDate = computed<HistoryDateGroup[]>(() =>
             </tr>
           </thead>
           <tbody>
+            <tr v-if="summary.implements.length === 0" class="h-[54px]">
+              <td colspan="4" class="text-center text-[10px] text-gray-400">
+                Sin datos para el período
+              </td>
+            </tr>
             <tr
               v-for="row in summary.implements"
               :key="row.implementId"
@@ -120,6 +125,13 @@ const historyByDate = computed<HistoryDateGroup[]>(() =>
               </th>
             </tr>
           </thead>
+          <tbody v-if="summary.history.length === 0">
+            <tr class="h-[54px]">
+              <td colspan="4" class="text-center text-[10px] text-gray-400">
+                Sin datos para el período
+              </td>
+            </tr>
+          </tbody>
           <tbody v-for="group in historyByDate" :key="group.date">
             <tr class="border-b border-gray-100 bg-gray-50/70">
               <th

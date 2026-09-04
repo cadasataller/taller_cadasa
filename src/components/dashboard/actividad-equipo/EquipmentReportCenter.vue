@@ -39,7 +39,7 @@ const tabCopy: Record<
 </script>
 
 <template>
-  <section id="equipment-report-center" class="min-h-0 overflow-hidden">
+  <section id="equipment-report-center" class="h-full min-h-0 overflow-hidden">
     <EquipmentReportSummaryView
       v-if="activeTab === 'resumen'"
       :summary="summary"

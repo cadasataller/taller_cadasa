@@ -35,6 +35,11 @@ function classificationTone(
             </tr>
           </thead>
           <tbody>
+            <tr v-if="summary.classifications.length === 0" class="h-[100px]">
+              <td colspan="3" class="text-center text-[10px] text-gray-400">
+                Sin datos para el período
+              </td>
+            </tr>
             <tr
               v-for="row in summary.classifications"
               :key="row.classification"
@@ -87,6 +92,11 @@ function classificationTone(
             </tr>
           </thead>
           <tbody>
+            <tr v-if="summary.mainStops.length === 0" class="h-[100px]">
+              <td colspan="3" class="text-center text-[10px] text-gray-400">
+                Sin datos para el período
+              </td>
+            </tr>
             <tr
               v-for="row in summary.mainStops"
               :key="row.reason"
@@ -128,6 +138,11 @@ function classificationTone(
             </tr>
           </thead>
           <tbody>
+            <tr v-if="summary.operators.length === 0" class="h-[100px]">
+              <td colspan="3" class="text-center text-[10px] text-gray-400">
+                Sin datos para el período
+              </td>
+            </tr>
             <tr
               v-for="row in summary.operators"
               :key="row.operatorId"
