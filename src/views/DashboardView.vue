@@ -270,7 +270,7 @@ onUnmounted(() => {
         class="min-w-full w-full flex-shrink-0 snap-center"
         :class="
           slide.id === 'actividad_equipo'
-            ? 'min-h-0 overflow-y-auto px-4 pb-[120px] md:px-6 md:pb-8 md:pt-0 lg:px-10 lg:pb-10 lg:pt-0 lg:overflow-hidden'
+            ? ''
             : 'px-4 pb-[120px] md:px-6 md:pb-8 md:pt-0 lg:px-10 lg:pb-10 lg:pt-0 overflow-y-auto'
         "
       >

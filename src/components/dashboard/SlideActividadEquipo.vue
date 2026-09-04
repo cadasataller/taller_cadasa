@@ -33,7 +33,7 @@ const {
 <template>
   <section
     id="equipment-report-view"
-    class="flex h-full min-h-80 flex-1 flex-col bg-second text-sm text-gray-900 lg:min-h-0"
+    class="flex h-full min-h-90 flex-1 flex-col bg-second text-sm text-gray-900 lg:min-h-0"
   >
     <EquipmentReportToolbar
       :filters="filters"
@@ -44,7 +44,7 @@ const {
     />
     <main
       id="equipment-report-workspace"
-      class="grid min-h-0 flex-1 grid-cols-1 gap-3 px-4 pb-4 md:px-5 lg:grid-cols-[250px_minmax(0,1fr)_300px] lg:overflow-hidden"
+      class="grid min-h-0 flex-1 grid-cols-1 gap-3 px-4 pb-4 md:px-5 lg:grid-cols-[250px_minmax(0,1fr)_250px] lg:overflow-hidden"
     >
       <EquipmentReportSidebar
         :equipment="equipment"

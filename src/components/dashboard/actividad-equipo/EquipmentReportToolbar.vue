@@ -75,16 +75,11 @@ function updateRange(value: Date | Date[] | null): void {
   >
     <div class="flex min-w-0 flex-wrap items-end gap-2">
       <div id="equipment-report-date-filter" class="flex flex-col gap-1">
-        <label class="text-[10px] font-medium text-gray-500"
-          >Rango de fechas</label
-        >
+        
         <div
-          class="flex h-8 min-w-56 items-center rounded-md border border-gray-200 bg-white px-2 shadow-sm"
+          class="flex h-8 min-w-56 items-center  "
         >
-          <CalendarDays
-            class="mr-2 size-3.5 shrink-0 text-main"
-            aria-hidden="true"
-          />
+          
           <VueDatePicker
             :model-value="selectedRange"
             range
@@ -98,15 +93,7 @@ function updateRange(value: Date | Date[] | null): void {
         </div>
       </div>
 
-      <div id="equipment-report-group-filter" class="flex flex-col gap-1">
-        <span class="text-[10px] font-medium text-gray-500">Agrupar por</span>
-        <div
-          class="flex h-8 min-w-36 items-center rounded-md border border-gray-200 bg-white px-2 text-xs shadow-sm"
-        >
-          Equipos
-        </div>
-      </div>
-
+      
       <nav
         id="equipment-report-tabs"
         class="flex h-8 overflow-hidden rounded-md border border-gray-200 bg-white"

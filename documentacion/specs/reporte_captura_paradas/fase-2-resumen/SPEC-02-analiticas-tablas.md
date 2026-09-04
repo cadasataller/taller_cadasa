@@ -37,11 +37,13 @@ Crear dos cards bajo `EquipmentSummaryBottomRow.vue`:
 Columnas exactas:
 
 ```txt
-Implemento | Descripción | Jornadas | Tiempo | % uso
+Implemento | Jornadas | Tiempo | % uso
 ```
 
 Mantener el reparto visual `0.42fr / 0.58fr` de la fila inferior. La tabla no
-debe ocultar datos ni reemplazarse por cards en escritorio.
+debe ocultar datos ni reemplazarse por cards en escritorio. La columna
+Implemento concatena el número y la descripción; la descripción conserva como
+máximo dos palabras con la misma regla de abreviación aplicada a Labor/Motivo.
 
 ### Historial reciente
 
@@ -51,9 +53,15 @@ Columnas exactas:
 Inicio | Fin | Labor / Motivo | Tiempo
 ```
 
-Muestra los diez registros ya limitados por el RPC. El contenedor interno tiene
-scroll vertical, bordes compactos y cabecera sticky. Inicio y fin se formatean
-en `America/Panama`; Labor/Motivo permite salto de palabra, tal como el HTML.
+Muestra los diez registros ya limitados por el RPC, agrupados por la fecha de
+inicio local. Cada grupo presenta una fila de fecha destacada y las filas
+internas muestran solo la hora en Inicio y Fin. El contenedor interno tiene
+scroll vertical, bordes compactos y cabecera sticky.
+
+La tabla ocupa todo el ancho disponible: Inicio, Fin y Tiempo conservan ancho
+compacto; Labor/Motivo usa el espacio flexible restante. Si Labor/Motivo supera
+el ancho disponible de esa columna, se trunca visualmente con elipsis. No se
+limita la cantidad de palabras ni se abrevia según la longitud de una palabra.
 
 ## Componentes reutilizables permitidos
 
