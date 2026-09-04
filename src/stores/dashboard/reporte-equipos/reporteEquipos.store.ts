@@ -217,13 +217,60 @@ export const useReporteEquiposStore = defineStore(
     async function retryStops(): Promise<void> {
       await loadStops(true);
     }
+    async function refreshSelectedEquipmentRange(code: string): Promise<void> {
+      const currentRequest = ++requestId;
+      selectedOperatorId.value = null;
+      context.value = null;
+      summary.value = null;
+      errors.value = {
+        ...errors.value,
+        context: null,
+        summary: null,
+        stops: null,
+      };
+      updateState("context", "loading");
+      updateState("summary", "loading");
+      invalidateStops();
+      const results = await Promise.allSettled([
+        reporteEquiposService.loadContext(code, filters.value),
+        reporteEquiposService.loadSummary(code, filters.value),
+      ]);
+      if (currentRequest !== requestId || code !== selectedEquipmentCode.value)
+        return;
+      const [contextResult, summaryResult] = results;
+      if (contextResult.status === "fulfilled") {
+        context.value = contextResult.value;
+        updateState("context", "ready");
+      } else
+        setFailure(
+          "context",
+          contextResult.reason instanceof Error
+            ? contextResult.reason
+            : new Error("No se pudo cargar el contexto del equipo."),
+        );
+      if (summaryResult.status === "fulfilled") {
+        summary.value = summaryResult.value;
+        updateState("summary", "ready");
+      } else
+        setFailure(
+          "summary",
+          summaryResult.reason instanceof Error
+            ? summaryResult.reason
+            : new Error("No se pudo cargar el resumen del equipo."),
+        );
+      if (activeTab.value === "paradas") void loadStops();
+    }
     async function setDateRange(
       startDate: string,
       endDate: string,
     ): Promise<void> {
-      invalidateStops();
       filters.value = { ...filters.value, startDate, endDate };
-      await loadInitial();
+      const code = selectedEquipmentCode.value;
+      if (!code) {
+        await loadInitial();
+        return;
+      }
+      await refreshSelectedEquipmentRange(code);
     }
     async function setSearch(search: string): Promise<void> {
       filters.value = { ...filters.value, search };

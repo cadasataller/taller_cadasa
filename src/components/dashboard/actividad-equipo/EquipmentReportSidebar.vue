@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, shallowRef } from "vue";
-import { LoaderCircle, Search, TriangleAlert } from "lucide-vue-next";
+import {
+  ArrowDownAZ,
+  LoaderCircle,
+  Search,
+  TriangleAlert,
+} from "lucide-vue-next";
 import type {
   EquipmentListItem,
   ReportLoadState,
@@ -21,18 +26,45 @@ const emit = defineEmits<{
 }>();
 
 const searchTerm = shallowRef("");
+const sortMode = shallowRef<"equipmentNumber" | "mostHours">("equipmentNumber");
+const nextSortLabel = computed(() =>
+  sortMode.value === "equipmentNumber" ? "Horas" : "# Equipo",
+);
+const sortAriaLabel = computed(
+  () => `Ordenar por ${nextSortLabel.value.toLocaleLowerCase()}`,
+);
+const equipmentNumberCollator = new Intl.Collator("es", {
+  numeric: true,
+  sensitivity: "base",
+});
 const visibleEquipment = computed(() => {
   const normalized = searchTerm.value.trim().toLocaleLowerCase();
-  if (!normalized) return props.equipment;
-  return props.equipment.filter((equipment) =>
-    `${equipment.code} ${equipment.type ?? ""}`
-      .toLocaleLowerCase()
-      .includes(normalized),
-  );
+  const filteredEquipment = normalized
+    ? props.equipment.filter((equipment) =>
+        `${equipment.code} ${equipment.type ?? ""}`
+          .toLocaleLowerCase()
+          .includes(normalized),
+      )
+    : props.equipment;
+
+  return [...filteredEquipment].sort((first, second) => {
+    if (sortMode.value === "mostHours") {
+      const timeDifference =
+        (second.totalSeconds ?? 0) - (first.totalSeconds ?? 0);
+      if (timeDifference !== 0) return timeDifference;
+    }
+
+    return equipmentNumberCollator.compare(first.code, second.code);
+  });
 });
 
 function submitSearch(): void {
   emit("search", searchTerm.value);
+}
+
+function toggleSortMode(): void {
+  sortMode.value =
+    sortMode.value === "equipmentNumber" ? "mostHours" : "equipmentNumber";
 }
 </script>
 
@@ -41,8 +73,20 @@ function submitSearch(): void {
     id="equipment-sidebar"
     class="flex min-h-0 flex-col overflow-hidden rounded-[10px] border border-gray-200 bg-white shadow-sm"
   >
-    <div id="equipment-sidebar-header" class="px-3 pb-2 pt-3">
+    <div
+      id="equipment-sidebar-header"
+      class="flex items-center justify-between gap-2 px-3 pb-2 pt-3"
+    >
       <h2 class="text-xs font-bold text-main">Equipos</h2>
+      <button
+        type="button"
+        class="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md border border-gray-200 px-2 text-[10px] font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+        :aria-label="sortAriaLabel"
+        @click="toggleSortMode"
+      >
+        Ordenar por {{ nextSortLabel }}
+        <ArrowDownAZ class="size-3" aria-hidden="true" />
+      </button>
     </div>
     <form class="px-3 pb-2" @submit.prevent="submitSearch">
       <label
