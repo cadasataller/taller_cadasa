@@ -48,6 +48,104 @@ export interface EquipmentSummary {
   stoppedSeconds: number;
   stoppedTime: string;
   effectiveness: number;
+  classifications: SummaryClassificationRow[];
+  mainStops: SummaryStopReasonRow[];
+  operators: SummaryOperatorUsageRow[];
+  implements: SummaryImplementRow[];
+  history: SummaryHistoryRow[];
+}
+export interface StopMetrics {
+  stoppedSeconds: number;
+  stoppedTime: string;
+  stoppedPercentage: number;
+  stopCount: number;
+  averageDurationSeconds: number;
+  averageDuration: string;
+}
+export interface StopClassificationRow {
+  classification: string;
+  seconds: number;
+  time: string;
+  count: number;
+  percentage: number;
+}
+export interface StopOriginRow {
+  origin: "equipo" | "implemento" | "otro";
+  seconds: number;
+  time: string;
+  count: number;
+  percentage: number;
+}
+export interface StopReasonRow {
+  reason: string;
+  occurrences: number;
+  seconds: number;
+  time: string;
+  percentage: number;
+}
+export interface StopImplement {
+  id: string;
+  number: string;
+  name: string;
+}
+export interface StopDetailRow {
+  startLocal: string;
+  endLocal: string;
+  duration: string;
+  reason: string;
+  origin: "equipo" | "implemento" | "otro";
+  classification: string;
+  engineOn: boolean;
+  engine: string;
+  implement: StopImplement | null;
+}
+export interface EquipmentStops {
+  code: string;
+  metrics: StopMetrics;
+  classifications: StopClassificationRow[];
+  origins: StopOriginRow[];
+  mainReasons: StopReasonRow[];
+  details: StopDetailRow[];
+}
+export interface SummaryClassificationRow {
+  classification: string;
+  seconds: number;
+  time: string;
+  percentage: number;
+}
+export interface SummaryStopReasonRow {
+  reason: string;
+  occurrences: number;
+  seconds: number;
+  time: string;
+  percentage: number;
+}
+export interface SummaryOperatorUsageRow {
+  operatorId: string;
+  operator: string;
+  journeys: number;
+  seconds: number;
+  time: string;
+  percentage: number;
+}
+export interface SummaryImplementRow {
+  implementId: string;
+  number: string;
+  description: string;
+  journeys: number;
+  seconds: number;
+  time: string;
+  percentage: number;
+}
+export interface SummaryHistoryRow {
+  startAt: string;
+  endAt: string;
+  startLocal: string;
+  endLocal: string;
+  kind: "trabajando" | "parado";
+  detail: string;
+  seconds: number;
+  time: string;
 }
 export interface ReportLoadStates {
   equipmentList: ReportLoadState;

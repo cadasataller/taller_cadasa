@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef } from "vue";
 import { VueDatePicker } from "@vuepic/vue-datepicker";
+import { es } from "date-fns/locale";
 import "@vuepic/vue-datepicker/dist/main.css";
 import { CalendarDays, Filter, RotateCcw } from "lucide-vue-next";
 import type {
@@ -36,6 +37,17 @@ function toIsoDate(value: Date): string {
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatDateRange(value: Date | Date[]): string {
+  const dates = Array.isArray(value) ? value : [value];
+  const formatter = new Intl.DateTimeFormat("es", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  return dates.map((date) => formatter.format(date)).join(" - ");
 }
 
 const selectedRange = computed<[Date, Date]>({
@@ -78,8 +90,8 @@ function updateRange(value: Date | Date[] | null): void {
             range
             :enable-time-picker="false"
             auto-apply
-            format="dd/MM/yyyy"
-            locale="es"
+            :formats="{ input: formatDateRange }"
+            :locale="es"
             input-class-name="equipment-report-date-input"
             @update:model-value="updateRange"
           />
@@ -104,7 +116,7 @@ function updateRange(value: Date | Date[] | null): void {
           v-for="tab in tabs"
           :key="tab.key"
           type="button"
-          class="min-w-24 border-r border-gray-200 px-3 text-xs font-semibold transition-colors last:border-r-0"
+          class="min-w-24 cursor-pointer border-r border-gray-200 px-3 text-xs font-semibold transition-colors last:border-r-0"
           :class="
             activeTab === tab.key
               ? 'bg-main text-white'
@@ -121,7 +133,7 @@ function updateRange(value: Date | Date[] | null): void {
     <div class="flex items-center gap-2">
       <button
         type="button"
-        class="inline-flex h-8 items-center gap-1.5 rounded-md border border-main px-3 text-xs font-semibold text-main transition-colors hover:bg-main/5"
+        class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-main px-3 text-xs font-semibold text-main transition-colors hover:bg-main/5"
         :aria-pressed="isFiltersOpen"
         @click="isFiltersOpen = !isFiltersOpen"
       >
@@ -130,7 +142,7 @@ function updateRange(value: Date | Date[] | null): void {
       </button>
       <button
         type="button"
-        class="inline-flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 shadow-sm transition-colors hover:bg-gray-50"
+        class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 shadow-sm transition-colors hover:bg-gray-50"
         @click="emit('clear')"
       >
         <RotateCcw class="size-3.5" aria-hidden="true" />

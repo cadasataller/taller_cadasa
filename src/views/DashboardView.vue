@@ -22,6 +22,13 @@ type DashboardSlide = {
   requiredFeature: string;
 };
 
+type DeferredDashboardSlideId = "mantenimiento" | "productividad_semanal";
+
+type DeferredSlideLoadProps = {
+  isActive: boolean;
+  loadImmediately: boolean;
+};
+
 const route = useRoute();
 const router = useRouter();
 const { syncDashboardHeaderNav, clearDashboardHeaderNav } =
@@ -92,11 +99,34 @@ const slides = computed(() => {
 
 const containerRef = ref<HTMLElement | null>(null);
 const currentSlideIndex = ref(0);
+const immediateLoadSlideId = ref<DeferredDashboardSlideId | null>(null);
 
 const isBackable = computed(() => !!route.query.back);
 const backPath = computed(() => (route.query.back as string) || "/");
 
-const scrollToSlideIndex = (index: number) => {
+const isDeferredDashboardSlide = (
+  slideId: string,
+): slideId is DeferredDashboardSlideId =>
+  slideId === "mantenimiento" || slideId === "productividad_semanal";
+
+const getDeferredSlideLoadProps = (
+  slideId: string,
+): DeferredSlideLoadProps | Record<never, never> => {
+  if (!isDeferredDashboardSlide(slideId)) return {};
+
+  return {
+    isActive: slides.value[currentSlideIndex.value]?.id === slideId,
+    loadImmediately: immediateLoadSlideId.value === slideId,
+  };
+};
+
+const scrollToSlideIndex = (index: number, loadImmediately = false) => {
+  const targetSlideId = slides.value[index]?.id;
+  immediateLoadSlideId.value =
+    loadImmediately && targetSlideId && isDeferredDashboardSlide(targetSlideId)
+      ? targetSlideId
+      : null;
+
   if (containerRef.value) {
     const slideEl = containerRef.value.children[index] as HTMLElement;
     if (slideEl) {
@@ -166,7 +196,7 @@ watch(
   ([currentSlides, activeIndex]) => {
     syncDashboardHeaderNav({
       currentSlideIndex: activeIndex,
-      onSelectSlide: scrollToSlideIndex,
+      onSelectSlide: (index) => scrollToSlideIndex(index, true),
       slides: currentSlides.map(({ id, label }) => ({ id, label })),
     });
   },
@@ -248,7 +278,10 @@ onUnmounted(() => {
           class="flex flex-col gap-0"
           :class="slide.id === 'actividad_equipo' ? 'min-h-0 lg:h-full' : ''"
         >
-          <component :is="slide.component" />
+          <component
+            :is="slide.component"
+            v-bind="getDeferredSlideLoadProps(slide.id)"
+          />
           <!-- End of scroll spacer to separate from bottom nav -->
           <div
             v-if="slide.id !== 'productividad_semanal'"

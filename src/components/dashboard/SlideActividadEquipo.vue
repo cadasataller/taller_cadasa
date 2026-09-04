@@ -10,14 +10,19 @@ const {
   context,
   equipment,
   equipmentListState,
+  errors,
   filters,
   initialError,
   loadStates,
   masterDetail,
   selectedEquipment,
   selectedEquipmentCode,
+  summary,
   clearFilters,
   retry,
+  retrySummary,
+  retryStops,
+  stops,
   selectEquipment,
   setDateRange,
   setSearch,
@@ -53,6 +58,16 @@ const {
       <EquipmentReportCenter
         :active-tab="activeTab"
         :selected-equipment="selectedEquipment"
+        :summary="summary"
+        :master-detail="masterDetail"
+        :context="context"
+        :summary-state="loadStates.summary"
+        :summary-error="errors.summary"
+        :stops="stops"
+        :stops-state="loadStates.stops"
+        :stops-error="errors.stops"
+        @retry-summary="retrySummary"
+        @retry-stops="retryStops"
       />
       <EquipmentReportDetailSidebar
         :detail="masterDetail"

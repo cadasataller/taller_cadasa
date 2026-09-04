@@ -3,6 +3,7 @@ import type {
   EquipmentListItem,
   EquipmentMasterDetail,
   EquipmentSummary,
+  EquipmentStops,
 } from "./reporteEquipos.types";
 import type { z } from "zod";
 import {
@@ -10,6 +11,7 @@ import {
   equipmentListSchema,
   masterSchema,
   summarySchema,
+  stopsSchema,
 } from "./reporteEquipos.schemas";
 
 export const mapEquipmentList = (
@@ -51,6 +53,95 @@ export const mapSummary = (
   stoppedSeconds: dto.metricas.tiempo_parado_segundos,
   stoppedTime: dto.metricas.tiempo_parado,
   effectiveness: dto.metricas.efectividad,
+  classifications: dto.clasificaciones.map((row) => ({
+    classification: row.clasificacion,
+    seconds: row.tiempo_segundos,
+    time: row.tiempo,
+    percentage: row.porcentaje,
+  })),
+  mainStops: dto.principales_paradas.map((row) => ({
+    reason: row.motivo,
+    occurrences: row.ocurrencias,
+    seconds: row.tiempo_segundos,
+    time: row.tiempo,
+    percentage: row.porcentaje_paradas,
+  })),
+  operators: dto.operadores.map((row) => ({
+    operatorId: row.operador_id,
+    operator: row.operador,
+    journeys: row.jornadas,
+    seconds: row.tiempo_segundos,
+    time: row.tiempo,
+    percentage: row.porcentaje,
+  })),
+  implements: dto.implementos.map((row) => ({
+    implementId: String(row.implemento_id),
+    number: String(row.numero),
+    description: row.descripcion,
+    journeys: row.jornadas,
+    seconds: row.tiempo_segundos,
+    time: row.tiempo,
+    percentage: row.porcentaje_uso,
+  })),
+  history: dto.historial.map((row) => ({
+    startAt: row.inicio,
+    endAt: row.fin,
+    startLocal: row.inicio_local,
+    endLocal: row.fin_local,
+    kind: row.tipo,
+    detail: row.detalle,
+    seconds: row.tiempo_segundos,
+    time: row.tiempo,
+  })),
+});
+export const mapStops = (dto: z.infer<typeof stopsSchema>): EquipmentStops => ({
+  code: dto.equipo_numero,
+  metrics: {
+    stoppedSeconds: dto.metricas.tiempo_parado_segundos,
+    stoppedTime: dto.metricas.tiempo_parado,
+    stoppedPercentage: dto.metricas.porcentaje_parado,
+    stopCount: dto.metricas.cantidad_paradas,
+    averageDurationSeconds: dto.metricas.duracion_promedio_segundos,
+    averageDuration: dto.metricas.duracion_promedio,
+  },
+  classifications: dto.por_clasificacion.map((row) => ({
+    classification: row.clasificacion,
+    seconds: row.tiempo_segundos,
+    time: row.tiempo,
+    count: row.cantidad,
+    percentage: row.porcentaje_parado,
+  })),
+  origins: dto.por_origen.map((row) => ({
+    origin: row.origen,
+    seconds: row.tiempo_segundos,
+    time: row.tiempo,
+    count: row.cantidad,
+    percentage: row.porcentaje_parado,
+  })),
+  mainReasons: dto.principales_motivos.map((row) => ({
+    reason: row.motivo,
+    occurrences: row.ocurrencias,
+    seconds: row.tiempo_segundos,
+    time: row.tiempo,
+    percentage: row.porcentaje_parado,
+  })),
+  details: dto.detalle.map((row) => ({
+    startLocal: row.inicio_local,
+    endLocal: row.fin_local,
+    duration: row.duracion,
+    reason: row.motivo,
+    origin: row.origen,
+    classification: row.clasificacion,
+    engineOn: row.motor_encendido,
+    engine: row.motor,
+    implement: row.implemento
+      ? {
+          id: String(row.implemento.id),
+          number: String(row.implemento.numero),
+          name: row.implemento.nombre,
+        }
+      : null,
+  })),
 });
 export const mapMaster = (
   dto: z.infer<typeof masterSchema>,

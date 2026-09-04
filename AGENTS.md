@@ -12,7 +12,7 @@ Antes de crear o modificar cualquier archivo, valida Prettier usando el gestor d
 Después de crear o modificar cualquier documento o archivo de código, formatéalo con:
 `pnpm exec prettier --write <ruta-del-archivo>`.
 
-valida que los specs de segumineot usan la conexion de supabaseRastreoTareas sino se usa usalo y acutliza el specs, tambien valida que usan tailwind anten de implemtna el specs yq ue usan los htlmls de rasrteo_tarae como guia para como debe mostar la ui pero siempre usando vue tailwind y ts, valida tambien que usa los tipso correcto de los rpcs como esta deifnido en rpcs_funciones_bd.md
+cada que hagas un cambio valia si existe specs relaciodno luego de terminar la trea, si eciste pregutnar si acutalizas los specs sino hay valida cual es o si debe crear pregutna no lo hagas tu mismo
 
 usa iconos de lucide icon
 

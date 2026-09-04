@@ -55,4 +55,4 @@ fase-4-operadores/
 fase-5-responsive-calidad/
 ```
 
-Solo la fase 0 está especificada por ahora. Las posteriores deben partir de sus contratos y decisiones, sin redefinir el cliente, el layout global ni la fuente visual.
+Las fases 0, 2, 3, 4 y 5 ya están especificadas. Las fases posteriores deben partir de sus contratos y decisiones, sin redefinir el cliente, el layout global ni la fuente visual.

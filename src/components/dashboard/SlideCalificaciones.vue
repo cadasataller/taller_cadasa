@@ -15,6 +15,7 @@ import ImageZoomViewer from "@/components/common/ImageZoomViewer.vue";
 import InspectionReadOnlyPanel from "@/components/dashboard/InspectionReadOnlyPanel.vue";
 import { parseMeetingObservation } from "@/utils/meetingRatings";
 import { ratingsService } from "@/stores/ratingsStore.service";
+import { useOmsgAssignmentComplianceStore } from "@/stores/omsgAssignmentComplianceStore";
 import type {
   PuntuacionSupervisorOtArea,
   RatingsCriterio,
@@ -25,6 +26,7 @@ import type {
   AssignedHoursWorkOrder,
   AssignedHoursWorkerGroup,
 } from "@/stores/assignedHoursStore.types";
+import type { OmsgAssignmentComplianceItem } from "@/stores/omsgAssignmentCompliance.types";
 import { Bar } from "vue-chartjs";
 import {
   Chart as ChartJS,
@@ -57,6 +59,7 @@ ChartJS.register(
 
 const store = useRatingsStore();
 const assignedHoursStore = useAssignedHoursStore();
+const omsgAssignmentComplianceStore = useOmsgAssignmentComplianceStore();
 const userStore = useUserStore();
 const route = useRoute();
 
@@ -188,6 +191,10 @@ const assignedHours = ref<AssignedHoursWorkOrder[]>([]);
 const isAssignedHoursLoading = ref(false);
 const assignedHoursError = ref<string | null>(null);
 const assignedHoursLoadedKey = ref("");
+const omsgAssignmentComplianceItems = ref<OmsgAssignmentComplianceItem[]>([]);
+const isOmsgAssignmentComplianceLoading = shallowRef(false);
+const omsgAssignmentComplianceError = ref<string | null>(null);
+const omsgAssignmentComplianceLoadedKey = ref("");
 
 const chartOptions = {
   responsive: true,
@@ -397,6 +404,33 @@ const loadAssignedHours = async (force = false): Promise<void> => {
   }
 };
 
+const loadOmsgAssignmentCompliance = async (force = false): Promise<void> => {
+  if (!selectedInspection.value || !selectedSupervisorEmail.value) return;
+
+  const nextKey = `${selectedSupervisorEmail.value}_${selectedInspection.value.fecha}`;
+  if (omsgAssignmentComplianceLoadedKey.value === nextKey && !force) return;
+
+  isOmsgAssignmentComplianceLoading.value = true;
+  omsgAssignmentComplianceError.value = null;
+
+  try {
+    omsgAssignmentComplianceItems.value =
+      await omsgAssignmentComplianceStore.fetchCompliance(
+        selectedSupervisorEmail.value,
+        selectedInspection.value.fecha,
+        force,
+      );
+    omsgAssignmentComplianceLoadedKey.value = nextKey;
+  } catch (error) {
+    omsgAssignmentComplianceError.value =
+      error instanceof Error
+        ? error.message
+        : "No se pudo cargar el cumplimiento de asignación OMSG.";
+  } finally {
+    isOmsgAssignmentComplianceLoading.value = false;
+  }
+};
+
 const getPreviousBusinessDate = (dateString: string): string => {
   const baseDate = new Date(`${dateString}T00:00:00`);
 
@@ -450,6 +484,9 @@ const openInspectionDetail = (inspection: RatingsInspeccionNormalizada) => {
   assignedHours.value = [];
   assignedHoursError.value = null;
   assignedHoursLoadedKey.value = "";
+  omsgAssignmentComplianceItems.value = [];
+  omsgAssignmentComplianceError.value = null;
+  omsgAssignmentComplianceLoadedKey.value = "";
 };
 
 const closeInspectionDetail = () => {
@@ -881,10 +918,14 @@ const getInspectionObservationText = (observation?: string | null) => {
       :assigned-hours-groups="assignedHoursGroups"
       :assigned-hours-loading="isAssignedHoursLoading"
       :assigned-hours-error="assignedHoursError"
+      :omsg-assignment-compliance-items="omsgAssignmentComplianceItems"
+      :omsg-assignment-compliance-loading="isOmsgAssignmentComplianceLoading"
+      :omsg-assignment-compliance-error="omsgAssignmentComplianceError"
       @close="closeInspectionDetail"
       @view-photos="openPhotos"
       @load-closing="loadClosingCompliance"
       @load-assigned-hours="loadAssignedHours"
+      @load-omsg-assignment-compliance="loadOmsgAssignmentCompliance"
     />
 
     <!-- Modal de Fotos -->

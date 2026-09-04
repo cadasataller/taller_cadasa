@@ -3,6 +3,7 @@ import {
   mapContext,
   mapEquipmentList,
   mapMaster,
+  mapStops,
   mapSummary,
 } from "./reporteEquipos.mappers";
 import {
@@ -10,12 +11,14 @@ import {
   equipmentListSchema,
   masterSchema,
   summarySchema,
+  stopsSchema,
 } from "./reporteEquipos.schemas";
 import type {
   EquipmentContext,
   EquipmentListItem,
   EquipmentMasterDetail,
   EquipmentSummary,
+  EquipmentStops,
   ReportFilters,
 } from "./reporteEquipos.types";
 
@@ -78,6 +81,21 @@ export const reporteEquiposService = {
         "No se pudo cargar el resumen del equipo.",
       );
     return mapSummary(summarySchema.parse(data));
+  },
+  async loadStops(
+    code: string,
+    filters: ReportFilters,
+  ): Promise<EquipmentStops> {
+    const { data, error } = await supabaseCapturaOperador.rpc(
+      "rpc_reporte_equipo_paradas",
+      { p_equipo: code, p_desde: filters.startDate, p_hasta: filters.endDate },
+    );
+    if (error)
+      return throwRemoteError(
+        error.message,
+        "No se pudo cargar las paradas del equipo.",
+      );
+    return mapStops(stopsSchema.parse(data));
   },
   async loadMasterDetail(code: string): Promise<EquipmentMasterDetail | null> {
     const { data, error } = await supabaseEquipos.rpc(

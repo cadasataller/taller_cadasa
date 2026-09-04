@@ -18,6 +18,16 @@ import { useHorasPerdidasAreaMotivoStore } from "@/stores/db_mantenimiento/horas
 import type { ProductividadSemanalArea } from "@/stores/horasTrabajo.types";
 import { getWeekNumber } from "@/utils/dateUtils";
 
+interface DeferredDashboardLoadProps {
+  isActive: boolean;
+  loadImmediately: boolean;
+}
+
+const props = withDefaults(defineProps<DeferredDashboardLoadProps>(), {
+  isActive: false,
+  loadImmediately: false,
+});
+
 const horasTrabajoStore = useHorasTrabajoStore();
 const maintenanceStore = useMaintenanceStore();
 const horasPerdidasAreaMotivoStore = useHorasPerdidasAreaMotivoStore();
@@ -50,6 +60,8 @@ const slideCaptureRef = useTemplateRef<HTMLElement>("slideCaptureRef");
 const dashboardTablesLoading = ref(false);
 const dashboardTablesLoaded = ref(false);
 const dashboardTablesError = ref<string | null>(null);
+let dataLoadTimer: ReturnType<typeof setTimeout> | null = null;
+let hasRequestedData = false;
 
 const productivitySlides = computed(
   () => productividadSemanal.value?.areas ?? [],
@@ -147,6 +159,19 @@ const loadAllProductivityData = () => {
   void Promise.allSettled([loadProductividad(), loadDashboardTables()]);
 };
 
+const clearDataLoadTimer = () => {
+  if (!dataLoadTimer) return;
+  clearTimeout(dataLoadTimer);
+  dataLoadTimer = null;
+};
+
+const loadDataOnce = () => {
+  if (hasRequestedData) return;
+
+  hasRequestedData = true;
+  loadAllProductivityData();
+};
+
 const goPrevious = () => {
   if (!canGoPrevious.value) return;
   currentSlideIndex.value -= 1;
@@ -218,12 +243,31 @@ watch(productivitySlides, (slides) => {
   }
 });
 
+watch(
+  [() => props.isActive, () => props.loadImmediately],
+  ([isActive, loadImmediately]) => {
+    clearDataLoadTimer();
+
+    if (!isActive || hasRequestedData) return;
+
+    if (loadImmediately) {
+      loadDataOnce();
+      return;
+    }
+
+    dataLoadTimer = setTimeout(() => {
+      if (props.isActive) loadDataOnce();
+    }, 2000);
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
-  loadAllProductivityData();
   window.addEventListener("keydown", handleKeyNavigation);
 });
 
 onUnmounted(() => {
+  clearDataLoadTimer();
   window.removeEventListener("keydown", handleKeyNavigation);
 });
 </script>

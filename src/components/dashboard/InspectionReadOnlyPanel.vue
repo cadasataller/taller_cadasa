@@ -16,6 +16,7 @@ import {
 } from "lucide-vue-next";
 import { parseMeetingObservation } from "@/utils/meetingRatings";
 import AssignedHoursReadOnlyPanel from "@/components/dashboard/AssignedHoursReadOnlyPanel.vue";
+import OmsgAssignmentCompliancePanel from "@/components/ratings/OmsgAssignmentCompliancePanel.vue";
 import type {
   RatingsCriterio,
   RatingsDetalle,
@@ -23,6 +24,7 @@ import type {
 } from "@/stores/ratingsStore.types";
 import type { PuntuacionSupervisorOtArea } from "@/stores/ratingsStore.types";
 import type { AssignedHoursGroup } from "@/stores/assignedHoursStore.types";
+import type { OmsgAssignmentComplianceItem } from "@/stores/omsgAssignmentCompliance.types";
 
 const props = defineProps<{
   inspection: RatingsInspeccionNormalizada;
@@ -38,6 +40,9 @@ const props = defineProps<{
   assignedHoursGroups: AssignedHoursGroup[];
   assignedHoursLoading: boolean;
   assignedHoursError: string | null;
+  omsgAssignmentComplianceItems: OmsgAssignmentComplianceItem[];
+  omsgAssignmentComplianceLoading: boolean;
+  omsgAssignmentComplianceError: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -45,6 +50,7 @@ const emit = defineEmits<{
   viewPhotos: [photoUrls: string];
   loadClosing: [];
   loadAssignedHours: [force: boolean];
+  loadOmsgAssignmentCompliance: [force: boolean];
 }>();
 
 type DrawerTab = "evaluation" | "closing";
@@ -411,6 +417,13 @@ const selectTab = (tab: DrawerTab): void => {
           :error="assignedHoursError"
           :inspection-date="inspection.fecha"
           @load="emit('loadAssignedHours', $event)"
+        />
+
+        <OmsgAssignmentCompliancePanel
+          :items="omsgAssignmentComplianceItems"
+          :is-loading="omsgAssignmentComplianceLoading"
+          :error="omsgAssignmentComplianceError"
+          @load="emit('loadOmsgAssignmentCompliance', $event)"
         />
 
         <section class="rounded-xl p-3" :style="managementSurfaceStyle">

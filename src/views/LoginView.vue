@@ -8,6 +8,7 @@ import {
   supabase,
   supabaseRatings,
   supabaseCompras,
+  supabaseCapturaOperador,
   supabaseEquipos,
   supabaseRastreoTareas,
 } from "@/lib/supabase";
@@ -53,6 +54,21 @@ const login = async () => {
         email: emailTrimmed,
         password: password.value,
       });
+      const p6 = supabaseCapturaOperador.auth.signInWithPassword({
+        email: emailTrimmed,
+        password: password.value,
+      });
+      void p6
+        .then(({ data, error }) => {
+          if (error || !data.session) {
+            console.warn(
+              "No se inició la sesión opcional de Captura Operador.",
+            );
+          }
+        })
+        .catch(() => {
+          console.warn("No se pudo conectar a Captura Operador.");
+        });
 
       const [res1, res2, res3, res4, res5] = await Promise.all([
         p1,
@@ -138,7 +154,7 @@ const login = async () => {
             <button
               type="button"
               @click="showPassword = !showPassword"
-              class="p-1 hover:bg-gray-100 rounded-md transition-colors"
+              class="cursor-pointer rounded-md p-1 transition-colors hover:bg-gray-100"
             >
               <component
                 :is="showPassword ? EyeOff : Eye"

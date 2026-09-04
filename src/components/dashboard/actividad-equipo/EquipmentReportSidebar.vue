@@ -86,7 +86,7 @@ function submitSearch(): void {
         </div>
         <button
           type="button"
-          class="mt-2 font-semibold underline"
+          class="mt-2 cursor-pointer font-semibold underline"
           @click="emit('retry')"
         >
           Reintentar
@@ -104,7 +104,7 @@ function submitSearch(): void {
           :key="item.code"
           :id="`equipment-row-${item.code}`"
           type="button"
-          class="mb-1.5 grid min-h-12 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors"
+          class="mb-1.5 grid min-h-12 w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors"
           :class="
             selectedCode === item.code
               ? 'border-main/40 bg-success/10'

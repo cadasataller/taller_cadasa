@@ -6,6 +6,7 @@ import type {
   EquipmentListItem,
   EquipmentMasterDetail,
   EquipmentSummary,
+  EquipmentStops,
   ReportFilters,
   ReportLoadState,
   ReportLoadStates,
@@ -44,8 +45,18 @@ export const useReporteEquiposStore = defineStore(
     const masterDetail = shallowRef<EquipmentMasterDetail | null>(null);
     const context = shallowRef<EquipmentContext | null>(null);
     const summary = shallowRef<EquipmentSummary | null>(null);
+    const stops = shallowRef<EquipmentStops | null>(null);
     const loadStates = ref<ReportLoadStates>(initialStates());
     const initialError = shallowRef<string | null>(null);
+    const errors = ref<Record<keyof ReportLoadStates, string | null>>({
+      equipmentList: null,
+      equipmentDetail: null,
+      context: null,
+      summary: null,
+      stops: null,
+      operators: null,
+      operatorDetail: null,
+    });
     const selectedEquipment = computed(
       () =>
         equipment.value.find(
@@ -53,6 +64,10 @@ export const useReporteEquiposStore = defineStore(
         ) ?? null,
     );
     let requestId = 0;
+    let stopsRequestId = 0;
+    const stopsCache = new Map<string, EquipmentStops>();
+    const stopsCacheKey = (code: string): string =>
+      `${code}:${filters.value.startDate}:${filters.value.endDate}`;
     const updateState = (
       key: keyof ReportLoadStates,
       value: ReportLoadState,
@@ -61,8 +76,15 @@ export const useReporteEquiposStore = defineStore(
     };
     const setFailure = (key: keyof ReportLoadStates, error: Error): void => {
       updateState(key, "error");
+      errors.value = { ...errors.value, [key]: error.message };
       initialError.value = error.message;
     };
+    function invalidateStops(): void {
+      ++stopsRequestId;
+      stops.value = null;
+      updateState("stops", "idle");
+      errors.value = { ...errors.value, stops: null };
+    }
     async function selectEquipment(code: string): Promise<void> {
       const currentRequest = ++requestId;
       selectedEquipmentCode.value = code;
@@ -70,9 +92,17 @@ export const useReporteEquiposStore = defineStore(
       masterDetail.value = null;
       context.value = null;
       summary.value = null;
+      errors.value = {
+        ...errors.value,
+        equipmentDetail: null,
+        context: null,
+        summary: null,
+        stops: null,
+      };
       updateState("equipmentDetail", "loading");
       updateState("context", "loading");
       updateState("summary", "loading");
+      invalidateStops();
       const results = await Promise.allSettled([
         reporteEquiposService.loadMasterDetail(code),
         reporteEquiposService.loadContext(code, filters.value),
@@ -110,6 +140,7 @@ export const useReporteEquiposStore = defineStore(
             ? summaryResult.reason
             : new Error("No se pudo cargar el resumen del equipo."),
         );
+      if (activeTab.value === "paradas") void loadStops();
     }
     async function loadInitial(): Promise<void> {
       const currentRequest = ++requestId;
@@ -135,11 +166,62 @@ export const useReporteEquiposStore = defineStore(
     }
     function setTab(tab: ReportTab): void {
       activeTab.value = tab;
+      if (tab === "paradas") void loadStops();
+    }
+    async function loadStops(force = false): Promise<void> {
+      const code = selectedEquipmentCode.value;
+      if (!code) return;
+      const key = stopsCacheKey(code);
+      if (!force) {
+        const cachedStops = stopsCache.get(key);
+        if (cachedStops) {
+          stops.value = cachedStops;
+          updateState(
+            "stops",
+            cachedStops.metrics.stopCount === 0 ? "empty" : "ready",
+          );
+          return;
+        }
+      }
+      const currentRequest = ++stopsRequestId;
+      stops.value = null;
+      updateState("stops", "loading");
+      errors.value = { ...errors.value, stops: null };
+      try {
+        const loadedStops = await reporteEquiposService.loadStops(
+          code,
+          filters.value,
+        );
+        if (
+          currentRequest !== stopsRequestId ||
+          code !== selectedEquipmentCode.value ||
+          key !== stopsCacheKey(code)
+        )
+          return;
+        stopsCache.set(key, loadedStops);
+        stops.value = loadedStops;
+        updateState(
+          "stops",
+          loadedStops.metrics.stopCount === 0 ? "empty" : "ready",
+        );
+      } catch (error) {
+        if (currentRequest !== stopsRequestId) return;
+        setFailure(
+          "stops",
+          error instanceof Error
+            ? error
+            : new Error("No se pudo cargar las paradas del equipo."),
+        );
+      }
+    }
+    async function retryStops(): Promise<void> {
+      await loadStops(true);
     }
     async function setDateRange(
       startDate: string,
       endDate: string,
     ): Promise<void> {
+      invalidateStops();
       filters.value = { ...filters.value, startDate, endDate };
       await loadInitial();
     }
@@ -148,8 +230,29 @@ export const useReporteEquiposStore = defineStore(
       await loadInitial();
     }
     async function clearFilters(): Promise<void> {
+      invalidateStops();
       filters.value = initialFilters();
       await loadInitial();
+    }
+    async function retrySummary(): Promise<void> {
+      const code = selectedEquipmentCode.value;
+      if (!code) return;
+      updateState("summary", "loading");
+      errors.value = { ...errors.value, summary: null };
+      try {
+        summary.value = await reporteEquiposService.loadSummary(
+          code,
+          filters.value,
+        );
+        updateState("summary", "ready");
+      } catch (error) {
+        setFailure(
+          "summary",
+          error instanceof Error
+            ? error
+            : new Error("No se pudo cargar el resumen del equipo."),
+        );
+      }
     }
     return {
       filters,
@@ -161,14 +264,18 @@ export const useReporteEquiposStore = defineStore(
       masterDetail,
       context,
       summary,
+      stops,
       loadStates,
       initialError,
+      errors,
       loadInitial,
       selectEquipment,
       setTab,
       setDateRange,
       setSearch,
       clearFilters,
+      retrySummary,
+      retryStops,
     };
   },
 );
