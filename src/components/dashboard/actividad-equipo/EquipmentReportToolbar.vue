@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, shallowRef } from "vue";
+import { computed, shallowRef, watch } from "vue";
 import { VueDatePicker } from "@vuepic/vue-datepicker";
 import { es } from "date-fns/locale";
 import "@vuepic/vue-datepicker/dist/main.css";
-import { CalendarDays, Filter, RotateCcw } from "lucide-vue-next";
+import { Filter, RotateCcw } from "lucide-vue-next";
+import { z } from "zod";
 import type {
   ReportFilters,
   ReportTab,
@@ -30,6 +31,7 @@ const tabs: { key: ReportTab; label: string }[] = [
 const visibleTabs = computed(() =>
   tabs.filter((tab) => props.availableTabs.includes(tab.key)),
 );
+const dateRangeSchema = z.array(z.date().nullable()).min(1).max(2);
 
 function dateFromIso(value: string): Date {
   const [year, month, day] = value.split("-").map(Number);
@@ -54,21 +56,28 @@ function formatDateRange(value: Date | Date[]): string {
   return dates.map((date) => formatter.format(date)).join(" - ");
 }
 
-const selectedRange = computed<[Date, Date]>({
-  get: () => [
-    dateFromIso(props.filters.startDate),
-    dateFromIso(props.filters.endDate),
-  ],
-  set: (range) =>
-    emit("updateDateRange", toIsoDate(range[0]), toIsoDate(range[1])),
-});
+type DateRangeSelection = [Date | null, Date | null];
+
+const selectedRange = shallowRef<DateRangeSelection>([
+  dateFromIso(props.filters.startDate),
+  dateFromIso(props.filters.endDate),
+]);
 const isFiltersOpen = shallowRef(false);
 
+watch(
+  () => [props.filters.startDate, props.filters.endDate] as const,
+  ([startDate, endDate]) => {
+    selectedRange.value = [dateFromIso(startDate), dateFromIso(endDate)];
+  },
+);
+
 function updateRange(value: Date | Date[] | null): void {
-  if (!Array.isArray(value) || value.length !== 2) return;
-  const [startDate, endDate] = value;
-  if (!startDate || !endDate) return;
+  const parsedRange = dateRangeSchema.safeParse(value);
+  if (!parsedRange.success) return;
+  const [startDate = null, endDate = null] = parsedRange.data;
   selectedRange.value = [startDate, endDate];
+  if (!startDate || !endDate) return;
+  emit("updateDateRange", toIsoDate(startDate), toIsoDate(endDate));
 }
 </script>
 
