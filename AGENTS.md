@@ -21,3 +21,9 @@ valida si tiene zod instalado, si lo tien cualquier logica de validacion que pue
 si hay algun componente que usa input date usa la libreria vue date picker que esya instalado, sino lo esta detente y pide qye lo instale, adapta la logica de fecha que se neceati al date picker vue
 
 nunca usas unknown o any, solo bajo estas condionces: aanlzia y si determinar ese uso detente y di que necesita para evitar que eso sea unknowe o any para poder tiparlo bien, si la repsuesta es no importa ntonces usa unknow o any si te dan un tipado o algo que permitar tiapr ntonces evita usar unknow o any
+
+los tamaño con tailwidns debe generarse tomando en cuenta que mi app es un erp y el tamñao base es xs sm
+
+prioriza a medida que haces la ui para web ir adaptando a mobile cada componente
+
+agrega la clase cursor a cualquier boton o componente que emit eventos de selecion

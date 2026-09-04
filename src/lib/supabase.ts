@@ -49,6 +49,18 @@ export const supabaseEquipos = createClient(
   supabaseEquiposAnonKey,
 );
 
+const supabaseCapturaOperadorUrl =
+  import.meta.env.VITE_SUPABASE_CAPTURA_OPERADOR_URL ||
+  "https://zabangygpfchxmxawict.supabase.co";
+const supabaseCapturaOperadorAnonKey =
+  import.meta.env.VITE_SUPABASE_CAPTURA_OPERADOR_ANON_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphYmFuZ3lncGZjaHhteGF3aWN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NjQwOTQsImV4cCI6MjEwMjU0MDA5NH0.VjstRj0SOQeNzFRWOr1HoQm-Azx_KJ92fY86waE3ZdE";
+
+export const supabaseCapturaOperador = createClient(
+  supabaseCapturaOperadorUrl,
+  supabaseCapturaOperadorAnonKey,
+);
+
 // Client for Task Tracking Database
 const supabaseRastreoTareasUrl =
   import.meta.env.VITE_SUPABASE_RASTREO_TAREAS_URL ||

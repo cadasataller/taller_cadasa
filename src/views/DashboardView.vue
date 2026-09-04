@@ -239,12 +239,15 @@ onUnmounted(() => {
         :id="'dashboard-slide-' + slide.id"
         class="min-w-full w-full flex-shrink-0 snap-center"
         :class="
-          slide.id === 'productividad_semanal'
-            ? 'px-4 pb-[120px] md:px-6 md:pb-8 md:pt-0 lg:px-10 lg:pb-10 lg:pt-0 overflow-y-auto'
+          slide.id === 'actividad_equipo'
+            ? 'min-h-0 overflow-y-auto px-4 pb-[120px] md:px-6 md:pb-8 md:pt-0 lg:px-10 lg:pb-10 lg:pt-0 lg:overflow-hidden'
             : 'px-4 pb-[120px] md:px-6 md:pb-8 md:pt-0 lg:px-10 lg:pb-10 lg:pt-0 overflow-y-auto'
         "
       >
-        <div class="flex flex-col gap-0">
+        <div
+          class="flex flex-col gap-0"
+          :class="slide.id === 'actividad_equipo' ? 'min-h-0 lg:h-full' : ''"
+        >
           <component :is="slide.component" />
           <!-- End of scroll spacer to separate from bottom nav -->
           <div

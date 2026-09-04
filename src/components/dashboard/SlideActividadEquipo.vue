@@ -1,22 +1,66 @@
 <script setup lang="ts">
-import { Activity } from "lucide-vue-next";
+import EquipmentReportCenter from "@/components/dashboard/actividad-equipo/EquipmentReportCenter.vue";
+import EquipmentReportDetailSidebar from "@/components/dashboard/actividad-equipo/EquipmentReportDetailSidebar.vue";
+import EquipmentReportSidebar from "@/components/dashboard/actividad-equipo/EquipmentReportSidebar.vue";
+import EquipmentReportToolbar from "@/components/dashboard/actividad-equipo/EquipmentReportToolbar.vue";
+import { useReporteEquiposView } from "@/composables/dashboard/useReporteEquiposView";
+
+const {
+  activeTab,
+  context,
+  equipment,
+  equipmentListState,
+  filters,
+  initialError,
+  loadStates,
+  masterDetail,
+  selectedEquipment,
+  selectedEquipmentCode,
+  clearFilters,
+  retry,
+  selectEquipment,
+  setDateRange,
+  setSearch,
+  setTab,
+} = useReporteEquiposView();
 </script>
 
 <template>
   <section
-    class="flex min-h-80 flex-col items-center justify-center px-6 text-center"
+    id="equipment-report-view"
+    class="flex h-full min-h-80 flex-1 flex-col bg-second text-sm text-gray-900 lg:min-h-0"
   >
-    <div
-      class="mb-5 grid size-16 place-items-center rounded-2xl border border-main/10 bg-main/5 text-main"
+    <EquipmentReportToolbar
+      :filters="filters"
+      :active-tab="activeTab"
+      @update-date-range="setDateRange"
+      @set-tab="setTab"
+      @clear="clearFilters"
+    />
+    <main
+      id="equipment-report-workspace"
+      class="grid min-h-0 flex-1 grid-cols-1 gap-3 px-4 pb-4 md:px-5 lg:grid-cols-[250px_minmax(0,1fr)_300px] lg:overflow-hidden"
     >
-      <Activity class="size-8" aria-hidden="true" />
-    </div>
-    <p class="text-xs font-bold uppercase tracking-[0.2em] text-main">
-      Próximamente
-    </p>
-    <h2 class="mt-2 text-xl font-bold text-gray-800">Actividad de equipo</h2>
-    <p class="mt-2 max-w-sm text-sm leading-6 text-gray-500">
-      Este reporte estará disponible cuando se conecten sus métricas operativas.
-    </p>
+      <EquipmentReportSidebar
+        :equipment="equipment"
+        :selected-code="selectedEquipmentCode"
+        :load-state="equipmentListState"
+        :error="initialError"
+        @select="selectEquipment"
+        @search="setSearch"
+        @retry="retry"
+      />
+      <EquipmentReportCenter
+        :active-tab="activeTab"
+        :selected-equipment="selectedEquipment"
+      />
+      <EquipmentReportDetailSidebar
+        :detail="masterDetail"
+        :context="context"
+        :detail-state="loadStates.equipmentDetail"
+        :context-state="loadStates.context"
+        :error="initialError"
+      />
+    </main>
   </section>
 </template>

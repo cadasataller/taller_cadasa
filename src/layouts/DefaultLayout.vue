@@ -14,6 +14,7 @@ import {
   supabase,
   supabaseRatings,
   supabaseCompras,
+  supabaseCapturaOperador,
   supabaseEquipos,
   supabaseRastreoTareas,
 } from "@/lib/supabase";
@@ -489,6 +490,7 @@ const logout = async () => {
     supabase.auth.signOut(),
     supabaseRatings.auth.signOut(),
     supabaseCompras.auth.signOut(),
+    supabaseCapturaOperador.auth.signOut(),
     supabaseEquipos.auth.signOut(),
     supabaseRastreoTareas.auth.signOut(),
   ]);
