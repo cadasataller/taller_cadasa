@@ -22,13 +22,6 @@ type DashboardSlide = {
   requiredFeature: string;
 };
 
-type DeferredDashboardSlideId = "mantenimiento" | "productividad_semanal";
-
-type DeferredSlideLoadProps = {
-  isActive: boolean;
-  loadImmediately: boolean;
-};
-
 const route = useRoute();
 const router = useRouter();
 const { syncDashboardHeaderNav, clearDashboardHeaderNav } =
@@ -97,56 +90,29 @@ const slides = computed(() => {
   );
 });
 
-const containerRef = ref<HTMLElement | null>(null);
 const currentSlideIndex = ref(0);
-const immediateLoadSlideId = ref<DeferredDashboardSlideId | null>(null);
 
 const isBackable = computed(() => !!route.query.back);
 const backPath = computed(() => (route.query.back as string) || "/");
 
-const isDeferredDashboardSlide = (
-  slideId: string,
-): slideId is DeferredDashboardSlideId =>
-  slideId === "mantenimiento" || slideId === "productividad_semanal";
+const activeSlide = computed(
+  () => slides.value[currentSlideIndex.value] ?? null,
+);
 
-const getDeferredSlideLoadProps = (
-  slideId: string,
-): DeferredSlideLoadProps | Record<never, never> => {
-  if (!isDeferredDashboardSlide(slideId)) return {};
+const getSlideLoadProps = (slideId: string) => {
+  if (slideId !== "mantenimiento" && slideId !== "productividad_semanal") {
+    return {};
+  }
 
   return {
-    isActive: slides.value[currentSlideIndex.value]?.id === slideId,
-    loadImmediately: immediateLoadSlideId.value === slideId,
+    isActive: true,
+    loadImmediately: true,
   };
 };
 
-const scrollToSlideIndex = (index: number, loadImmediately = false) => {
-  const targetSlideId = slides.value[index]?.id;
-  immediateLoadSlideId.value =
-    loadImmediately && targetSlideId && isDeferredDashboardSlide(targetSlideId)
-      ? targetSlideId
-      : null;
-
-  if (containerRef.value) {
-    const slideEl = containerRef.value.children[index] as HTMLElement;
-    if (slideEl) {
-      containerRef.value.scrollTo({
-        left: slideEl.offsetLeft,
-        behavior: "smooth",
-      });
-    }
-  }
+const selectSlideIndex = (index: number) => {
+  if (!slides.value[index]) return;
   currentSlideIndex.value = index;
-};
-
-const handleScroll = () => {
-  if (!containerRef.value) return;
-  const scrollLeft = containerRef.value.scrollLeft;
-  const slideWidth = containerRef.value.clientWidth;
-  const index = Math.round(scrollLeft / slideWidth);
-  if (currentSlideIndex.value !== index) {
-    currentSlideIndex.value = index;
-  }
 };
 
 const goBack = () => {
@@ -169,9 +135,7 @@ watch(
         const idx = slides.value.findIndex((s) => s.id === initialSlide);
         if (idx !== -1) {
           currentSlideIndex.value = idx;
-          nextTick(() => {
-            scrollToSlideIndex(idx);
-          });
+          nextTick(() => selectSlideIndex(idx));
         }
       }
     });
@@ -185,7 +149,7 @@ watch(
     if (newSlide) {
       const idx = slides.value.findIndex((s) => s.id === newSlide);
       if (idx !== -1 && idx !== currentSlideIndex.value) {
-        scrollToSlideIndex(idx);
+        selectSlideIndex(idx);
       }
     }
   },
@@ -196,7 +160,7 @@ watch(
   ([currentSlides, activeIndex]) => {
     syncDashboardHeaderNav({
       currentSlideIndex: activeIndex,
-      onSelectSlide: (index) => scrollToSlideIndex(index, true),
+      onSelectSlide: selectSlideIndex,
       slides: currentSlides.map(({ id, label }) => ({ id, label })),
     });
   },
@@ -256,49 +220,23 @@ onUnmounted(() => {
       </div>
     </div>
     <div
-      v-if="!isLoading"
-      id="dashboard-slider-container"
-      ref="containerRef"
-      @scroll.passive="handleScroll"
-      class="flex-1 flex overflow-x-auto snap-x snap-mandatory no-scrollbar bg-gray-50/50"
-      style="scroll-behavior: smooth"
+      v-if="!isLoading && activeSlide"
+      id="dashboard-tab-panel"
+      class="flex-1 bg-gray-50/50"
+      :class="
+        activeSlide.id === 'actividad_equipo'
+          ? 'min-h-0 lg:h-full'
+          : 'overflow-y-auto px-4 pb-[120px] md:px-6 md:pb-8 md:pt-0 lg:px-10 lg:pb-10 lg:pt-0'
+      "
     >
+      <component
+        :is="activeSlide.component"
+        v-bind="getSlideLoadProps(activeSlide.id)"
+      />
       <div
-        v-for="slide in slides"
-        :key="slide.id"
-        :id="'dashboard-slide-' + slide.id"
-        class="min-w-full w-full flex-shrink-0 snap-center"
-        :class="
-          slide.id === 'actividad_equipo'
-            ? ''
-            : 'px-4 pb-[120px] md:px-6 md:pb-8 md:pt-0 lg:px-10 lg:pb-10 lg:pt-0 overflow-y-auto'
-        "
-      >
-        <div
-          class="flex flex-col gap-0"
-          :class="slide.id === 'actividad_equipo' ? 'min-h-0 lg:h-full' : ''"
-        >
-          <component
-            :is="slide.component"
-            v-bind="getDeferredSlideLoadProps(slide.id)"
-          />
-          <!-- End of scroll spacer to separate from bottom nav -->
-          <div
-            v-if="slide.id !== 'productividad_semanal'"
-            class="h-10 w-full flex-shrink-0 lg:hidden"
-          ></div>
-        </div>
-      </div>
+        v-if="activeSlide.id !== 'productividad_semanal'"
+        class="h-10 w-full flex-shrink-0 lg:hidden"
+      ></div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
-</style>

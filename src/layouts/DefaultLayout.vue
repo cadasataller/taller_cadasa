@@ -73,6 +73,7 @@ const userProfile = ref<{
 const userEmail = ref("");
 const MODULE_DASHBOARD_FEATURE = "module_dashboard";
 const MODULE_CALIFICACIONES_FEATURE = "module_calificaciones";
+const VIEW_CALIFICACIONES_DASHBOARD_FEATURE = "ver_dashboard_calificaciones";
 const MODULE_REPARACIONES_FEATURE = "module_reparaciones";
 const MODULE_MANTENIMIENTO_FEATURE = "module_mantenimiento";
 const MODULE_COMPRAS_FEATURE = "module_compras";
@@ -82,6 +83,7 @@ const CREATE_SOLICITUD_FEATURE = "crear_solicitud_compra";
 const VIEW_PROFILE_FEATURE = "ver_datos_perfil";
 const MODULE_ENGRASE_FEATURE = "module_engrase";
 const VIEW_FILTROS_ENGRASE_FEATURE = "ver_filtros_engrase";
+const VIEW_ACTIVIDAD_EQUIPO_FEATURE = "ver_dashboard_actividad_equipo";
 const engraseDesktopOpen = ref(false);
 const mobileMoreOpen = ref(false);
 const mobileEngraseOpen = ref(false);
@@ -99,6 +101,7 @@ const allMenuItems = [
     path: "/calificaciones",
     icon: BarChart3,
     requiredFeature: MODULE_CALIFICACIONES_FEATURE,
+    requiredAnyFeature: VIEW_CALIFICACIONES_DASHBOARD_FEATURE,
   },
   {
     name: "Reparaciones",
@@ -155,6 +158,11 @@ const canSeeSeguimientoTareas = computed(
   () =>
     canSeeSeguimiento.value &&
     featureAccessStore.tieneFuncionalidad(SEGUIMIENTO_FEATURES.viewTasks),
+);
+const canSeeSeguimientoActividadEquipo = computed(
+  () =>
+    canSeeSeguimiento.value &&
+    featureAccessStore.tieneFuncionalidad(VIEW_ACTIVIDAD_EQUIPO_FEATURE),
 );
 const canViewProfile = computed(
   () =>
@@ -248,7 +256,9 @@ const menuItems = computed(() =>
   allMenuItems.filter(
     (item) =>
       isFeatureAccessLoaded.value &&
-      featureAccessStore.tieneFuncionalidad(item.requiredFeature),
+      (featureAccessStore.tieneFuncionalidad(item.requiredFeature) ||
+        ("requiredAnyFeature" in item &&
+          featureAccessStore.tieneFuncionalidad(item.requiredAnyFeature))),
   ),
 );
 
@@ -274,22 +284,35 @@ const mobilePrimaryItems = computed(() => {
     primaryPaths.includes(item.path),
   );
 
-  if (canSeeSeguimientoTareas.value) {
+  if (canSeeSeguimientoTareas.value || canSeeSeguimientoActividadEquipo.value) {
     primaryItems.splice(2, 0, {
       name: "Seguimiento",
-      path: "/seguimiento/tareas",
+      path: canSeeSeguimientoTareas.value
+        ? "/seguimiento/tareas"
+        : "/seguimiento/actividad-equipo",
       icon: MapPinned,
-      requiredFeature: SEGUIMIENTO_FEATURES.viewTasks,
+      requiredFeature: SEGUIMIENTO_FEATURES.module,
     });
   }
 
   return primaryItems;
 });
-const mobileMoreItems = computed(() =>
-  menuItems.value.filter(
+const mobileMoreItems = computed(() => {
+  const items = menuItems.value.filter(
     (item) => !["/dashboard", "/mantenimiento", "/compras"].includes(item.path),
-  ),
-);
+  );
+
+  if (canSeeSeguimientoActividadEquipo.value) {
+    items.push({
+      name: "Actividad equipo",
+      path: "/seguimiento/actividad-equipo",
+      icon: MapPinned,
+      requiredFeature: VIEW_ACTIVIDAD_EQUIPO_FEATURE,
+    });
+  }
+
+  return items;
+});
 const isMobileMoreActive = computed(
   () =>
     isEngraseRoute.value ||
@@ -323,8 +346,13 @@ const isSolicitudCompraCreateRoute = computed(
   () => route.name === "SolicitudCompraCrear",
 );
 const isDashboardRoute = computed(() => route.path.startsWith("/dashboard"));
+const isCalificacionesRoute = computed(() =>
+  route.path.startsWith("/calificaciones"),
+);
 const showDashboardHeaderNav = computed(
-  () => isDashboardRoute.value && dashboardHeaderNavState.isVisible,
+  () =>
+    (isDashboardRoute.value || isCalificacionesRoute.value) &&
+    dashboardHeaderNavState.isVisible,
 );
 const dashboardPrimarySlides = computed(() => {
   const { slides } = dashboardHeaderNavState;
@@ -730,6 +758,18 @@ const isActive = (path: string) =>
                   @click="seguimientoDesktopOpen = false"
                   >Tareas</router-link
                 >
+                <router-link
+                  v-if="canSeeSeguimientoActividadEquipo"
+                  to="/seguimiento/actividad-equipo"
+                  class="flex items-center rounded-lg px-4 py-2.5 text-sm"
+                  :class="
+                    isActive('/seguimiento/actividad-equipo')
+                      ? 'bg-white/10 text-white'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  "
+                  @click="seguimientoDesktopOpen = false"
+                  >Actividad equipo</router-link
+                >
               </div>
             </div>
           </div>
@@ -846,6 +886,18 @@ const isActive = (path: string) =>
             :class="isSeguimientoRoute ? 'bg-white/10 text-white' : ''"
             @click="closeDesktopFloatingGroup"
             >Tareas</router-link
+          >
+          <router-link
+            v-if="canSeeSeguimientoActividadEquipo"
+            to="/seguimiento/actividad-equipo"
+            class="flex rounded-lg px-3 py-2.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white"
+            :class="
+              isActive('/seguimiento/actividad-equipo')
+                ? 'bg-white/10 text-white'
+                : ''
+            "
+            @click="closeDesktopFloatingGroup"
+            >Actividad equipo</router-link
           >
         </div>
       </div>

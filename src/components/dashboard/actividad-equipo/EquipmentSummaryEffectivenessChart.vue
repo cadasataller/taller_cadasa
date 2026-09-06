@@ -3,10 +3,10 @@ import { computed } from "vue";
 
 interface Props {
   id: string;
+  kind: "effective" | "stopped";
   effectiveness: number;
   stoppedSeconds: number;
   totalSeconds: number;
-  stoppedTime: string;
 }
 
 const props = defineProps<Props>();
@@ -31,52 +31,39 @@ const effectivenessLabel = computed(
   () => `${percentageFormatter.format(effectivePercentage.value)}%`,
 );
 const stoppedLabel = computed(
-  () => `${percentageFormatter.format(stoppedPercentage.value)}% detenido`,
+  () => `${percentageFormatter.format(stoppedPercentage.value)}%`,
 );
-const effectivenessStroke = computed(
-  () => `${effectivePercentage.value} ${100 - effectivePercentage.value}`,
+const metric = computed(() =>
+  props.kind === "effective"
+    ? {
+        label: "Efectividad",
+        value: effectivenessLabel.value,
+        detail: "Del tiempo registrado",
+        className:
+          "bg-[linear-gradient(135deg,var(--color-main),#004643)] text-white",
+      }
+    : {
+        label: "Paradas",
+        value: stoppedLabel.value,
+        detail: "Del tiempo registrado",
+        className:
+          "bg-[linear-gradient(135deg,var(--color-accent),var(--color-accent-dark))] text-white",
+      },
 );
 </script>
 
 <template>
   <article
     :id="id"
-    class="flex min-h-[70px] min-w-0 items-center justify-between gap-2 rounded-md border border-gray-200 px-2 py-2"
+    class="flex h-full min-h-[70px] min-w-0 flex-col items-center justify-center text-center"
+    :class="metric.className"
   >
-    <div class="min-w-0">
-      <span class="text-[10px] text-gray-500">Efectividad</span>
-      <strong class="mt-0.5 block text-sm tabular-nums text-main">
-        {{ effectivenessLabel }}
-      </strong>
-      <small class="block truncate text-[10px] text-gray-500">
-         {{ stoppedLabel }}
-      </small>
-    </div>
-    <div class="relative grid size-[58px] shrink-0 place-items-center">
-      <svg class="size-full -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
-        <circle
-          cx="18"
-          cy="18"
-          r="14"
-          fill="none"
-          class="stroke-danger/20"
-          stroke-width="4"
-        />
-        <circle
-          cx="18"
-          cy="18"
-          r="14"
-          fill="none"
-          class="stroke-success"
-          stroke-linecap="round"
-          stroke-width="4"
-          pathLength="100"
-          :stroke-dasharray="effectivenessStroke"
-        />
-      </svg>
-      <span class="absolute text-[10px] font-bold tabular-nums text-main">
-        {{ effectivenessLabel }}
-      </span>
-    </div>
+    <span class="text-[10px] font-medium text-white/80">{{
+      metric.label
+    }}</span>
+    <strong class="mt-0.5 text-2xl font-extrabold tabular-nums">
+      {{ metric.value }}
+    </strong>
+    <small class="text-[10px] text-white/80">{{ metric.detail }}</small>
   </article>
 </template>

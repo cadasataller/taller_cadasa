@@ -5,13 +5,28 @@ import {
 } from "vue-router";
 import { supabase } from "@/lib/supabase";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
-import { SEGUIMIENTO_TASK_ROUTE_FEATURES } from "@/seguimiento/shared/seguimiento.permissions";
+import {
+  SEGUIMIENTO_FEATURES,
+  SEGUIMIENTO_TASK_ROUTE_FEATURES,
+} from "@/seguimiento/shared/seguimiento.permissions";
 
 const EmptyRouteComponent = { template: "<div></div>" };
 
-const moduleHomeRoutes = [
+type ModuleHomeRoute = {
+  path: string;
+  requiredFeatures?: readonly string[];
+  requiredAnyFeatures?: readonly string[];
+};
+
+const moduleHomeRoutes: readonly ModuleHomeRoute[] = [
   { path: "/dashboard", requiredFeatures: ["module_dashboard"] },
-  { path: "/calificaciones", requiredFeatures: ["module_calificaciones"] },
+  {
+    path: "/calificaciones",
+    requiredAnyFeatures: [
+      "module_calificaciones",
+      "ver_dashboard_calificaciones",
+    ],
+  },
   { path: "/reparaciones", requiredFeatures: ["module_reparaciones"] },
   { path: "/mantenimiento", requiredFeatures: ["module_mantenimiento"] },
   { path: "/compras", requiredFeatures: ["module_compras"] },
@@ -25,7 +40,7 @@ const moduleHomeRoutes = [
     requiredFeatures: ["module_engrase", "ver_filtros_engrase"],
   },
   { path: "/panel-admin", requiredFeatures: ["panel_admin"] },
-] as const;
+];
 
 const getRequiredFeatures = (to: RouteLocationNormalized): string[] => {
   const features = to.matched.flatMap((record) => {
@@ -40,6 +55,20 @@ const getRequiredFeatures = (to: RouteLocationNormalized): string[] => {
           )
         : []),
     ];
+  });
+
+  return [...new Set(features)];
+};
+
+const getRequiredAnyFeatures = (to: RouteLocationNormalized): string[] => {
+  const features = to.matched.flatMap((record) => {
+    const requiredAnyFeatures = record.meta.requiredAnyFeatures;
+
+    return Array.isArray(requiredAnyFeatures)
+      ? requiredAnyFeatures.filter(
+          (feature): feature is string => typeof feature === "string",
+        )
+      : [];
   });
 
   return [...new Set(features)];
@@ -73,7 +102,12 @@ const router = createRouter({
           path: "calificaciones",
           name: "SupervisorRatings",
           component: () => import("@/views/SupervisorRatingsView.vue"),
-          meta: { requiredFeature: "module_calificaciones" },
+          meta: {
+            requiredAnyFeatures: [
+              "module_calificaciones",
+              "ver_dashboard_calificaciones",
+            ],
+          },
         },
         {
           path: "reparaciones",
@@ -111,6 +145,18 @@ const router = createRouter({
           component: () =>
             import("@/views/seguimiento/SeguimientoTareasView.vue"),
           meta: { requiredFeatures: SEGUIMIENTO_TASK_ROUTE_FEATURES },
+        },
+        {
+          path: "seguimiento/actividad-equipo",
+          name: "SeguimientoActividadEquipo",
+          component: () =>
+            import("@/views/seguimiento/ActividadEquipoView.vue"),
+          meta: {
+            requiredFeatures: [
+              SEGUIMIENTO_FEATURES.module,
+              "ver_dashboard_actividad_equipo",
+            ],
+          },
         },
         {
           path: "catalogo",
@@ -250,20 +296,34 @@ router.beforeEach(async (to) => {
     return to.name === "Profile" ? true : { name: "Profile" };
   }
 
-  const firstAllowedModule = moduleHomeRoutes.find(({ requiredFeatures }) =>
-    requiredFeatures.every((feature) =>
-      featureAccessStore.tieneFuncionalidad(feature),
-    ),
-  );
+  const firstAllowedModule = moduleHomeRoutes.find((route) => {
+    const hasRequiredFeatures = (route.requiredFeatures ?? []).every(
+      (feature) => featureAccessStore.tieneFuncionalidad(feature),
+    );
+    const requiredAnyFeatures = route.requiredAnyFeatures ?? [];
+    const hasAnyRequiredFeature =
+      requiredAnyFeatures.length === 0 ||
+      requiredAnyFeatures.some((feature) =>
+        featureAccessStore.tieneFuncionalidad(feature),
+      );
+
+    return hasRequiredFeatures && hasAnyRequiredFeature;
+  });
 
   if (to.name === "HomeRedirect") {
     return firstAllowedModule?.path ?? { name: "Profile" };
   }
 
   const requiredFeatures = getRequiredFeatures(to);
-  const hasAccess = requiredFeatures.every((feature) =>
-    featureAccessStore.tieneFuncionalidad(feature),
-  );
+  const requiredAnyFeatures = getRequiredAnyFeatures(to);
+  const hasAccess =
+    requiredFeatures.every((feature) =>
+      featureAccessStore.tieneFuncionalidad(feature),
+    ) &&
+    (requiredAnyFeatures.length === 0 ||
+      requiredAnyFeatures.some((feature) =>
+        featureAccessStore.tieneFuncionalidad(feature),
+      ));
 
   if (!hasAccess) {
     return firstAllowedModule?.path ?? { name: "Profile" };
