@@ -41,6 +41,7 @@ export interface EquipmentMasterDetail {
 }
 export interface EquipmentSummary {
   code: string;
+  recentLocation: EquipmentRecentLocation | null;
   totalSeconds: number;
   totalTime: string;
   workingSeconds: number;
@@ -53,6 +54,15 @@ export interface EquipmentSummary {
   operators: SummaryOperatorUsageRow[];
   implements: SummaryImplementRow[];
   history: SummaryHistoryRow[];
+}
+export interface EquipmentRecentLocation {
+  latitude: number;
+  longitude: number;
+  occurredAt: string;
+  occurredAtLocal: string;
+  registeredAt: string;
+  eventType: string;
+  farmName: string | null;
 }
 export interface StopMetrics {
   stoppedSeconds: number;

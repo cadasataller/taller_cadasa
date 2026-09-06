@@ -33,6 +33,19 @@ export const contextSchema = z.object({
 });
 export const summarySchema = z.object({
   equipo_numero: z.string(),
+  equipo: z.object({
+    numero: z.string(),
+    ubicacion_mas_reciente: z
+      .object({
+        latitud: z.number().finite(),
+        longitud: z.number().finite(),
+        ocurrio_en: z.string(),
+        ocurrio_en_local: z.string(),
+        registrado_en: z.string(),
+        tipo_evento: z.string(),
+      })
+      .nullable(),
+  }),
   metricas: z.object({
     tiempo_total_segundos: z.number().finite(),
     tiempo_total: z.string(),
@@ -93,6 +106,13 @@ export const summarySchema = z.object({
     }),
   ),
 });
+export const farmResolutionSchema = z.array(
+  z.object({
+    ubicacion_id: z.string(),
+    nombre: z.string(),
+    area_id: z.string(),
+  }),
+);
 const stopBreakdownSchema = z.object({
   tiempo_segundos: z.number().finite(),
   tiempo: z.string(),

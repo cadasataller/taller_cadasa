@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mapStops } from "./reporteEquipos.mappers";
 import {
   equipmentListSchema,
+  farmResolutionSchema,
   stopsSchema,
   summarySchema,
 } from "./reporteEquipos.schemas";
@@ -30,6 +31,36 @@ describe("reporteEquipos schemas", () => {
     expect(result.success).toBe(false);
   });
 
+  it("acepta la última ubicación conocida del equipo", () => {
+    const result = summarySchema.pick({ equipo: true }).safeParse({
+      equipo: {
+        numero: "484091",
+        ubicacion_mas_reciente: {
+          latitud: 8.123456,
+          longitud: -82.456789,
+          ocurrio_en: "2026-09-05T14:35:20-05:00",
+          ocurrio_en_local: "2026-09-05 14:35:20",
+          registrado_en: "2026-09-05T14:35:24-05:00",
+          tipo_evento: "inicio_parada",
+        },
+      },
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("acepta la finca resuelta para la última ubicación", () => {
+    const result = farmResolutionSchema.safeParse([
+      {
+        ubicacion_id: "595f8a6b-63c9-4752-9c9f-9e0ff37ea711",
+        nombre: "Calle Larga",
+        area_id: "21e9fe15-5f33-4ecb-a100-c07f3cdee786",
+      },
+    ]);
+
+    expect(result.success).toBe(true);
+  });
+
   it("preserva segundos, porcentajes e implemento al mapear paradas", () => {
     const dto = stopsSchema.parse({
       equipo_numero: "484091",
@@ -46,8 +77,9 @@ describe("reporteEquipos schemas", () => {
           clasificacion: "OPERATIVO",
           tiempo_segundos: 9360,
           tiempo: "02:36",
-          cantidad: 6,
+          ocurrencias: 6,
           porcentaje_parado: 86.8,
+          porcentaje_paradas: 86.8,
         },
       ],
       por_origen: [
@@ -55,8 +87,8 @@ describe("reporteEquipos schemas", () => {
           origen: "implemento",
           tiempo_segundos: 0,
           tiempo: "00:00",
-          cantidad: 2,
-          porcentaje_parado: 0.1,
+          ocurrencias: 2,
+          porcentaje_paradas: 0.1,
         },
       ],
       principales_motivos: [
@@ -66,6 +98,7 @@ describe("reporteEquipos schemas", () => {
           tiempo_segundos: 0,
           tiempo: "00:00",
           porcentaje_parado: 0.1,
+          porcentaje_paradas: 0.1,
         },
       ],
       detalle: [

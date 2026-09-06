@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { CircleOff, LoaderCircle, TriangleAlert } from "lucide-vue-next";
+import {
+  CircleOff,
+  LoaderCircle,
+  MapPin,
+  TriangleAlert,
+} from "lucide-vue-next";
 import EquipmentSummaryImplementsCard from "./EquipmentSummaryImplementsCard.vue";
 import { formatOperationalNumber } from "@/utils/formatOperationalNumber";
+import { formatCompactPanamaDateTime } from "@/utils/formatCompactPanamaDate";
 import type {
   EquipmentContext,
   EquipmentMasterDetail,
@@ -27,14 +33,7 @@ const hasSelection = computed(
 );
 
 function displayDate(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("es-PA", {
-    dateStyle: "short",
-    timeStyle: "short",
-    timeZone: "America/Panama",
-  }).format(date);
+  return formatCompactPanamaDateTime(value);
 }
 </script>
 
@@ -80,6 +79,29 @@ function displayDate(value: string | null): string {
           <dt class="text-gray-500">{{ row[0] }}</dt>
           <dd class="break-words font-medium text-gray-700">{{ row[1] }}</dd>
         </div>
+        <div
+          v-if="summary?.recentLocation?.farmName"
+          class="border-b border-gray-100 py-2"
+        >
+          <dt
+            class="mb-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-gray-400"
+          >
+            Última ubicación registrada
+          </dt>
+          <dd class="flex items-start gap-1.5 pl-1">
+            <MapPin class="mt-0.5 size-3.5 shrink-0 text-gray-500" />
+            <div class="min-w-0">
+              <p class="truncate text-[10.5px] font-semibold text-gray-700">
+                {{ summary.recentLocation.farmName }}
+              </p>
+              <p class="mt-0.5 text-[10px] text-gray-500">
+                {{
+                  formatCompactPanamaDateTime(summary.recentLocation.occurredAt)
+                }}
+              </p>
+            </div>
+          </dd>
+        </div>
       </dl>
       <p v-else-if="!hasSelection" class="px-3 pb-5 text-xs text-gray-500">
         Seleccione un equipo para ver su perfil.
@@ -119,7 +141,7 @@ function displayDate(value: string | null): string {
           <tbody>
             <tr
               v-for="row in context.engine"
-              :key="row.engineOn"
+              :key="`${row.state}-${row.time}-${row.percentage}-${row.periods}`"
               class="border-b border-gray-100"
             >
               <td class="py-1.5">
@@ -136,7 +158,6 @@ function displayDate(value: string | null): string {
             </tr>
           </tbody>
         </table>
-        
       </div>
       <div
         v-else

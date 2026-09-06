@@ -46,6 +46,17 @@ export const mapSummary = (
   dto: z.infer<typeof summarySchema>,
 ): EquipmentSummary => ({
   code: dto.equipo_numero,
+  recentLocation: dto.equipo.ubicacion_mas_reciente
+    ? {
+        latitude: dto.equipo.ubicacion_mas_reciente.latitud,
+        longitude: dto.equipo.ubicacion_mas_reciente.longitud,
+        occurredAt: dto.equipo.ubicacion_mas_reciente.ocurrio_en,
+        occurredAtLocal: dto.equipo.ubicacion_mas_reciente.ocurrio_en_local,
+        registeredAt: dto.equipo.ubicacion_mas_reciente.registrado_en,
+        eventType: dto.equipo.ubicacion_mas_reciente.tipo_evento,
+        farmName: null,
+      }
+    : null,
   totalSeconds: dto.metricas.tiempo_total_segundos,
   totalTime: dto.metricas.tiempo_total,
   workingSeconds: dto.metricas.tiempo_trabajando_segundos,

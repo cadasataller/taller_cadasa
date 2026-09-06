@@ -1,4 +1,8 @@
-import { supabaseCapturaOperador, supabaseEquipos } from "@/lib/supabase";
+import {
+  supabaseCapturaOperador,
+  supabaseEquipos,
+  supabaseRastreoTareas,
+} from "@/lib/supabase";
 import {
   mapContext,
   mapEquipmentList,
@@ -9,6 +13,7 @@ import {
 import {
   contextSchema,
   equipmentListSchema,
+  farmResolutionSchema,
   masterSchema,
   summarySchema,
   stopsSchema,
@@ -28,7 +33,6 @@ const throwRemoteError = (
 ): never => {
   throw new Error(message || fallback);
 };
-
 export const reporteEquiposService = {
   async loadEquipmentList(
     filters: ReportFilters,
@@ -80,7 +84,33 @@ export const reporteEquiposService = {
         error.message,
         "No se pudo cargar el resumen del equipo.",
       );
-    return mapSummary(summarySchema.parse(data));
+    const summary = mapSummary(summarySchema.parse(data));
+    const recentLocation = summary.recentLocation;
+    if (!recentLocation) return summary;
+
+    const farm = await this.resolveFarmByPoint(
+      recentLocation.latitude,
+      recentLocation.longitude,
+    );
+    return {
+      ...summary,
+      recentLocation: {
+        ...recentLocation,
+        farmName: farm,
+      },
+    };
+  },
+  async resolveFarmByPoint(
+    latitude: number,
+    longitude: number,
+  ): Promise<string | null> {
+    const { data, error } = await supabaseRastreoTareas.rpc(
+      "resolver_finca_por_punto_v2",
+      { p_latitud: latitude, p_longitud: longitude },
+    );
+    if (error) return null;
+    const farm = farmResolutionSchema.parse(data ?? [])[0] ?? null;
+    return farm?.nombre ?? null;
   },
   async loadStops(
     code: string,

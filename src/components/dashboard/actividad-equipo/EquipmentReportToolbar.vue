@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import "@vuepic/vue-datepicker/dist/main.css";
 import { Filter, RotateCcw } from "lucide-vue-next";
 import { z } from "zod";
+import { formatCompactDate } from "@/utils/formatCompactPanamaDate";
 import type {
   ReportFilters,
   ReportTab,
@@ -45,32 +46,10 @@ function toIsoDate(value: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-const abbreviatedMonths = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "agos",
-  "sep",
-  "oct",
-  "nov",
-  "dic",
-] as const;
-
 function formatDateRange(value: Date | Date[]): string {
   const dates = Array.isArray(value) ? value : [value];
 
-  return dates
-    .map(
-      (date) =>
-        `${date.getDate()} ${abbreviatedMonths[date.getMonth()]} ${String(
-          date.getFullYear(),
-        ).slice(-2)}`,
-    )
-    .join(" - ");
+  return dates.map(formatCompactDate).join(" - ");
 }
 
 type DateRangeSelection = [Date | null, Date | null];
