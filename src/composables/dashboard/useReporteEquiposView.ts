@@ -19,5 +19,8 @@ export function useReporteEquiposView() {
     clearFilters: store.clearFilters,
     retrySummary: store.retrySummary,
     retryStops: store.retryStops,
+    retryOperators: store.loadOperators,
+    retryOperatorDetail: store.retryOperatorDetail,
+    selectOperator: store.selectOperator,
   };
 }

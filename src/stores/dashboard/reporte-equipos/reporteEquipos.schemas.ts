@@ -192,3 +192,99 @@ export const masterSchema = z.object({
     })
     .nullable(),
 });
+const operatorTimeSchema = z.object({
+  tiempo_segundos: z.number().finite(),
+  tiempo: z.string(),
+  porcentaje: z.number().finite(),
+});
+export const equipmentOperatorsSchema = z.object({
+  equipo_numero: z.string(),
+  metricas: z.object({
+    operadores_unicos: z.number().int(),
+    tiempo_total_segundos: z.number().finite(),
+    tiempo_total: z.string(),
+    jornadas: z.number().int(),
+    mayor_participacion: z
+      .object({
+        operador_id: z.string(),
+        operador: z.string(),
+        porcentaje: z.number().finite(),
+      })
+      .nullable(),
+  }),
+  operadores: z.array(
+    z.object({
+      operador_id: z.string(),
+      operador: z.string(),
+      jornadas: z.number().int().nullable(),
+      tiempo_total_segundos: z.number().finite(),
+      tiempo_total: z.string(),
+      tiempo_trabajando_segundos: z.number().finite().nullable(),
+      tiempo_trabajando: z.string().nullable(),
+      tiempo_parado_segundos: z.number().finite().nullable(),
+      tiempo_parado: z.string().nullable(),
+      porcentaje_uso: z.number().finite(),
+      primera_actividad: z.string().nullable(),
+      ultima_actividad: z.string().nullable(),
+    }),
+  ),
+});
+export const operatorDetailSchema = z.object({
+  equipo_numero: z.string(),
+  operador: z.object({ id: z.string(), label: z.string() }),
+  metricas: z.object({
+    jornadas: z.number().int(),
+    tiempo_total_segundos: z.number().finite(),
+    tiempo_total: z.string(),
+    tiempo_trabajando_segundos: z.number().finite(),
+    tiempo_trabajando: z.string(),
+    tiempo_parado_segundos: z.number().finite(),
+    tiempo_parado: z.string(),
+  }),
+  distribucion_estado: z.array(
+    operatorTimeSchema.extend({
+      estado: z.union([z.literal("trabajando"), z.literal("parado")]),
+    }),
+  ),
+  distribucion_clasificacion: z.array(
+    operatorTimeSchema.extend({ clasificacion: z.string() }),
+  ),
+  principales_paradas: z.array(
+    z.object({
+      motivo: z.string(),
+      ocurrencias: z.number().int(),
+      tiempo_segundos: z.number().finite(),
+      tiempo: z.string(),
+      porcentaje_paradas: z.number().finite(),
+    }),
+  ),
+  motor: z.array(
+    operatorTimeSchema.extend({
+      motor_encendido: z.boolean(),
+      estado: z.string(),
+      periodos: z.number().int(),
+    }),
+  ),
+  implementos: z.array(
+    z.object({
+      implemento_id: identifierSchema,
+      numero: identifierSchema,
+      descripcion: z.string(),
+      jornadas: z.number().int(),
+      tiempo_segundos: z.number().finite(),
+      tiempo: z.string(),
+    }),
+  ),
+  historial: z.array(
+    z.object({
+      inicio: z.string(),
+      fin: z.string(),
+      inicio_local: z.string(),
+      fin_local: z.string(),
+      tipo: z.union([z.literal("trabajando"), z.literal("parado")]),
+      detalle: z.string(),
+      tiempo_segundos: z.number().finite(),
+      tiempo: z.string(),
+    }),
+  ),
+});

@@ -38,7 +38,13 @@ const {
   retry,
   retrySummary,
   retryStops,
+  retryOperators,
+  retryOperatorDetail,
   stops,
+  operators,
+  operatorDetail,
+  selectedOperatorId,
+  selectOperator,
   selectEquipment,
   setDateRange,
   setSearch,
@@ -89,8 +95,18 @@ function setTab(tab: ReportTab): void {
         :stops="stops"
         :stops-state="loadStates.stops"
         :stops-error="errors.stops"
+        :operators="operators"
+        :operator-detail="operatorDetail"
+        :selected-operator-id="selectedOperatorId"
+        :operators-state="loadStates.operators"
+        :operator-detail-state="loadStates.operatorDetail"
+        :operators-error="errors.operators"
+        :operator-detail-error="errors.operatorDetail"
         @retry-summary="retrySummary"
         @retry-stops="retryStops"
+        @select-operator="selectOperator"
+        @retry-operators="retryOperators"
+        @retry-operator-detail="retryOperatorDetail"
       />
       <EquipmentReportDetailSidebar
         :detail="masterDetail"

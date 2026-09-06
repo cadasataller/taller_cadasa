@@ -5,23 +5,29 @@ import {
 } from "@/lib/supabase";
 import {
   mapContext,
+  mapEquipmentOperators,
   mapEquipmentList,
   mapMaster,
   mapStops,
+  mapOperatorDetail,
   mapSummary,
 } from "./reporteEquipos.mappers";
 import {
   contextSchema,
   equipmentListSchema,
+  equipmentOperatorsSchema,
   farmResolutionSchema,
   masterSchema,
   summarySchema,
   stopsSchema,
+  operatorDetailSchema,
 } from "./reporteEquipos.schemas";
 import type {
   EquipmentContext,
   EquipmentListItem,
   EquipmentMasterDetail,
+  EquipmentOperators,
+  OperatorDetail,
   EquipmentSummary,
   EquipmentStops,
   ReportFilters,
@@ -126,6 +132,42 @@ export const reporteEquiposService = {
         "No se pudo cargar las paradas del equipo.",
       );
     return mapStops(stopsSchema.parse(data));
+  },
+  async loadOperators(
+    code: string,
+    filters: ReportFilters,
+  ): Promise<EquipmentOperators> {
+    const { data, error } = await supabaseCapturaOperador.rpc(
+      "rpc_reporte_equipo_operadores",
+      { p_equipo: code, p_desde: filters.startDate, p_hasta: filters.endDate },
+    );
+    if (error)
+      return throwRemoteError(
+        error.message,
+        "No se pudo cargar los operadores del equipo.",
+      );
+    return mapEquipmentOperators(equipmentOperatorsSchema.parse(data));
+  },
+  async loadOperatorDetail(
+    code: string,
+    operatorId: string,
+    filters: ReportFilters,
+  ): Promise<OperatorDetail> {
+    const { data, error } = await supabaseCapturaOperador.rpc(
+      "rpc_reporte_equipo_operador_detalle",
+      {
+        p_equipo: code,
+        p_operador: operatorId,
+        p_desde: filters.startDate,
+        p_hasta: filters.endDate,
+      },
+    );
+    if (error)
+      return throwRemoteError(
+        error.message,
+        "No se pudo cargar el detalle del operador.",
+      );
+    return mapOperatorDetail(operatorDetailSchema.parse(data));
   },
   async loadMasterDetail(code: string): Promise<EquipmentMasterDetail | null> {
     const { data, error } = await supabaseEquipos.rpc(

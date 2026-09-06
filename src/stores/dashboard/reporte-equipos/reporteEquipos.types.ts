@@ -119,6 +119,98 @@ export interface EquipmentStops {
   mainReasons: StopReasonRow[];
   details: StopDetailRow[];
 }
+export interface OperatorMetrics {
+  uniqueOperators: number;
+  totalSeconds: number;
+  totalTime: string;
+  journeys: number;
+  topParticipation: {
+    operatorId: string;
+    operator: string;
+    percentage: number;
+  } | null;
+}
+export interface OperatorUsageRow {
+  operatorId: string;
+  operator: string;
+  journeys: number | null;
+  totalSeconds: number;
+  totalTime: string;
+  workingSeconds: number | null;
+  workingTime: string | null;
+  stoppedSeconds: number | null;
+  stoppedTime: string | null;
+  percentage: number;
+  firstActivity: string | null;
+  lastActivity: string | null;
+}
+export interface EquipmentOperators {
+  code: string;
+  metrics: OperatorMetrics;
+  operators: OperatorUsageRow[];
+}
+export interface OperatorStateDistributionRow {
+  state: "trabajando" | "parado";
+  seconds: number;
+  time: string;
+  percentage: number;
+}
+export interface OperatorClassificationDistributionRow {
+  classification: string;
+  seconds: number;
+  time: string;
+  percentage: number;
+}
+export interface OperatorStopReasonRow {
+  reason: string;
+  seconds: number;
+  time: string;
+  percentage: number;
+}
+export interface OperatorEngineUsageRow {
+  engineOn: boolean;
+  state: string;
+  seconds: number;
+  time: string;
+  percentage: number;
+  periods: number;
+}
+export interface OperatorImplementRow {
+  implementId: string;
+  number: string;
+  description: string;
+  journeys: number;
+  seconds: number;
+  time: string;
+}
+export interface OperatorHistoryRow {
+  startAt: string;
+  endAt: string;
+  startLocal: string;
+  endLocal: string;
+  kind: "trabajando" | "parado";
+  detail: string;
+  seconds: number;
+  time: string;
+}
+export interface OperatorDetail {
+  code: string;
+  operatorId: string;
+  operatorLabel: string;
+  journeys: number;
+  totalSeconds: number;
+  totalTime: string;
+  workingSeconds: number;
+  workingTime: string;
+  stoppedSeconds: number;
+  stoppedTime: string;
+  stateDistribution: OperatorStateDistributionRow[];
+  classificationDistribution: OperatorClassificationDistributionRow[];
+  mainStops: OperatorStopReasonRow[];
+  engine: OperatorEngineUsageRow[];
+  implements: OperatorImplementRow[];
+  history: OperatorHistoryRow[];
+}
 export interface SummaryClassificationRow {
   classification: string;
   seconds: number;

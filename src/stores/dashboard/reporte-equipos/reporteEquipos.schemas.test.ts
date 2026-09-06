@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { mapStops } from "./reporteEquipos.mappers";
+import {
+  mapEquipmentOperators,
+  mapOperatorDetail,
+  mapStops,
+} from "./reporteEquipos.mappers";
 import {
   equipmentListSchema,
+  equipmentOperatorsSchema,
   farmResolutionSchema,
   stopsSchema,
+  operatorDetailSchema,
   summarySchema,
 } from "./reporteEquipos.schemas";
 
@@ -137,5 +143,129 @@ describe("reporteEquipos schemas", () => {
       detalle: [],
     });
     expect(result.success).toBe(false);
+  });
+
+  it("mapea operadores y mantiene los campos nulos de la tabla", () => {
+    const operators = mapEquipmentOperators(
+      equipmentOperatorsSchema.parse({
+        equipo_numero: "484091",
+        metricas: {
+          operadores_unicos: 1,
+          tiempo_total_segundos: 600,
+          tiempo_total: "00:10",
+          jornadas: 1,
+          mayor_participacion: null,
+        },
+        operadores: [
+          {
+            operador_id: "op-1",
+            operador: "operador@cadasa.com",
+            jornadas: null,
+            tiempo_total_segundos: 600,
+            tiempo_total: "00:10",
+            tiempo_trabajando_segundos: null,
+            tiempo_trabajando: null,
+            tiempo_parado_segundos: null,
+            tiempo_parado: null,
+            porcentaje_uso: 100,
+            primera_actividad: null,
+            ultima_actividad: null,
+          },
+        ],
+      }),
+    );
+    expect(operators.metrics.topParticipation).toBeNull();
+    expect(operators.operators[0]).toMatchObject({
+      journeys: null,
+      workingTime: null,
+      stoppedTime: null,
+    });
+  });
+
+  it("mapea el detalle del operador sin inferir motor, implementos ni historial", () => {
+    const detail = mapOperatorDetail(
+      operatorDetailSchema.parse({
+        equipo_numero: "484091",
+        operador: { id: "op-1", label: "operador@cadasa.com" },
+        metricas: {
+          jornadas: 1,
+          tiempo_total_segundos: 600,
+          tiempo_total: "00:10",
+          tiempo_trabajando_segundos: 480,
+          tiempo_trabajando: "00:08",
+          tiempo_parado_segundos: 120,
+          tiempo_parado: "00:02",
+        },
+        distribucion_estado: [
+          {
+            estado: "trabajando",
+            tiempo_segundos: 480,
+            tiempo: "00:08",
+            porcentaje: 80,
+          },
+        ],
+        distribucion_clasificacion: [
+          {
+            clasificacion: "EFECTIVO",
+            tiempo_segundos: 480,
+            tiempo: "00:08",
+            porcentaje: 80,
+          },
+        ],
+        principales_paradas: [
+          {
+            motivo: "Combustible",
+            ocurrencias: 1,
+            tiempo_segundos: 120,
+            tiempo: "00:02",
+            porcentaje_paradas: 100,
+          },
+        ],
+        motor: [
+          {
+            motor_encendido: false,
+            estado: "Apagado",
+            tiempo_segundos: 120,
+            tiempo: "00:02",
+            porcentaje: 20,
+            periodos: 1,
+          },
+        ],
+        implementos: [
+          {
+            implemento_id: "imp-1",
+            numero: 439011,
+            descripcion: "Rastra pesada",
+            jornadas: 1,
+            tiempo_segundos: 480,
+            tiempo: "00:08",
+          },
+        ],
+        historial: [
+          {
+            inicio: "2026-09-02T13:00:00-05:00",
+            fin: "2026-09-02T13:10:00-05:00",
+            inicio_local: "02/09/2026 13:00",
+            fin_local: "02/09/2026 13:10",
+            tipo: "trabajando",
+            detalle: "Rastra pesada",
+            tiempo_segundos: 600,
+            tiempo: "00:10",
+          },
+        ],
+      }),
+    );
+    expect(detail.engine[0]).toMatchObject({
+      engineOn: false,
+      state: "Apagado",
+    });
+    expect(detail.implements[0]).toMatchObject({
+      number: "439011",
+      time: "00:08",
+    });
+    expect(detail.history[0]).toMatchObject({
+      detail: "Rastra pesada",
+      time: "00:10",
+    });
   });
 });

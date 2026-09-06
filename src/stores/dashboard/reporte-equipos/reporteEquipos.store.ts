@@ -5,6 +5,8 @@ import type {
   EquipmentContext,
   EquipmentListItem,
   EquipmentMasterDetail,
+  EquipmentOperators,
+  OperatorDetail,
   EquipmentSummary,
   EquipmentStops,
   ReportFilters,
@@ -46,6 +48,8 @@ export const useReporteEquiposStore = defineStore(
     const context = shallowRef<EquipmentContext | null>(null);
     const summary = shallowRef<EquipmentSummary | null>(null);
     const stops = shallowRef<EquipmentStops | null>(null);
+    const operators = shallowRef<EquipmentOperators | null>(null);
+    const operatorDetail = shallowRef<OperatorDetail | null>(null);
     const loadStates = ref<ReportLoadStates>(initialStates());
     const initialError = shallowRef<string | null>(null);
     const errors = ref<Record<keyof ReportLoadStates, string | null>>({
@@ -65,6 +69,8 @@ export const useReporteEquiposStore = defineStore(
     );
     let requestId = 0;
     let stopsRequestId = 0;
+    let operatorsRequestId = 0;
+    let operatorDetailRequestId = 0;
     const stopsCache = new Map<string, EquipmentStops>();
     const stopsCacheKey = (code: string): string =>
       `${code}:${filters.value.startDate}:${filters.value.endDate}`;
@@ -77,7 +83,7 @@ export const useReporteEquiposStore = defineStore(
     const setFailure = (key: keyof ReportLoadStates, error: Error): void => {
       updateState(key, "error");
       errors.value = { ...errors.value, [key]: error.message };
-      initialError.value = error.message;
+      if (key === "equipmentList") initialError.value = error.message;
     };
     function invalidateStops(): void {
       ++stopsRequestId;
@@ -85,10 +91,20 @@ export const useReporteEquiposStore = defineStore(
       updateState("stops", "idle");
       errors.value = { ...errors.value, stops: null };
     }
+    function invalidateOperators(): void {
+      ++operatorsRequestId;
+      ++operatorDetailRequestId;
+      selectedOperatorId.value = null;
+      operators.value = null;
+      operatorDetail.value = null;
+      updateState("operators", "idle");
+      updateState("operatorDetail", "idle");
+      errors.value = { ...errors.value, operators: null, operatorDetail: null };
+    }
     async function selectEquipment(code: string): Promise<void> {
       const currentRequest = ++requestId;
       selectedEquipmentCode.value = code;
-      selectedOperatorId.value = null;
+      invalidateOperators();
       masterDetail.value = null;
       context.value = null;
       summary.value = null;
@@ -141,6 +157,7 @@ export const useReporteEquiposStore = defineStore(
             : new Error("No se pudo cargar el resumen del equipo."),
         );
       if (activeTab.value === "paradas") void loadStops();
+      if (activeTab.value === "operadores") void loadOperators();
     }
     async function loadInitial(): Promise<void> {
       const currentRequest = ++requestId;
@@ -167,6 +184,7 @@ export const useReporteEquiposStore = defineStore(
     function setTab(tab: ReportTab): void {
       activeTab.value = tab;
       if (tab === "paradas") void loadStops();
+      if (tab === "operadores") void loadOperators();
     }
     async function loadStops(force = false): Promise<void> {
       const code = selectedEquipmentCode.value;
@@ -217,9 +235,96 @@ export const useReporteEquiposStore = defineStore(
     async function retryStops(): Promise<void> {
       await loadStops(true);
     }
+    async function loadOperators(force = false): Promise<void> {
+      const code = selectedEquipmentCode.value;
+      if (
+        !code ||
+        (!force && loadStates.value.operators === "ready" && operators.value)
+      )
+        return;
+      const currentRequest = ++operatorsRequestId;
+      operators.value = null;
+      updateState("operators", "loading");
+      errors.value = { ...errors.value, operators: null };
+      try {
+        const loadedOperators = await reporteEquiposService.loadOperators(
+          code,
+          filters.value,
+        );
+        if (
+          currentRequest !== operatorsRequestId ||
+          code !== selectedEquipmentCode.value
+        )
+          return;
+        operators.value = loadedOperators;
+        updateState(
+          "operators",
+          loadedOperators.operators.length ? "ready" : "empty",
+        );
+      } catch (error) {
+        if (currentRequest !== operatorsRequestId) return;
+        setFailure(
+          "operators",
+          error instanceof Error
+            ? error
+            : new Error("No se pudo cargar los operadores del equipo."),
+        );
+      }
+    }
+    async function selectOperator(operatorId: string): Promise<void> {
+      const code = selectedEquipmentCode.value;
+      if (
+        !code ||
+        !operators.value?.operators.some((row) => row.operatorId === operatorId)
+      )
+        return;
+      const currentRequest = ++operatorDetailRequestId;
+      selectedOperatorId.value = operatorId;
+      operatorDetail.value = null;
+      updateState("operatorDetail", "loading");
+      errors.value = { ...errors.value, operatorDetail: null };
+      const startDate = filters.value.startDate;
+      const endDate = filters.value.endDate;
+      try {
+        const detail = await reporteEquiposService.loadOperatorDetail(
+          code,
+          operatorId,
+          filters.value,
+        );
+        if (
+          currentRequest !== operatorDetailRequestId ||
+          code !== selectedEquipmentCode.value ||
+          operatorId !== selectedOperatorId.value ||
+          startDate !== filters.value.startDate ||
+          endDate !== filters.value.endDate
+        )
+          return;
+        operatorDetail.value = detail;
+        updateState(
+          "operatorDetail",
+          detail.history.length ||
+            detail.implements.length ||
+            detail.stateDistribution.length
+            ? "ready"
+            : "empty",
+        );
+      } catch (error) {
+        if (currentRequest !== operatorDetailRequestId) return;
+        setFailure(
+          "operatorDetail",
+          error instanceof Error
+            ? error
+            : new Error("No se pudo cargar el detalle del operador."),
+        );
+      }
+    }
+    async function retryOperatorDetail(): Promise<void> {
+      if (selectedOperatorId.value)
+        await selectOperator(selectedOperatorId.value);
+    }
     async function refreshSelectedEquipmentRange(code: string): Promise<void> {
       const currentRequest = ++requestId;
-      selectedOperatorId.value = null;
+      invalidateOperators();
       context.value = null;
       summary.value = null;
       errors.value = {
@@ -259,6 +364,7 @@ export const useReporteEquiposStore = defineStore(
             : new Error("No se pudo cargar el resumen del equipo."),
         );
       if (activeTab.value === "paradas") void loadStops();
+      if (activeTab.value === "operadores") void loadOperators();
     }
     async function setDateRange(
       startDate: string,
@@ -273,11 +379,13 @@ export const useReporteEquiposStore = defineStore(
       await refreshSelectedEquipmentRange(code);
     }
     async function setSearch(search: string): Promise<void> {
+      invalidateOperators();
       filters.value = { ...filters.value, search };
       await loadInitial();
     }
     async function clearFilters(): Promise<void> {
       invalidateStops();
+      invalidateOperators();
       filters.value = initialFilters();
       await loadInitial();
     }
@@ -312,6 +420,8 @@ export const useReporteEquiposStore = defineStore(
       context,
       summary,
       stops,
+      operators,
+      operatorDetail,
       loadStates,
       initialError,
       errors,
@@ -323,6 +433,9 @@ export const useReporteEquiposStore = defineStore(
       clearFilters,
       retrySummary,
       retryStops,
+      loadOperators,
+      selectOperator,
+      retryOperatorDetail,
     };
   },
 );
