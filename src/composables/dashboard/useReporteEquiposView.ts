@@ -15,7 +15,6 @@ export function useReporteEquiposView() {
     selectEquipment: store.selectEquipment,
     setTab: store.setTab,
     setDateRange: store.setDateRange,
-    setSearch: store.setSearch,
     clearFilters: store.clearFilters,
     retrySummary: store.retrySummary,
     retryStops: store.retryStops,

@@ -12,8 +12,36 @@ import {
   operatorDetailSchema,
   summarySchema,
 } from "./reporteEquipos.schemas";
+import { jornadaEventoDetalleSchema } from "./jornadaEventos.schemas";
 
 describe("reporteEquipos schemas", () => {
+  it("acepta contexto sin implemento e intervalos con fechas locales", () => {
+    const detail = jornadaEventoDetalleSchema.parse({
+      evento: {
+        tipo_evento: "reanudar",
+        ocurrio_en_local: "05/09/2026 12:37:44",
+        datos: { causa_cerrada_id: "causa-1" },
+      },
+      contexto: {
+        operador: "AMILCAR MORALES",
+        equipo: "484102",
+        labor: "Arado",
+      },
+      intervalos: [
+        {
+          tipo: "periodo",
+          etiqueta: "Período de parada",
+          inicio_local: "05/09/2026 12:08:47",
+          fin_local: "05/09/2026 12:37:44",
+          duracion_segundos: 1737,
+        },
+      ],
+    });
+
+    expect(detail.contexto.implemento).toBeUndefined();
+    expect(detail.intervalos[0]?.inicio_local).toBe("05/09/2026 12:08:47");
+  });
+
   it("acepta el enriquecimiento fallido sin ocultar el equipo", () => {
     const result = equipmentListSchema.safeParse({
       data: [

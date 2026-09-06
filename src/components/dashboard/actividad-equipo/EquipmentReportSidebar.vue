@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, shallowRef } from "vue";
+import { computed, shallowRef, watch } from "vue";
 import {
   ArrowDownAZ,
   LoaderCircle,
   Search,
   TriangleAlert,
+  X,
 } from "lucide-vue-next";
 import type {
   EquipmentListItem,
@@ -17,17 +18,17 @@ interface Props {
   selectedCode: string | null;
   loadState: ReportLoadState;
   error: string | null;
+  resetSearchSignal: number;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<{
   select: [code: string];
-  search: [query: string];
   retry: [];
 }>();
 
 const searchTerm = shallowRef("");
-const sortMode = shallowRef<"equipmentNumber" | "mostHours">("equipmentNumber");
+const sortMode = shallowRef<"equipmentNumber" | "mostHours">("mostHours");
 const nextSortLabel = computed(() =>
   sortMode.value === "equipmentNumber" ? "Horas" : "# Equipo",
 );
@@ -59,14 +60,16 @@ const visibleEquipment = computed(() => {
   });
 });
 
-function submitSearch(): void {
-  emit("search", searchTerm.value);
-}
-
 function toggleSortMode(): void {
   sortMode.value =
     sortMode.value === "equipmentNumber" ? "mostHours" : "equipmentNumber";
 }
+
+function clearSearch(): void {
+  searchTerm.value = "";
+}
+
+watch(() => props.resetSearchSignal, clearSearch);
 </script>
 
 <template>
@@ -89,7 +92,7 @@ function toggleSortMode(): void {
         <ArrowDownAZ class="size-3" aria-hidden="true" />
       </button>
     </div>
-    <form class="px-3 pb-2" @submit.prevent="submitSearch">
+    <div class="px-3 pb-2" role="search">
       <label
         class="flex h-8 items-center rounded-md border border-gray-200 bg-white px-2"
       >
@@ -101,10 +104,19 @@ function toggleSortMode(): void {
           v-model="searchTerm"
           class="min-w-0 flex-1 border-0 bg-transparent text-xs outline-none placeholder:text-gray-400"
           placeholder="Buscar equipo..."
-          @change="submitSearch"
         />
+        <button
+          v-if="searchTerm"
+          type="button"
+          class="grid size-6 cursor-pointer place-items-center rounded text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+          aria-label="Limpiar búsqueda de equipos"
+          title="Limpiar búsqueda"
+          @click="clearSearch"
+        >
+          <X class="size-3.5" aria-hidden="true" />
+        </button>
       </label>
-    </form>
+    </div>
 
     <div
       id="equipment-sidebar-list"

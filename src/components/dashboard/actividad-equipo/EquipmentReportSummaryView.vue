@@ -29,15 +29,19 @@ const emit = defineEmits<{ retry: [] }>();
       <div
         v-if="loadState === 'ready' && summary"
         :key="`summary-${summary.code}`"
-        class="grid h-full min-h-[360px] grid-rows-[auto_3fr_5fr] gap-2 lg:min-h-0"
+        class="grid h-full min-h-[360px] grid-rows-[auto_minmax(0,1fr)] gap-2 lg:min-h-0"
       >
         <EquipmentSummaryHero
           :detail="masterDetail"
           :context="context"
           :summary="summary"
         />
-        <EquipmentSummaryAnalytics :summary="summary" />
-        <EquipmentSummaryBottomRow :summary="summary" />
+        <div
+          class="grid min-h-0 grid-rows-[minmax(30%,45%)_minmax(0,1fr)] gap-2"
+        >
+          <EquipmentSummaryAnalytics :summary="summary" />
+          <EquipmentSummaryBottomRow :summary="summary" />
+        </div>
       </div>
       <div
         v-else-if="loadState === 'loading'"

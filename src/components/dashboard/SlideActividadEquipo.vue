@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, shallowRef } from "vue";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
 import EquipmentReportCenter from "@/components/dashboard/actividad-equipo/EquipmentReportCenter.vue";
 import EquipmentReportDetailSidebar from "@/components/dashboard/actividad-equipo/EquipmentReportDetailSidebar.vue";
@@ -12,6 +12,7 @@ const REPORT_SECTION_FEATURES: Record<ReportTab, string> = {
   resumen: "ver_dashboard_actividad_equipo_resumen",
   paradas: "ver_dashboard_actividad_equipo_paradas",
   operadores: "ver_dashboard_actividad_equipo_operadores",
+  eventos: "ver_dashboard_actividad_equipo",
 };
 
 const featureAccessStore = useFeatureAccessStore();
@@ -47,14 +48,20 @@ const {
   selectOperator,
   selectEquipment,
   setDateRange,
-  setSearch,
   setTab: updateActiveTab,
 } = useReporteEquiposView();
+
+const equipmentSearchResetSignal = shallowRef(0);
 
 function setTab(tab: ReportTab): void {
   if (availableTabs.value.includes(tab)) {
     updateActiveTab(tab);
   }
+}
+
+async function clearAllFilters(): Promise<void> {
+  equipmentSearchResetSignal.value += 1;
+  await clearFilters();
 }
 </script>
 
@@ -69,19 +76,24 @@ function setTab(tab: ReportTab): void {
       :available-tabs="availableTabs"
       @update-date-range="setDateRange"
       @set-tab="setTab"
-      @clear="clearFilters"
+      @clear="clearAllFilters"
     />
     <main
       id="equipment-report-workspace"
-      class="grid min-h-0 flex-1 grid-cols-1 gap-3 px-4 pb-4 md:px-5 lg:grid-cols-[250px_minmax(0,1fr)_250px] lg:overflow-hidden"
+      class="grid min-h-0 flex-1 grid-cols-1 gap-3 px-4 pb-4 md:px-5 lg:overflow-hidden"
+      :class="
+        activeTab === 'eventos'
+          ? 'lg:grid-cols-[250px_minmax(0,1fr)]'
+          : 'lg:grid-cols-[250px_minmax(0,1fr)_250px]'
+      "
     >
       <EquipmentReportSidebar
         :equipment="equipment"
         :selected-code="selectedEquipmentCode"
         :load-state="equipmentListState"
         :error="initialError"
+        :reset-search-signal="equipmentSearchResetSignal"
         @select="selectEquipment"
-        @search="setSearch"
         @retry="retry"
       />
       <EquipmentReportCenter
@@ -102,6 +114,7 @@ function setTab(tab: ReportTab): void {
         :operator-detail-state="loadStates.operatorDetail"
         :operators-error="errors.operators"
         :operator-detail-error="errors.operatorDetail"
+        :filters="filters"
         @retry-summary="retrySummary"
         @retry-stops="retryStops"
         @select-operator="selectOperator"
@@ -109,6 +122,7 @@ function setTab(tab: ReportTab): void {
         @retry-operator-detail="retryOperatorDetail"
       />
       <EquipmentReportDetailSidebar
+        v-if="activeTab !== 'eventos'"
         :detail="masterDetail"
         :context="context"
         :detail-state="loadStates.equipmentDetail"

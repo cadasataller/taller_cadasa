@@ -4,6 +4,8 @@ import { computed } from "vue";
 const props = defineProps<{
   percentage: number;
   tone: "main" | "success" | "warning" | "accent";
+  percentagePosition?: "start" | "end";
+  valueWidth?: "auto" | "aligned";
 }>();
 
 const barWidth = computed(
@@ -18,11 +20,16 @@ const toneClass = computed(
       accent: "bg-accent",
     })[props.tone],
 );
+const valueClass = computed(() =>
+  props.valueWidth === "aligned"
+    ? "w-11 shrink-0 text-left text-[10px] tabular-nums text-gray-600"
+    : "shrink-0 text-[10px] tabular-nums text-gray-600",
+);
 </script>
 
 <template>
   <div class="flex items-center gap-1.5">
-    <span class="w-8 text-right text-[10px] tabular-nums text-gray-600"
+    <span v-if="props.percentagePosition !== 'end'" :class="valueClass"
       >{{ percentage }}%</span
     >
     <span class="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100"
@@ -31,5 +38,8 @@ const toneClass = computed(
         :class="toneClass"
         :style="{ width: barWidth }"
     /></span>
+    <span v-if="props.percentagePosition === 'end'" :class="valueClass"
+      >{{ percentage }}%</span
+    >
   </div>
 </template>

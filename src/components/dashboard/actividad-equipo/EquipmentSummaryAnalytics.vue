@@ -17,30 +17,23 @@ function classificationTone(
 <template>
   <section
     id="equipment-summary-analytics"
-    class="grid min-h-0 gap-2 lg:grid-cols-3"
+    class="grid min-h-0 items-stretch gap-2 lg:grid-cols-3"
   >
     <article
       id="summary-classification-card"
-      class="group flex min-h-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+      class="group flex min-h-0 min-w-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
     >
       <h3 class="mb-1.5 text-xs font-bold text-main">
         Distribución por clasificación
       </h3>
 
       <div
-        class="min-h-0 flex-1 overflow-y-auto md:overflow-y-hidden md:group-hover:overflow-y-auto"
+        class="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto md:overflow-y-hidden md:group-hover:overflow-y-auto"
       >
         <table class="w-full table-fixed border-collapse text-[10px]">
-          <thead>
-            <tr class="border-b border-gray-100 text-left text-gray-500">
-              <th class="pb-1 text-left font-semibold">Clasificación</th>
-              <th class="w-14 pb-1 text-center font-semibold">Tiempo</th>
-              <th class="w-24 pb-1 text-center font-semibold">%</th>
-            </tr>
-          </thead>
           <tbody>
             <tr v-if="summary.classifications.length === 0" class="h-[100px]">
-              <td colspan="3" class="text-center text-[10px] text-gray-400">
+              <td class="text-center text-[10px] text-gray-400">
                 Sin datos para el período
               </td>
             </tr>
@@ -49,28 +42,25 @@ function classificationTone(
               :key="row.classification"
               class="border-b border-gray-100 last:border-0"
             >
-              <td class="py-1.5 text-left">
-                <span class="flex min-w-0 gap-1.5"
-                  ><i
-                    class="size-1.5 rounded-full"
-                    :class="
-                      classificationTone(row.classification) === 'main'
-                        ? 'bg-main'
-                        : classificationTone(row.classification) === 'success'
-                          ? 'bg-success'
-                          : 'bg-warning'
-                    "
-                  /><span
-                    class="line-clamp-2 leading-tight"
-                    :title="row.classification"
-                    >{{ row.classification }}</span
-                  ></span
-                >
-              </td>
-              <td class="py-1.5 text-center tabular-nums">{{ row.time }}</td>
               <td class="py-1.5">
+                <div class="flex min-w-0 items-start justify-between gap-2">
+                  <span class="flex min-w-0 gap-1.5">
+                    
+                    <span
+                      class="line-clamp-2 leading-tight"
+                      :title="row.classification"
+                      >{{ row.classification }}</span
+                    >
+                  </span>
+                  <span class="w-11 shrink-0 tabular-nums text-gray-600">{{
+                    row.time
+                  }}</span>
+                </div>
                 <EquipmentSummaryPercentBar
+                  class="mt-1"
                   :percentage="row.percentage"
+                  percentage-position="end"
+                  value-width="aligned"
                   :tone="classificationTone(row.classification)"
                 />
               </td>
@@ -81,23 +71,16 @@ function classificationTone(
     </article>
     <article
       id="summary-main-stops-card"
-      class="group flex min-h-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+      class="group flex min-h-0 min-w-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
     >
       <h3 class="mb-1.5 text-xs font-bold text-main">Principales paradas</h3>
       <div
-        class="min-h-0 flex-1 overflow-y-auto md:overflow-y-hidden md:group-hover:overflow-y-auto"
+        class="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto md:overflow-y-hidden md:group-hover:overflow-y-auto"
       >
         <table class="w-full table-fixed border-collapse text-[10px]">
-          <thead>
-            <tr class="border-b border-gray-100 text-left text-gray-500">
-              <th class="pb-1 font-semibold text-left">Motivo</th>
-              <th class="w-14 pb-1 text-center font-semibold">Tiempo</th>
-              <th class="w-24 pb-1 font-semibold text-center">%</th>
-            </tr>
-          </thead>
           <tbody>
             <tr v-if="summary.mainStops.length === 0" class="h-[100px]">
-              <td colspan="3" class="text-center text-[10px] text-gray-400">
+              <td class="text-center text-[10px] text-gray-400">
                 Sin datos para el período
               </td>
             </tr>
@@ -106,17 +89,22 @@ function classificationTone(
               :key="row.reason"
               class="border-b border-gray-100 last:border-0"
             >
-              <td class="py-1.5 text-left">
-                <span
-                  class="line-clamp-2 break-words leading-tight"
-                  :title="row.reason"
-                  >{{ row.reason }}</span
-                >
-              </td>
-              <td class="py-1.5 tabular-nums text-center">{{ row.time }}</td>
               <td class="py-1.5">
+                <div class="flex min-w-0 items-start justify-between gap-2">
+                  <span
+                    class="line-clamp-2 min-w-0 break-words leading-tight"
+                    :title="row.reason"
+                    >{{ row.reason }}</span
+                  >
+                  <span class="w-11 shrink-0 tabular-nums text-gray-600">{{
+                    row.time
+                  }}</span>
+                </div>
                 <EquipmentSummaryPercentBar
+                  class="mt-1"
                   :percentage="row.percentage"
+                  percentage-position="end"
+                  value-width="aligned"
                   tone="accent"
                 />
               </td>
@@ -127,23 +115,16 @@ function classificationTone(
     </article>
     <article
       id="summary-operator-usage-card"
-      class="group flex min-h-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+      class="group flex min-h-0 min-w-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
     >
       <h3 class="mb-1.5 text-xs font-bold text-main">Uso por operador</h3>
       <div
-        class="min-h-0 flex-1 overflow-y-auto md:overflow-y-hidden md:group-hover:overflow-y-auto"
+        class="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto md:overflow-y-hidden md:group-hover:overflow-y-auto"
       >
         <table class="w-full table-fixed border-collapse text-[10px]">
-          <thead>
-            <tr class="border-b border-gray-100 text-left text-gray-500">
-              <th class="pb-1 text-left font-semibold">Operador</th>
-              <th class="w-14 pb-1 text-center font-semibold">Tiempo</th>
-              <th class="w-24 pb-1 text-center font-semibold">%</th>
-            </tr>
-          </thead>
           <tbody>
             <tr v-if="summary.operators.length === 0" class="h-[100px]">
-              <td colspan="3" class="text-center text-[10px] text-gray-400">
+              <td class="text-center text-[10px] text-gray-400">
                 Sin datos para el período
               </td>
             </tr>
@@ -152,17 +133,22 @@ function classificationTone(
               :key="row.operatorId"
               class="border-b border-gray-100 last:border-0"
             >
-              <td class="py-1.5 text-left">
-                <span
-                  class="line-clamp-2 break-words leading-tight"
-                  :title="row.operator"
-                  >{{ row.operator }}</span
-                >
-              </td>
-              <td class="py-1.5 text-center tabular-nums">{{ row.time }}</td>
               <td class="py-1.5">
+                <div class="flex min-w-0 items-start justify-between gap-2">
+                  <span
+                    class="line-clamp-2 min-w-0 break-words leading-tight"
+                    :title="row.operator"
+                    >{{ row.operator }}</span
+                  >
+                  <span class="w-11 shrink-0 tabular-nums text-gray-600">{{
+                    row.time
+                  }}</span>
+                </div>
                 <EquipmentSummaryPercentBar
+                  class="mt-1"
                   :percentage="row.percentage"
+                  percentage-position="end"
+                  value-width="aligned"
                   tone="main"
                 />
               </td>

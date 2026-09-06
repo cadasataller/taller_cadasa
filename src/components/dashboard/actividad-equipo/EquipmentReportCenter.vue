@@ -2,6 +2,7 @@
 import EquipmentOperatorsView from "./EquipmentOperatorsView.vue";
 import EquipmentStopsView from "./EquipmentStopsView.vue";
 import EquipmentReportSummaryView from "./EquipmentReportSummaryView.vue";
+import EquipmentEventsView from "./EquipmentEventsView.vue";
 import type {
   EquipmentContext,
   EquipmentListItem,
@@ -10,6 +11,7 @@ import type {
   OperatorDetail,
   EquipmentSummary,
   EquipmentStops,
+  ReportFilters,
   ReportLoadState,
   ReportTab,
 } from "@/stores/dashboard/reporte-equipos/reporteEquipos.types";
@@ -32,6 +34,7 @@ defineProps<{
   operatorDetailState: ReportLoadState;
   operatorsError: string | null;
   operatorDetailError: string | null;
+  filters: ReportFilters;
 }>();
 const emit = defineEmits<{
   retrySummary: [];
@@ -62,7 +65,7 @@ const emit = defineEmits<{
       @retry="emit('retryStops')"
     />
     <EquipmentOperatorsView
-      v-else
+      v-else-if="activeTab === 'operadores'"
       :operators="operators"
       :selected-operator-id="selectedOperatorId"
       :operator-detail="operatorDetail"
@@ -73,6 +76,12 @@ const emit = defineEmits<{
       @select-operator="emit('selectOperator', $event)"
       @retry-operators="emit('retryOperators')"
       @retry-operator-detail="emit('retryOperatorDetail')"
+    />
+    <EquipmentEventsView
+      v-else
+      :equipo="selectedEquipment?.code ?? null"
+      :desde="filters.startDate"
+      :hasta="filters.endDate"
     />
   </section>
 </template>

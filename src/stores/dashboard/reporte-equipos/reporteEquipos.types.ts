@@ -1,10 +1,9 @@
-export type ReportTab = "resumen" | "paradas" | "operadores";
+export type ReportTab = "resumen" | "paradas" | "operadores" | "eventos";
 export type ReportLoadState = "idle" | "loading" | "ready" | "empty" | "error";
 
 export interface ReportFilters {
   startDate: string;
   endDate: string;
-  search: string;
 }
 export interface EquipmentListItem {
   code: string;
@@ -185,6 +184,84 @@ export interface OperatorDetail {
   classificationDistribution: OperatorClassificationDistributionRow[];
   mainStops: OperatorStopReasonRow[];
   history: OperatorHistoryRow[];
+}
+export interface JornadaEventoListaItem {
+  eventoId: string;
+  fechaHora: string;
+  operadorId: string;
+  operador: string;
+  equipo: string;
+  tipoEvento: string;
+  evento: string;
+  detalle: string | null;
+  labor: string;
+}
+export interface JornadaEventosCursor {
+  ocurrioEn: string;
+  id: string;
+}
+export interface JornadaEventosListaResponse {
+  modo: "hoy" | "fallback_recientes" | "rango_explicito";
+  snapshotRegistradoEn: string;
+  pageSize: number;
+  hasMore: boolean;
+  nextCursor: JornadaEventosCursor | null;
+  items: JornadaEventoListaItem[];
+}
+export interface JornadaEventoFilters {
+  tipoEvento: string | null;
+}
+export interface JornadaEventoIntervalo {
+  id: string | null;
+  tipo: string;
+  etiqueta: string;
+  estado: string | null;
+  inicio: string | null;
+  fin: string | null;
+  duracionSegundos: number | null;
+  clasificacion: string | null;
+  motorEncendido: boolean | null;
+  equipo: string | null;
+  implemento: string | null;
+  labor: string | null;
+}
+export type JornadaEventoJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JornadaEventoJsonObject
+  | JornadaEventoJsonValue[];
+export interface JornadaEventoJsonObject {
+  [key: string]: JornadaEventoJsonValue;
+}
+export interface JornadaEventoDetalle {
+  raw: JornadaEventoJsonObject;
+  evento: {
+    id: string;
+    clientEventId: string | null;
+    jornadaId: string | null;
+    asignacionId: string | null;
+    periodoId: string | null;
+    tipoEvento: string;
+    ocurrioEn: string;
+    registradoEn: string | null;
+    sincronizadoEn: string | null;
+    retroactivoMinutos: number | null;
+    latitud: number | null;
+    longitud: number | null;
+    creadoPorAuthUserId: string | null;
+    datos: JornadaEventoJsonObject | null;
+    creadoEn: string | null;
+    secuencia: number | null;
+  };
+  contexto: {
+    operador: string | null;
+    equipo: string | null;
+    labor: string | null;
+    implemento: string | null;
+  };
+  intervalos: JornadaEventoIntervalo[];
 }
 export interface SummaryClassificationRow {
   classification: string;

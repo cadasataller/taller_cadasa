@@ -47,8 +47,6 @@ export const reporteEquiposService = {
       "buscar-equipos-reporte",
       {
         body: {
-          q: filters.search,
-          limit: 50,
           full: true,
           desde: filters.startDate,
           hasta: filters.endDate,

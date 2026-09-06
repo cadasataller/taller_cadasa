@@ -23,7 +23,6 @@ const initialFilters = (): ReportFilters => {
   return {
     startDate: formatDate(start),
     endDate: formatDate(today),
-    search: "",
   };
 };
 const initialStates = (): ReportLoadStates => ({
@@ -378,11 +377,6 @@ export const useReporteEquiposStore = defineStore(
       }
       await refreshSelectedEquipmentRange(code);
     }
-    async function setSearch(search: string): Promise<void> {
-      invalidateOperators();
-      filters.value = { ...filters.value, search };
-      await loadInitial();
-    }
     async function clearFilters(): Promise<void> {
       invalidateStops();
       invalidateOperators();
@@ -429,7 +423,6 @@ export const useReporteEquiposStore = defineStore(
       selectEquipment,
       setTab,
       setDateRange,
-      setSearch,
       clearFilters,
       retrySummary,
       retryStops,

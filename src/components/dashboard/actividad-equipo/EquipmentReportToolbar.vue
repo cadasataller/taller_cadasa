@@ -28,6 +28,7 @@ const tabs: { key: ReportTab; label: string }[] = [
   { key: "resumen", label: "Resumen" },
   { key: "paradas", label: "Paradas" },
   { key: "operadores", label: "Operadores" },
+  { key: "eventos", label: "Eventos" },
 ];
 const visibleTabs = computed(() =>
   tabs.filter((tab) => props.availableTabs.includes(tab.key)),
