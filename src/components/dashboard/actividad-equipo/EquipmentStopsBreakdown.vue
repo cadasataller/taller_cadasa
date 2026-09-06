@@ -43,9 +43,9 @@ const originLabel: Record<StopOriginRow["origin"], string> = {
           <thead>
             <tr class="border-b border-gray-100 text-left text-gray-500">
               <th class="pb-1 font-semibold">Clasificación</th>
-              <th class="w-[68px] pb-1 text-right font-semibold">Tiempo</th>
-              <th class="w-14 pb-1 text-right font-semibold">N.º</th>
-              <th class="w-[118px] pb-1 font-semibold">% parada</th>
+              <th class="w-[68px] pb-1 text-center font-semibold">Tiempo</th>
+              <th class="w-14 pb-1 text-center font-semibold">N.º</th>
+              <th class="w-[118px] pb-1 text-center font-semibold">% parada</th>
             </tr>
           </thead>
           <tbody>
@@ -68,9 +68,9 @@ const originLabel: Record<StopOriginRow["origin"], string> = {
                   />{{ row.classification }}</span
                 >
               </td>
-              <td class="py-1.5 text-right tabular-nums">{{ row.time }}</td>
-              <td class="py-1.5 text-right tabular-nums">{{ row.count }}</td>
-              <td class="py-1.5">
+              <td class="py-1.5 text-center tabular-nums">{{ row.time }}</td>
+              <td class="py-1.5 text-center tabular-nums">{{ row.count }}</td>
+              <td class="py-1.5 text-center">
                 <EquipmentSummaryPercentBar
                   :percentage="row.percentage"
                   :tone="classificationTone(row.classification)"
@@ -94,9 +94,9 @@ const originLabel: Record<StopOriginRow["origin"], string> = {
           <thead>
             <tr class="border-b border-gray-100 text-left text-gray-500">
               <th class="pb-1 font-semibold">Origen</th>
-              <th class="w-[68px] pb-1 text-right font-semibold">Tiempo</th>
-              <th class="w-14 pb-1 text-right font-semibold">N.º</th>
-              <th class="w-[118px] pb-1 font-semibold">% parada</th>
+              <th class="w-[68px] pb-1 text-center font-semibold">Tiempo</th>
+              <th class="w-14 pb-1 text-center font-semibold">N.º</th>
+              <th class="w-[118px] pb-1 text-center font-semibold">% parada</th>
             </tr>
           </thead>
           <tbody>
@@ -119,9 +119,9 @@ const originLabel: Record<StopOriginRow["origin"], string> = {
                   />{{ originLabel[row.origin] }}</span
                 >
               </td>
-              <td class="py-1.5 text-right tabular-nums">{{ row.time }}</td>
-              <td class="py-1.5 text-right tabular-nums">{{ row.count }}</td>
-              <td class="py-1.5">
+              <td class="py-1.5 text-center tabular-nums">{{ row.time }}</td>
+              <td class="py-1.5 text-center tabular-nums">{{ row.count }}</td>
+              <td class="py-1.5 text-center">
                 <EquipmentSummaryPercentBar
                   :percentage="row.percentage"
                   :tone="originTone(row.origin)"

@@ -18,9 +18,9 @@ defineProps<{ reasons: StopReasonRow[] }>();
         <thead>
           <tr class="border-b border-gray-100 text-left text-gray-500">
             <th class="pb-1 font-semibold">Motivo</th>
-            <th class="w-[74px] pb-1 text-right font-semibold">Ocurrencias</th>
-            <th class="w-[76px] pb-1 text-right font-semibold">Tiempo</th>
-            <th class="w-[150px] pb-1 font-semibold">% parada</th>
+            <th class="w-[74px] pb-1 text-center font-semibold">Ocurrencias</th>
+            <th class="w-[76px] pb-1 text-center font-semibold">Tiempo</th>
+            <th class="w-[150px] pb-1 text-center font-semibold">% parada</th>
           </tr>
         </thead>
         <tbody>
@@ -30,10 +30,10 @@ defineProps<{ reasons: StopReasonRow[] }>();
             class="border-b border-gray-100 last:border-0"
           >
             <td class="py-1.5 leading-tight break-words">{{ row.reason }}</td>
-            <td class="py-1.5 text-right tabular-nums">
+            <td class="py-1.5 text-center tabular-nums">
               {{ row.occurrences }}
             </td>
-            <td class="py-1.5 text-right tabular-nums">{{ row.time }}</td>
+            <td class="py-1.5 text-center tabular-nums">{{ row.time }}</td>
             <td class="py-1.5">
               <EquipmentSummaryPercentBar
                 :percentage="row.percentage"
