@@ -102,8 +102,12 @@ function isStartOfNewDate(index: number): boolean {
             <tr
               v-for="(row, index) in summary.history"
               :key="`${row.startAt}-${row.kind}-${row.detail}`"
-              class="border-b border-gray-100 last:border-0"
-              :class="isStartOfNewDate(index) ? 'bg-gray-50/70' : ''"
+              class="border-b border-gray-100 transition-colors last:border-0 hover:bg-main/5"
+              :class="
+                isStartOfNewDate(index)
+                  ? 'bg-gray-50/90 shadow-[inset_3px_0_0_var(--color-main)]'
+                  : ''
+              "
             >
               <td
                 class="border-r border-gray-100 p-1.5 align-top tabular-nums whitespace-nowrap"

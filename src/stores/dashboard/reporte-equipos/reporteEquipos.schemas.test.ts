@@ -182,7 +182,7 @@ describe("reporteEquipos schemas", () => {
     });
   });
 
-  it("mapea el detalle del operador sin inferir motor, implementos ni historial", () => {
+  it("mapea el detalle reducido del operador", () => {
     const detail = mapOperatorDetail(
       operatorDetailSchema.parse({
         equipo_numero: "484091",
@@ -196,14 +196,6 @@ describe("reporteEquipos schemas", () => {
           tiempo_parado_segundos: 120,
           tiempo_parado: "00:02",
         },
-        distribucion_estado: [
-          {
-            estado: "trabajando",
-            tiempo_segundos: 480,
-            tiempo: "00:08",
-            porcentaje: 80,
-          },
-        ],
         distribucion_clasificacion: [
           {
             clasificacion: "EFECTIVO",
@@ -221,26 +213,6 @@ describe("reporteEquipos schemas", () => {
             porcentaje_paradas: 100,
           },
         ],
-        motor: [
-          {
-            motor_encendido: false,
-            estado: "Apagado",
-            tiempo_segundos: 120,
-            tiempo: "00:02",
-            porcentaje: 20,
-            periodos: 1,
-          },
-        ],
-        implementos: [
-          {
-            implemento_id: "imp-1",
-            numero: 439011,
-            descripcion: "Rastra pesada",
-            jornadas: 1,
-            tiempo_segundos: 480,
-            tiempo: "00:08",
-          },
-        ],
         historial: [
           {
             inicio: "2026-09-02T13:00:00-05:00",
@@ -255,13 +227,13 @@ describe("reporteEquipos schemas", () => {
         ],
       }),
     );
-    expect(detail.engine[0]).toMatchObject({
-      engineOn: false,
-      state: "Apagado",
-    });
-    expect(detail.implements[0]).toMatchObject({
-      number: "439011",
+    expect(detail.classificationDistribution[0]).toMatchObject({
+      classification: "EFECTIVO",
       time: "00:08",
+    });
+    expect(detail.mainStops[0]).toMatchObject({
+      reason: "Combustible",
+      percentage: 100,
     });
     expect(detail.history[0]).toMatchObject({
       detail: "Rastra pesada",

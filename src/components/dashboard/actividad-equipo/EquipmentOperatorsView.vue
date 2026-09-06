@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { AlertCircle, Loader2, RotateCcw, UsersRound } from "lucide-vue-next";
 import EquipmentOperatorsKpiGrid from "./EquipmentOperatorsKpiGrid.vue";
 import EquipmentOperatorsUsageTable from "./EquipmentOperatorsUsageTable.vue";
@@ -9,7 +10,7 @@ import type {
   OperatorDetail,
   ReportLoadState,
 } from "@/stores/dashboard/reporte-equipos/reporteEquipos.types";
-defineProps<{
+const props = defineProps<{
   operators: EquipmentOperators | null;
   selectedOperatorId: string | null;
   operatorDetail: OperatorDetail | null;
@@ -18,6 +19,11 @@ defineProps<{
   operatorsError: string | null;
   operatorDetailError: string | null;
 }>();
+const gridRowsClass = computed(() =>
+  (props.operators?.operators.length ?? 0) > 3
+    ? "lg:grid-rows-[auto_160px_auto_minmax(0,1fr)]"
+    : "lg:grid-rows-[auto_auto_auto_minmax(0,1fr)]",
+);
 const emit = defineEmits<{
   selectOperator: [operatorId: string];
   retryOperators: [];
@@ -27,7 +33,8 @@ const emit = defineEmits<{
 <template>
   <section
     id="equipment-operators-view"
-    class="grid h-full min-h-0 gap-2 overflow-y-auto lg:grid-rows-[auto_minmax(160px,0.9fr)_minmax(150px,0.75fr)_minmax(170px,1fr)] lg:overflow-hidden"
+    class="grid h-full min-h-0 gap-2 overflow-y-auto lg:overflow-hidden"
+    :class="gridRowsClass"
   >
     <template v-if="operatorsState === 'ready' && operators"
       ><EquipmentOperatorsKpiGrid
@@ -43,9 +50,9 @@ const emit = defineEmits<{
           :detail="operatorDetail"
       /></template>
       <div v-else-if="operatorDetailState === 'loading'" class="contents">
-        <div class="grid gap-2 lg:grid-cols-3">
+        <div class="grid gap-2 lg:grid-cols-2">
           <i
-            v-for="index in 3"
+            v-for="index in 2"
             :key="index"
             class="min-h-28 animate-pulse rounded-[10px] border border-gray-200 bg-white"
           />
@@ -100,9 +107,9 @@ const emit = defineEmits<{
       <i
         class="min-h-40 animate-pulse rounded-[10px] border border-gray-200 bg-white"
       />
-      <div class="grid gap-2 lg:grid-cols-3">
+      <div class="grid gap-2 lg:grid-cols-2">
         <i
-          v-for="index in 3"
+          v-for="index in 2"
           :key="index"
           class="min-h-28 animate-pulse rounded-[10px] border border-gray-200 bg-white"
         />

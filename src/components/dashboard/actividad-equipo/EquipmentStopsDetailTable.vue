@@ -3,7 +3,7 @@ import type { StopDetailRow } from "@/stores/dashboard/reporte-equipos/reporteEq
 import { formatCompactPanamaDateTime } from "@/utils/formatCompactPanamaDate";
 import { formatOperationalNumber } from "@/utils/formatOperationalNumber";
 
-defineProps<{ details: StopDetailRow[] }>();
+const props = defineProps<{ details: StopDetailRow[] }>();
 
 const originLabel: Record<StopDetailRow["origin"], string> = {
   equipo: "Equipo",
@@ -14,6 +14,15 @@ function implementLabel(row: StopDetailRow): string {
   return row.implement
     ? `${formatOperationalNumber(row.implement.number)} ${row.implement.name}`
     : "—";
+}
+function dateKey(value: string): string {
+  return value.trim().split(/\s+/)[0] ?? value;
+}
+function isStartOfNewDate(index: number): boolean {
+  const currentRow = props.details[index];
+  const previousRow = props.details[index - 1];
+  if (!currentRow || !previousRow) return true;
+  return dateKey(currentRow.startLocal) !== dateKey(previousRow.startLocal);
 }
 </script>
 
@@ -73,9 +82,14 @@ function implementLabel(row: StopDetailRow): string {
           </thead>
           <tbody v-if="details.length">
             <tr
-              v-for="row in details"
+              v-for="(row, index) in details"
               :key="`${row.startLocal}-${row.endLocal}-${row.reason}`"
-              class="border-b border-gray-100 last:border-0"
+              class="border-b border-gray-100 transition-colors last:border-0 hover:bg-main/5"
+              :class="
+                isStartOfNewDate(index)
+                  ? 'bg-gray-50/90 shadow-[inset_3px_0_0_var(--color-main)]'
+                  : ''
+              "
             >
               <td
                 class="border-r border-gray-100 p-1.5 align-top whitespace-nowrap"

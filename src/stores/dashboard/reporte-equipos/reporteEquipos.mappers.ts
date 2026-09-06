@@ -221,12 +221,6 @@ export const mapOperatorDetail = (
   workingTime: dto.metricas.tiempo_trabajando,
   stoppedSeconds: dto.metricas.tiempo_parado_segundos,
   stoppedTime: dto.metricas.tiempo_parado,
-  stateDistribution: dto.distribucion_estado.map((row) => ({
-    state: row.estado,
-    seconds: row.tiempo_segundos,
-    time: row.tiempo,
-    percentage: row.porcentaje,
-  })),
   classificationDistribution: dto.distribucion_clasificacion.map((row) => ({
     classification: row.clasificacion,
     seconds: row.tiempo_segundos,
@@ -238,22 +232,6 @@ export const mapOperatorDetail = (
     seconds: row.tiempo_segundos,
     time: row.tiempo,
     percentage: row.porcentaje_paradas,
-  })),
-  engine: dto.motor.map((row) => ({
-    engineOn: row.motor_encendido,
-    state: row.estado,
-    seconds: row.tiempo_segundos,
-    time: row.tiempo,
-    percentage: row.porcentaje,
-    periods: row.periodos,
-  })),
-  implements: dto.implementos.map((row) => ({
-    implementId: String(row.implemento_id),
-    number: String(row.numero),
-    description: row.descripcion,
-    journeys: row.jornadas,
-    seconds: row.tiempo_segundos,
-    time: row.tiempo,
   })),
   history: dto.historial.map((row) => ({
     startAt: row.inicio,

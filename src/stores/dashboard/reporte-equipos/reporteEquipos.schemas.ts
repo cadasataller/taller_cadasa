@@ -241,11 +241,6 @@ export const operatorDetailSchema = z.object({
     tiempo_parado_segundos: z.number().finite(),
     tiempo_parado: z.string(),
   }),
-  distribucion_estado: z.array(
-    operatorTimeSchema.extend({
-      estado: z.union([z.literal("trabajando"), z.literal("parado")]),
-    }),
-  ),
   distribucion_clasificacion: z.array(
     operatorTimeSchema.extend({ clasificacion: z.string() }),
   ),
@@ -256,23 +251,6 @@ export const operatorDetailSchema = z.object({
       tiempo_segundos: z.number().finite(),
       tiempo: z.string(),
       porcentaje_paradas: z.number().finite(),
-    }),
-  ),
-  motor: z.array(
-    operatorTimeSchema.extend({
-      motor_encendido: z.boolean(),
-      estado: z.string(),
-      periodos: z.number().int(),
-    }),
-  ),
-  implementos: z.array(
-    z.object({
-      implemento_id: identifierSchema,
-      numero: identifierSchema,
-      descripcion: z.string(),
-      jornadas: z.number().int(),
-      tiempo_segundos: z.number().finite(),
-      tiempo: z.string(),
     }),
   ),
   historial: z.array(

@@ -303,8 +303,8 @@ export const useReporteEquiposStore = defineStore(
         updateState(
           "operatorDetail",
           detail.history.length ||
-            detail.implements.length ||
-            detail.stateDistribution.length
+            detail.classificationDistribution.length ||
+            detail.mainStops.length
             ? "ready"
             : "empty",
         );

@@ -149,12 +149,6 @@ export interface EquipmentOperators {
   metrics: OperatorMetrics;
   operators: OperatorUsageRow[];
 }
-export interface OperatorStateDistributionRow {
-  state: "trabajando" | "parado";
-  seconds: number;
-  time: string;
-  percentage: number;
-}
 export interface OperatorClassificationDistributionRow {
   classification: string;
   seconds: number;
@@ -166,22 +160,6 @@ export interface OperatorStopReasonRow {
   seconds: number;
   time: string;
   percentage: number;
-}
-export interface OperatorEngineUsageRow {
-  engineOn: boolean;
-  state: string;
-  seconds: number;
-  time: string;
-  percentage: number;
-  periods: number;
-}
-export interface OperatorImplementRow {
-  implementId: string;
-  number: string;
-  description: string;
-  journeys: number;
-  seconds: number;
-  time: string;
 }
 export interface OperatorHistoryRow {
   startAt: string;
@@ -204,11 +182,8 @@ export interface OperatorDetail {
   workingTime: string;
   stoppedSeconds: number;
   stoppedTime: string;
-  stateDistribution: OperatorStateDistributionRow[];
   classificationDistribution: OperatorClassificationDistributionRow[];
   mainStops: OperatorStopReasonRow[];
-  engine: OperatorEngineUsageRow[];
-  implements: OperatorImplementRow[];
   history: OperatorHistoryRow[];
 }
 export interface SummaryClassificationRow {
