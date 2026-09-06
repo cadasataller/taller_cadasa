@@ -152,6 +152,8 @@ export const stopsSchema = z.object({
   ),
   detalle: z.array(
     z.object({
+      inicio: z.string(),
+      fin: z.string(),
       inicio_local: z.string(),
       fin_local: z.string(),
       duracion: z.string(),

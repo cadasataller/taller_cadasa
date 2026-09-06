@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { StopDetailRow } from "@/stores/dashboard/reporte-equipos/reporteEquipos.types";
+import { formatCompactPanamaDateTime } from "@/utils/formatCompactPanamaDate";
 import { formatOperationalNumber } from "@/utils/formatOperationalNumber";
 
 defineProps<{ details: StopDetailRow[] }>();
@@ -79,12 +80,12 @@ function implementLabel(row: StopDetailRow): string {
               <td
                 class="border-r border-gray-100 p-1.5 align-top whitespace-nowrap"
               >
-                {{ row.startLocal }}
+                {{ formatCompactPanamaDateTime(row.startAt) }}
               </td>
               <td
                 class="border-r border-gray-100 p-1.5 align-top whitespace-nowrap"
               >
-                {{ row.endLocal }}
+                {{ formatCompactPanamaDateTime(row.endAt) }}
               </td>
               <td
                 class="border-r border-gray-100 p-1.5 text-right align-top tabular-nums whitespace-nowrap"

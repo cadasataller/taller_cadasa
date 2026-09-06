@@ -103,6 +103,8 @@ describe("reporteEquipos schemas", () => {
       ],
       detalle: [
         {
+          inicio: "2026-08-19T20:41:00+00:00",
+          fin: "2026-08-19T20:41:00+00:00",
           inicio_local: "19/08/2026 15:41",
           fin_local: "19/08/2026 15:41",
           duracion: "00:00",

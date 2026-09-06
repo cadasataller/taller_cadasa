@@ -137,6 +137,8 @@ export const mapStops = (dto: z.infer<typeof stopsSchema>): EquipmentStops => ({
     percentage: row.porcentaje_paradas,
   })),
   details: dto.detalle.map((row) => ({
+    startAt: row.inicio,
+    endAt: row.fin,
     startLocal: row.inicio_local,
     endLocal: row.fin_local,
     duration: row.duracion,

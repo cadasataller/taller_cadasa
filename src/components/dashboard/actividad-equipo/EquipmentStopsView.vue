@@ -22,7 +22,7 @@ const emit = defineEmits<{ retry: [] }>();
 <template>
   <section
     id="equipment-stops-view"
-    class="grid h-full min-h-0 grid-rows-[auto_auto_auto_minmax(0,1fr)] gap-2 overflow-hidden"
+    class="grid h-full min-h-0 gap-2 overflow-hidden lg:grid-rows-[auto_auto_minmax(0,1fr)_minmax(0,1fr)]"
   >
     <template v-if="loadState === 'ready' && stops">
       <EquipmentStopsKpiGrid :metrics="stops.metrics" :context="context" />

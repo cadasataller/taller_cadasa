@@ -44,5 +44,5 @@ export function formatCompactPanamaDateTime(value: CompactDateInput): string {
 
   return `${part("day")} ${abbreviatedMonths[Number(part("month")) - 1]} ${part(
     "year",
-  )} ${part("hour")}:${part("minute")}`;
+  )} - ${part("hour")}:${part("minute")}`;
 }

@@ -30,15 +30,15 @@ const originLabel: Record<StopOriginRow["origin"], string> = {
 </script>
 
 <template>
-  <section class="grid items-stretch gap-2 lg:grid-cols-2">
+  <section class="grid min-h-0 gap-2 lg:grid-cols-2">
     <article
       id="stops-classification-card"
-      class="rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+      class="flex min-h-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
     >
       <h3 class="mb-1.5 text-xs font-bold text-main">
         Paradas por clasificación
       </h3>
-      <div v-if="classifications.length" class="overflow-x-auto">
+      <div v-if="classifications.length" class="min-h-0 flex-1 overflow-auto">
         <table class="w-full table-fixed border-collapse text-[10px]">
           <thead>
             <tr class="border-b border-gray-100 text-left text-gray-500">
@@ -86,10 +86,10 @@ const originLabel: Record<StopOriginRow["origin"], string> = {
     </article>
     <article
       id="stops-origin-card"
-      class="rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+      class="flex min-h-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
     >
       <h3 class="mb-1.5 text-xs font-bold text-main">Paradas por origen</h3>
-      <div v-if="origins.length" class="overflow-x-auto">
+      <div v-if="origins.length" class="min-h-0 flex-1 overflow-auto">
         <table class="w-full table-fixed border-collapse text-[10px]">
           <thead>
             <tr class="border-b border-gray-100 text-left text-gray-500">

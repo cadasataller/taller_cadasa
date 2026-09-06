@@ -99,6 +99,8 @@ export interface StopImplement {
   name: string;
 }
 export interface StopDetailRow {
+  startAt: string;
+  endAt: string;
   startLocal: string;
   endLocal: string;
   duration: string;
