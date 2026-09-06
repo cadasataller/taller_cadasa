@@ -1,117 +1,83 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import EquipmentSummaryPercentBar from "./EquipmentSummaryPercentBar.vue";
-import type {
-  EquipmentSummary,
-  SummaryHistoryRow,
-} from "@/stores/dashboard/reporte-equipos/reporteEquipos.types";
-
-interface HistoryDateGroup {
-  date: string;
-  rows: SummaryHistoryRow[];
-}
+import type { EquipmentSummary } from "@/stores/dashboard/reporte-equipos/reporteEquipos.types";
 
 const props = defineProps<{ summary: EquipmentSummary }>();
 
-function splitLocalDateTime(value: string): { date: string; time: string } {
-  const [date = "—", ...timeParts] = value.trim().split(/\s+/);
-  return { date: date || "—", time: timeParts.join(" ") || "—" };
+const abbreviatedMonths = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "agos",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
+] as const;
+
+function dateKey(value: string): string {
+  return value.trim().split(/\s+/)[0] ?? value;
 }
 
-function formatTwoWords(value: string): string {
-  const [firstWord, secondWord] = value.trim().split(/\s+/);
-  if (!firstWord) return "—";
-  if (!secondWord) return firstWord;
-  const visibleSecondWord =
-    secondWord.length > 6 ? `${secondWord.slice(0, 5)}.....` : secondWord;
-  return `${firstWord} ${visibleSecondWord}`;
+function formatHistoryDate(value: string): string {
+  const [rawDate, rawTime] = value.trim().split(/\s+/);
+  const [rawDay, rawMonth, rawYear] = (rawDate ?? "").split("/");
+  const day = Number(rawDay);
+  const month = Number(rawMonth);
+
+  if (
+    !Number.isInteger(day) ||
+    !Number.isInteger(month) ||
+    month < 1 ||
+    month > 12 ||
+    !rawYear
+  )
+    return value;
+
+  const date = `${String(day).padStart(2, "0")} ${
+    abbreviatedMonths[month - 1]
+  } ${rawYear.slice(-2)}`;
+
+  return rawTime ? `${date} - ${rawTime}` : date;
 }
 
-const historyByDate = computed<HistoryDateGroup[]>(() =>
-  props.summary.history.reduce<HistoryDateGroup[]>((groups, row) => {
-    const date = splitLocalDateTime(row.startLocal).date;
-    const latestGroup = groups[groups.length - 1];
-    if (latestGroup?.date === date) latestGroup.rows.push(row);
-    else groups.push({ date, rows: [row] });
-    return groups;
-  }, []),
-);
+function isStartOfNewDate(index: number): boolean {
+  const currentRow = props.summary.history[index];
+  const previousRow = props.summary.history[index - 1];
+  if (!currentRow || !previousRow) return true;
+
+  return dateKey(currentRow.startLocal) !== dateKey(previousRow.startLocal);
+}
 </script>
 
 <template>
-  <section
-    id="equipment-summary-bottom-row"
-    class="grid min-h-0 gap-2 lg:grid-cols-[minmax(0,.42fr)_minmax(0,.58fr)] lg:overflow-hidden"
-  >
-    <article
-      id="summary-equipment-implements-card"
-      class="min-h-0 overflow-hidden rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
-    >
-      <h3 class="mb-1.5 text-xs font-bold text-main">
-        Implementos usados por equipo
-      </h3>
-      <div class="overflow-x-auto">
-        <table class="w-full table-auto border-collapse text-[10px]">
-          <thead>
-            <tr class="border-b border-gray-100 text-left text-gray-500">
-              <th class="pb-1 font-semibold">Implemento</th>
-              <th class="w-[64px] pb-1 text-right font-semibold">Jornadas</th>
-              <th class="w-[64px] pb-1 text-right font-semibold">Tiempo</th>
-              <th class="w-[112px] pb-1 font-semibold">% uso</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="summary.implements.length === 0" class="h-[54px]">
-              <td colspan="4" class="text-center text-[10px] text-gray-400">
-                Sin datos para el período
-              </td>
-            </tr>
-            <tr
-              v-for="row in summary.implements"
-              :key="row.implementId"
-              class="border-b border-gray-100 last:border-0"
-            >
-              <td
-                class="py-1.5 leading-tight whitespace-nowrap"
-                :title="`${row.number} ${row.description}`"
-              >
-                <span class="font-semibold">{{ row.number }}</span>
-                {{ formatTwoWords(row.description) }}
-              </td>
-              <td class="py-1.5 text-right tabular-nums">{{ row.journeys }}</td>
-              <td class="py-1.5 text-right tabular-nums">{{ row.time }}</td>
-              <td class="py-1.5">
-                <EquipmentSummaryPercentBar
-                  :percentage="row.percentage"
-                  tone="main"
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </article>
+  <section id="equipment-summary-bottom-row" class="min-h-0 lg:overflow-hidden">
     <article
       id="summary-history-card"
-      class="flex min-h-0 flex-col overflow-hidden rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+      class="flex h-full min-h-0 flex-col overflow-hidden rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
     >
       <h3 class="mb-1.5 text-xs font-bold text-main">
         Historial reciente · 10 últimos
       </h3>
       <div
         id="summary-history-scroll"
-        class="min-h-0 flex-1 overflow-y-auto rounded-md border border-gray-100"
+        class="min-h-0 flex-1 overflow-auto rounded-md border border-gray-100"
       >
-        <table class="w-full table-fixed border-collapse text-[10px]">
+        <table
+          class="min-w-[500px] w-full table-fixed border-collapse text-[10px]"
+        >
           <thead class="sticky top-0 z-10 bg-gray-50 text-left text-gray-600">
             <tr>
               <th
-                class="w-[72px] border-b border-r border-gray-100 p-1.5 font-bold"
+                class="w-[128px] border-b border-r border-gray-100 p-1.5 font-bold"
               >
                 Inicio
               </th>
               <th
-                class="w-[72px] border-b border-r border-gray-100 p-1.5 font-bold"
+                class="w-[128px] border-b border-r border-gray-100 p-1.5 font-bold"
               >
                 Fin
               </th>
@@ -132,29 +98,22 @@ const historyByDate = computed<HistoryDateGroup[]>(() =>
               </td>
             </tr>
           </tbody>
-          <tbody v-for="group in historyByDate" :key="group.date">
-            <tr class="border-b border-gray-100 bg-gray-50/70">
-              <th
-                colspan="4"
-                class="p-1.5 text-left text-[10px] font-bold text-main"
-              >
-                {{ group.date }}
-              </th>
-            </tr>
+          <tbody>
             <tr
-              v-for="row in group.rows"
+              v-for="(row, index) in summary.history"
               :key="`${row.startAt}-${row.kind}-${row.detail}`"
               class="border-b border-gray-100 last:border-0"
+              :class="isStartOfNewDate(index) ? 'bg-gray-50/70' : ''"
             >
               <td
                 class="border-r border-gray-100 p-1.5 align-top tabular-nums whitespace-nowrap"
               >
-                {{ splitLocalDateTime(row.startLocal).time }}
+                {{ formatHistoryDate(row.startLocal) }}
               </td>
               <td
                 class="border-r border-gray-100 p-1.5 align-top tabular-nums whitespace-nowrap"
               >
-                {{ splitLocalDateTime(row.endLocal).time }}
+                {{ formatHistoryDate(row.endLocal) }}
               </td>
               <td
                 class="min-w-0 border-r border-gray-100 p-1.5 align-top"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { StopDetailRow } from "@/stores/dashboard/reporte-equipos/reporteEquipos.types";
+import { formatOperationalNumber } from "@/utils/formatOperationalNumber";
 
 defineProps<{ details: StopDetailRow[] }>();
 
@@ -9,7 +10,9 @@ const originLabel: Record<StopDetailRow["origin"], string> = {
   otro: "Otro",
 };
 function implementLabel(row: StopDetailRow): string {
-  return row.implement ? `${row.implement.number} ${row.implement.name}` : "—";
+  return row.implement
+    ? `${formatOperationalNumber(row.implement.number)} ${row.implement.name}`
+    : "—";
 }
 </script>
 

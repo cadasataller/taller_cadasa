@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { CircleOff, LoaderCircle, TriangleAlert } from "lucide-vue-next";
+import EquipmentSummaryImplementsCard from "./EquipmentSummaryImplementsCard.vue";
+import { formatOperationalNumber } from "@/utils/formatOperationalNumber";
 import type {
   EquipmentContext,
   EquipmentMasterDetail,
+  EquipmentSummary,
   ReportLoadState,
 } from "@/stores/dashboard/reporte-equipos/reporteEquipos.types";
 
@@ -12,6 +15,9 @@ interface Props {
   context: EquipmentContext | null;
   detailState: ReportLoadState;
   contextState: ReportLoadState;
+  summary: EquipmentSummary | null;
+  summaryState: ReportLoadState;
+  summaryError: string | null;
   error: string | null;
 }
 
@@ -63,7 +69,7 @@ function displayDate(value: string | null): string {
             ['Tipo', detail.type ?? '—'],
             ['Modelo', detail.model ?? '—'],
             ['Marca', detail.brand ?? '—'],
-            ['Código', detail.code],
+            ['Código', formatOperationalNumber(detail.code)],
             ['Total jornadas', String(context?.journeys ?? '—')],
             ['Primera actividad', displayDate(context?.firstActivity ?? null)],
             ['Última actividad', displayDate(context?.lastActivity ?? null)],
@@ -130,12 +136,7 @@ function displayDate(value: string | null): string {
             </tr>
           </tbody>
         </table>
-        <p
-          class="mt-2 rounded-md bg-gray-50 p-2 text-[9.5px] leading-snug text-gray-500"
-        >
-          El estado se toma de la labor cuando trabaja y de la causa de parada
-          cuando está detenido.
-        </p>
+        
       </div>
       <div
         v-else
@@ -144,5 +145,11 @@ function displayDate(value: string | null): string {
         <CircleOff class="size-4" />Sin datos de motor.
       </div>
     </article>
+
+    <EquipmentSummaryImplementsCard
+      :summary="summary"
+      :load-state="summaryState"
+      :error="summaryError"
+    />
   </aside>
 </template>

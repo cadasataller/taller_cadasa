@@ -96,8 +96,8 @@ export const summarySchema = z.object({
 const stopBreakdownSchema = z.object({
   tiempo_segundos: z.number().finite(),
   tiempo: z.string(),
-  cantidad: z.number().int(),
-  porcentaje_parado: z.number().finite(),
+  ocurrencias: z.number().int(),
+  porcentaje_paradas: z.number().finite(),
 });
 export const stopsSchema = z.object({
   equipo_numero: z.string(),
@@ -127,7 +127,7 @@ export const stopsSchema = z.object({
       ocurrencias: z.number().int(),
       tiempo_segundos: z.number().finite(),
       tiempo: z.string(),
-      porcentaje_parado: z.number().finite(),
+      porcentaje_paradas: z.number().finite(),
     }),
   ),
   detalle: z.array(

@@ -2,6 +2,7 @@
 import { UsersRound } from "lucide-vue-next";
 import EquipmentStopsView from "./EquipmentStopsView.vue";
 import EquipmentReportSummaryView from "./EquipmentReportSummaryView.vue";
+import { formatOperationalNumber } from "@/utils/formatOperationalNumber";
 import type {
   EquipmentContext,
   EquipmentListItem,
@@ -72,7 +73,7 @@ const tabCopy: Record<
         >
           {{
             selectedEquipment
-              ? selectedEquipment.code
+              ? formatOperationalNumber(selectedEquipment.code)
               : "Sin equipo seleccionado"
           }}
         </p>

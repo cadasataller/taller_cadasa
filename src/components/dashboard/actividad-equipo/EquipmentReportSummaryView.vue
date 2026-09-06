@@ -29,7 +29,7 @@ const emit = defineEmits<{ retry: [] }>();
       <div
         v-if="loadState === 'ready' && summary"
         :key="`summary-${summary.code}`"
-        class="grid h-full min-h-[360px] grid-rows-[auto_auto_minmax(0,1fr)] gap-2 lg:min-h-0"
+        class="grid h-full min-h-[360px] grid-rows-[auto_3fr_5fr] gap-2 lg:min-h-0"
       >
         <EquipmentSummaryHero
           :detail="masterDetail"

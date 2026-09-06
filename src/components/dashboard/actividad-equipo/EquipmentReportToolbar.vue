@@ -45,15 +45,32 @@ function toIsoDate(value: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+const abbreviatedMonths = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "agos",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
+] as const;
+
 function formatDateRange(value: Date | Date[]): string {
   const dates = Array.isArray(value) ? value : [value];
-  const formatter = new Intl.DateTimeFormat("es", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
 
-  return dates.map((date) => formatter.format(date)).join(" - ");
+  return dates
+    .map(
+      (date) =>
+        `${date.getDate()} ${abbreviatedMonths[date.getMonth()]} ${String(
+          date.getFullYear(),
+        ).slice(-2)}`,
+    )
+    .join(" - ");
 }
 
 type DateRangeSelection = [Date | null, Date | null];
@@ -94,6 +111,7 @@ function updateRange(value: Date | Date[] | null): void {
             range
             :enable-time-picker="false"
             auto-apply
+            :config="{ closeOnAutoApply: false }"
             :formats="{ input: formatDateRange }"
             :locale="es"
             input-class-name="equipment-report-date-input"

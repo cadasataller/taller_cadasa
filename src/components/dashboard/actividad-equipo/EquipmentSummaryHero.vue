@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import EquipmentSummaryMetric from "./EquipmentSummaryMetric.vue";
+import EquipmentSummaryEffectivenessChart from "./EquipmentSummaryEffectivenessChart.vue";
+import { formatOperationalNumber } from "@/utils/formatOperationalNumber";
 import type {
   EquipmentContext,
   EquipmentMasterDetail,
@@ -32,14 +34,14 @@ defineProps<{
           <img
             v-if="detail?.imageUrl"
             :src="detail.imageUrl"
-            :alt="`Equipo ${detail.code}`"
+            :alt="`Equipo ${formatOperationalNumber(detail.code)}`"
             class="h-full w-full object-contain"
           />
           <span v-else class="text-[10px] text-gray-500">IMAGEN</span>
         </div>
         <div class="min-w-0">
           <p class="text-base font-extrabold text-main">
-            {{ detail?.code ?? summary.code }}
+            {{ formatOperationalNumber(detail?.code ?? summary.code) }}
           </p>
           <p class="mt-0.5 truncate text-xs text-gray-600">
             {{ detail?.type ?? "—" }}
@@ -70,11 +72,12 @@ defineProps<{
         :value="summary.workingTime"
         detail="Tiempo trabajando"
       />
-      <EquipmentSummaryMetric
+      <EquipmentSummaryEffectivenessChart
         id="summary-effectiveness-card"
-        label="Efectividad"
-        :value="`${summary.effectiveness}%`"
-        :detail="`${summary.stoppedTime} detenido`"
+        :effectiveness="summary.effectiveness"
+        :stopped-seconds="summary.stoppedSeconds"
+        :total-seconds="summary.totalSeconds"
+        :stopped-time="summary.stoppedTime"
       />
     </div>
   </article>

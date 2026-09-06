@@ -10,6 +10,7 @@ import type {
   EquipmentListItem,
   ReportLoadState,
 } from "@/stores/dashboard/reporte-equipos/reporteEquipos.types";
+import { formatOperationalNumber } from "@/utils/formatOperationalNumber";
 
 interface Props {
   equipment: EquipmentListItem[];
@@ -158,7 +159,9 @@ function toggleSortMode(): void {
           @click="emit('select', item.code)"
         >
           <span class="min-w-0"
-            ><strong class="block text-xs text-gray-900">{{ item.code }}</strong
+            ><strong class="block text-xs text-gray-900">{{
+              formatOperationalNumber(item.code)
+            }}</strong
             ><span class="mt-0.5 block truncate text-[10px] text-gray-500">{{
               item.type ?? "—"
             }}</span></span

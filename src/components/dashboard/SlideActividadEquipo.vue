@@ -97,6 +97,9 @@ function setTab(tab: ReportTab): void {
         :context="context"
         :detail-state="loadStates.equipmentDetail"
         :context-state="loadStates.context"
+        :summary="summary"
+        :summary-state="loadStates.summary"
+        :summary-error="errors.summary"
         :error="initialError"
       />
     </main>
