@@ -128,9 +128,7 @@ function eventColor(type: string): string {
         >
           <div>
             <h2 class="text-sm font-bold text-main">Historial de eventos</h2>
-            <p class="mt-0.5 text-xs text-gray-500">
-              Actividad registrada para el contexto seleccionado
-            </p>
+            
             <p class="mt-1 text-[10px] text-gray-400">{{ contextLabel }}</p>
           </div>
           <button
