@@ -36,10 +36,10 @@ const moduleHomeRoutes: readonly ModuleHomeRoute[] = [
     requiredFeatures: SEGUIMIENTO_TASK_ROUTE_FEATURES,
   },
   {
-    path: "/seguimiento/resumen-actividad-equipos",
+    path: "/seguimiento/reportes",
     requiredFeatures: [
       SEGUIMIENTO_FEATURES.module,
-      SEGUIMIENTO_FEATURES.viewActivityTeamsSummary,
+      SEGUIMIENTO_FEATURES.viewReports,
     ],
   },
   {
@@ -154,28 +154,34 @@ const router = createRouter({
           meta: { requiredFeatures: SEGUIMIENTO_TASK_ROUTE_FEATURES },
         },
         {
-          path: "seguimiento/actividad-equipo",
-          name: "SeguimientoActividadEquipo",
+          path: "seguimiento/reportes",
+          name: "SeguimientoReportes",
           component: () =>
-            import("@/views/seguimiento/ActividadEquipoView.vue"),
+            import("@/views/seguimiento/SeguimientoReportesView.vue"),
           meta: {
             requiredFeatures: [
               SEGUIMIENTO_FEATURES.module,
-              "ver_dashboard_actividad_equipo",
+              SEGUIMIENTO_FEATURES.viewReports,
             ],
           },
-        },
-        {
-          path: "seguimiento/resumen-actividad-equipos",
-          name: "SeguimientoResumenActividadEquipos",
-          component: () =>
-            import("@/views/seguimiento/ResumenActividadEquiposView.vue"),
-          meta: {
-            requiredFeatures: [
-              SEGUIMIENTO_FEATURES.module,
-              SEGUIMIENTO_FEATURES.viewActivityTeamsSummary,
-            ],
-          },
+          children: [
+            {
+              path: "actividad-equipo",
+              name: "SeguimientoReportesActividadEquipo",
+              component: () =>
+                import("@/views/seguimiento/ActividadEquipoView.vue"),
+              meta: { requiredFeature: "ver_dashboard_actividad_equipo" },
+            },
+            {
+              path: "resumen-actividad-equipos",
+              name: "SeguimientoReportesResumenActividadEquipos",
+              component: () =>
+                import("@/views/seguimiento/ResumenActividadEquiposView.vue"),
+              meta: {
+                requiredFeature: SEGUIMIENTO_FEATURES.viewActivityTeamsSummary,
+              },
+            },
+          ],
         },
         {
           path: "catalogo",

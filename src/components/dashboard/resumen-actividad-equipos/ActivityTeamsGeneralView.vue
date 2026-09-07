@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Trophy, UsersRound, Wrench, CircleAlert } from "lucide-vue-next";
+import { Trophy, Wrench, CircleAlert, Tractor } from "lucide-vue-next";
 import ActivityTeamsRanking from "./ActivityTeamsRanking.vue";
 import type {
   ActivityTeamsDay,
@@ -67,7 +67,7 @@ defineProps<{
 
     <section class="grid gap-3 grid-cols-2 lg:grid-cols-4">
       <article class="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-        <UsersRound class="size-4 text-main" aria-hidden="true" /><strong
+        <Tractor class="size-4 text-main" aria-hidden="true" /><strong
           class="mt-3 block font-mono text-2xl text-main"
           >{{ totals.equipment }}</strong
         ><span

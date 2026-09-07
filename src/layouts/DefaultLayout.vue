@@ -172,6 +172,31 @@ const canSeeSeguimientoResumenActividadEquipos = computed(
       SEGUIMIENTO_FEATURES.viewActivityTeamsSummary,
     ),
 );
+const canSeeSeguimientoReportes = computed(
+  () =>
+    canSeeSeguimiento.value &&
+    featureAccessStore.tieneFuncionalidad(SEGUIMIENTO_FEATURES.viewReports) &&
+    (canSeeSeguimientoActividadEquipo.value ||
+      canSeeSeguimientoResumenActividadEquipos.value),
+);
+const seguimientoReportTabs = computed(() => [
+  ...(canSeeSeguimientoActividadEquipo.value
+    ? [
+        {
+          label: "Actividad equipo",
+          path: "/seguimiento/reportes/actividad-equipo",
+        },
+      ]
+    : []),
+  ...(canSeeSeguimientoResumenActividadEquipos.value
+    ? [
+        {
+          label: "Resumen equipos",
+          path: "/seguimiento/reportes/resumen-actividad-equipos",
+        },
+      ]
+    : []),
+]);
 const canViewProfile = computed(
   () =>
     isFeatureAccessLoaded.value &&
@@ -179,6 +204,9 @@ const canViewProfile = computed(
 );
 const isSeguimientoRoute = computed(() =>
   route.path.startsWith("/seguimiento"),
+);
+const isSeguimientoReportesRoute = computed(() =>
+  route.path.startsWith("/seguimiento/reportes"),
 );
 const isEngraseRoute = computed(() => route.path.startsWith("/engrase"));
 const isCatalogoEngraseRoute = computed(
@@ -292,18 +320,12 @@ const mobilePrimaryItems = computed(() => {
     primaryPaths.includes(item.path),
   );
 
-  if (
-    canSeeSeguimientoTareas.value ||
-    canSeeSeguimientoActividadEquipo.value ||
-    canSeeSeguimientoResumenActividadEquipos.value
-  ) {
+  if (canSeeSeguimientoTareas.value || canSeeSeguimientoReportes.value) {
     primaryItems.splice(2, 0, {
       name: "Seguimiento",
       path: canSeeSeguimientoTareas.value
         ? "/seguimiento/tareas"
-        : canSeeSeguimientoActividadEquipo.value
-          ? "/seguimiento/actividad-equipo"
-          : "/seguimiento/resumen-actividad-equipos",
+        : "/seguimiento/reportes",
       icon: MapPinned,
       requiredFeature: SEGUIMIENTO_FEATURES.module,
     });
@@ -327,20 +349,11 @@ const mobileSeguimientoItems = computed(() => [
         },
       ]
     : []),
-  ...(canSeeSeguimientoActividadEquipo.value
+  ...(canSeeSeguimientoReportes.value
     ? [
         {
-          name: "Actividad equipo",
-          path: "/seguimiento/actividad-equipo",
-          icon: MapPinned,
-        },
-      ]
-    : []),
-  ...(canSeeSeguimientoResumenActividadEquipos.value
-    ? [
-        {
-          name: "Resumen equipos",
-          path: "/seguimiento/resumen-actividad-equipos",
+          name: "Reportes",
+          path: "/seguimiento/reportes",
           icon: BarChart3,
         },
       ]
@@ -391,6 +404,10 @@ const showDashboardHeaderNav = computed(
     (isDashboardRoute.value || isCalificacionesRoute.value) &&
     dashboardHeaderNavState.isVisible,
 );
+const showSeguimientoReportsHeaderNav = computed(
+  () =>
+    isSeguimientoReportesRoute.value && seguimientoReportTabs.value.length > 0,
+);
 const dashboardPrimarySlides = computed(() => {
   const { slides } = dashboardHeaderNavState;
 
@@ -407,7 +424,9 @@ const isDashboardOverflowSlideActive = computed(
     dashboardPrimarySlides.value.length,
 );
 const mobileTopBarSpacerClass = computed(() =>
-  showDashboardHeaderNav.value ? "h-[124px]" : "h-[68px]",
+  showDashboardHeaderNav.value || showSeguimientoReportsHeaderNav.value
+    ? "h-[124px]"
+    : "h-[68px]",
 );
 const hideDefaultLayout = computed(
   () =>
@@ -796,28 +815,16 @@ const isActive = (path: string) =>
                   >Tareas</router-link
                 >
                 <router-link
-                  v-if="canSeeSeguimientoActividadEquipo"
-                  to="/seguimiento/actividad-equipo"
+                  v-if="canSeeSeguimientoReportes"
+                  to="/seguimiento/reportes"
                   class="flex items-center rounded-lg px-4 py-2.5 text-sm"
                   :class="
-                    isActive('/seguimiento/actividad-equipo')
+                    isSeguimientoReportesRoute
                       ? 'bg-white/10 text-white'
                       : 'text-gray-400 hover:bg-white/5 hover:text-white'
                   "
                   @click="seguimientoDesktopOpen = false"
-                  >Actividad equipo</router-link
-                >
-                <router-link
-                  v-if="canSeeSeguimientoResumenActividadEquipos"
-                  to="/seguimiento/resumen-actividad-equipos"
-                  class="flex items-center rounded-lg px-4 py-2.5 text-sm"
-                  :class="
-                    isActive('/seguimiento/resumen-actividad-equipos')
-                      ? 'bg-white/10 text-white'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                  "
-                  @click="seguimientoDesktopOpen = false"
-                  >Resumen equipos</router-link
+                  >Reportes</router-link
                 >
               </div>
             </div>
@@ -937,28 +944,12 @@ const isActive = (path: string) =>
             >Tareas</router-link
           >
           <router-link
-            v-if="canSeeSeguimientoActividadEquipo"
-            to="/seguimiento/actividad-equipo"
+            v-if="canSeeSeguimientoReportes"
+            to="/seguimiento/reportes"
             class="flex rounded-lg px-3 py-2.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white"
-            :class="
-              isActive('/seguimiento/actividad-equipo')
-                ? 'bg-white/10 text-white'
-                : ''
-            "
+            :class="isSeguimientoReportesRoute ? 'bg-white/10 text-white' : ''"
             @click="closeDesktopFloatingGroup"
-            >Actividad equipo</router-link
-          >
-          <router-link
-            v-if="canSeeSeguimientoResumenActividadEquipos"
-            to="/seguimiento/resumen-actividad-equipos"
-            class="flex rounded-lg px-3 py-2.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white"
-            :class="
-              isActive('/seguimiento/resumen-actividad-equipos')
-                ? 'bg-white/10 text-white'
-                : ''
-            "
-            @click="closeDesktopFloatingGroup"
-            >Resumen equipos</router-link
+            >Reportes</router-link
           >
         </div>
       </div>
@@ -1071,6 +1062,28 @@ const isActive = (path: string) =>
             </div>
           </div>
         </div>
+
+        <nav
+          v-else-if="showSeguimientoReportsHeaderNav"
+          class="flex min-w-0 max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-gray-200/20 bg-gray-100 p-1 shadow-inner hide-scrollbar"
+          aria-label="Reportes de seguimiento"
+        >
+          <button
+            v-for="tab in seguimientoReportTabs"
+            :key="tab.path"
+            type="button"
+            class="cursor-pointer whitespace-nowrap rounded-lg px-4 py-1.5 text-center text-[11px] font-bold transition-all"
+            :class="
+              isActive(tab.path)
+                ? 'bg-white text-main shadow-md'
+                : 'text-gray-400 hover:text-gray-600'
+            "
+            :aria-pressed="isActive(tab.path)"
+            @click="router.push(tab.path)"
+          >
+            {{ tab.label }}
+          </button>
+        </nav>
 
         <p v-else class="text-xs font-normal text-gray-500">
           <template v-if="canViewProfile">
@@ -1213,6 +1226,27 @@ const isActive = (path: string) =>
             </div>
           </div>
         </div>
+        <nav
+          v-else-if="showSeguimientoReportsHeaderNav"
+          class="flex items-center gap-1 overflow-x-auto border border-gray-200/20 bg-gray-100 p-1 shadow-inner hide-scrollbar"
+          aria-label="Reportes de seguimiento"
+        >
+          <button
+            v-for="tab in seguimientoReportTabs"
+            :key="tab.path"
+            type="button"
+            class="cursor-pointer shrink-0 rounded-lg px-3 py-1.5 text-[10px] font-bold transition-all"
+            :class="
+              isActive(tab.path)
+                ? 'bg-white text-main shadow-md'
+                : 'text-gray-400 hover:text-gray-600'
+            "
+            :aria-pressed="isActive(tab.path)"
+            @click="router.push(tab.path)"
+          >
+            {{ tab.label }}
+          </button>
+        </nav>
       </div>
 
       <!-- Mobile Spacer for Top Bar -->
