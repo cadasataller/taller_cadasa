@@ -87,6 +87,7 @@ const VIEW_ACTIVIDAD_EQUIPO_FEATURE = "ver_dashboard_actividad_equipo";
 const engraseDesktopOpen = ref(false);
 const mobileMoreOpen = ref(false);
 const mobileEngraseOpen = ref(false);
+const mobileSeguimientoOpen = ref(false);
 const seguimientoDesktopOpen = ref(false);
 
 const allMenuItems = [
@@ -311,29 +312,44 @@ const mobilePrimaryItems = computed(() => {
   return primaryItems;
 });
 const mobileMoreItems = computed(() => {
-  const items = menuItems.value.filter(
+  return menuItems.value.filter(
     (item) => !["/dashboard", "/mantenimiento", "/compras"].includes(item.path),
   );
-
-  if (canSeeSeguimientoActividadEquipo.value) {
-    items.push({
-      name: "Actividad equipo",
-      path: "/seguimiento/actividad-equipo",
-      icon: MapPinned,
-      requiredFeature: VIEW_ACTIVIDAD_EQUIPO_FEATURE,
-    });
-  }
-  if (canSeeSeguimientoResumenActividadEquipos.value) {
-    items.push({
-      name: "Resumen equipos",
-      path: "/seguimiento/resumen-actividad-equipos",
-      icon: BarChart3,
-      requiredFeature: SEGUIMIENTO_FEATURES.viewActivityTeamsSummary,
-    });
-  }
-
-  return items;
 });
+
+const mobileSeguimientoItems = computed(() => [
+  ...(canSeeSeguimientoTareas.value
+    ? [
+        {
+          name: "Tareas",
+          path: "/seguimiento/tareas",
+          icon: MapPinned,
+        },
+      ]
+    : []),
+  ...(canSeeSeguimientoActividadEquipo.value
+    ? [
+        {
+          name: "Actividad equipo",
+          path: "/seguimiento/actividad-equipo",
+          icon: MapPinned,
+        },
+      ]
+    : []),
+  ...(canSeeSeguimientoResumenActividadEquipos.value
+    ? [
+        {
+          name: "Resumen equipos",
+          path: "/seguimiento/resumen-actividad-equipos",
+          icon: BarChart3,
+        },
+      ]
+    : []),
+]);
+
+const mobilePrimaryEmptySlots = computed(() =>
+  Math.max(0, 3 - mobilePrimaryItems.value.length),
+);
 const isMobileMoreActive = computed(
   () =>
     isEngraseRoute.value ||
@@ -1227,25 +1243,53 @@ const isActive = (path: string) =>
         id="mobile-bottom-nav"
         class="lg:hidden fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-gray-100 bg-white px-2 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
       >
-        <router-link
-          v-for="item in mobilePrimaryItems"
-          :key="item.path"
-          :to="item.path"
-          class="flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition-colors"
-          :class="isActive(item.path) ? 'text-main' : 'text-gray-400'"
-        >
-          <component :is="item.icon" class="h-5 w-5 shrink-0" />
-          <span class="truncate text-[10px] font-semibold">{{
-            item.name
-          }}</span>
-        </router-link>
+        <template v-for="item in mobilePrimaryItems" :key="item.path">
+          <button
+            v-if="item.path.startsWith('/seguimiento')"
+            type="button"
+            class="flex min-w-0 cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition-colors"
+            :class="isSeguimientoRoute ? 'text-main' : 'text-gray-400'"
+            :aria-expanded="mobileMoreOpen && mobileSeguimientoOpen"
+            aria-controls="mobile-more-sheet"
+            @click="
+              mobileMoreOpen = true;
+              mobileSeguimientoOpen = true;
+              mobileEngraseOpen = false;
+            "
+          >
+            <component :is="item.icon" class="h-5 w-5 shrink-0" />
+            <span class="truncate text-[10px] font-semibold">{{
+              item.name
+            }}</span>
+          </button>
+          <router-link
+            v-else
+            :to="item.path"
+            class="flex min-w-0 cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition-colors"
+            :class="isActive(item.path) ? 'text-main' : 'text-gray-400'"
+          >
+            <component :is="item.icon" class="h-5 w-5 shrink-0" />
+            <span class="truncate text-[10px] font-semibold">{{
+              item.name
+            }}</span>
+          </router-link>
+        </template>
+        <span
+          v-for="emptySlot in mobilePrimaryEmptySlots"
+          :key="`mobile-primary-empty-${emptySlot}`"
+          aria-hidden="true"
+        />
         <button
           type="button"
-          class="flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition-colors"
+          class="flex min-w-0 cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition-colors"
           :class="isMobileMoreActive ? 'text-main' : 'text-gray-400'"
           :aria-expanded="mobileMoreOpen"
           aria-controls="mobile-more-sheet"
-          @click="mobileMoreOpen = true"
+          @click="
+            mobileMoreOpen = true;
+            mobileEngraseOpen = false;
+            mobileSeguimientoOpen = false;
+          "
         >
           <MoreHorizontal class="h-5 w-5" />
           <span class="text-[10px] font-semibold">Más</span>
@@ -1258,6 +1302,7 @@ const isActive = (path: string) =>
         @click.self="
           mobileMoreOpen = false;
           mobileEngraseOpen = false;
+          mobileSeguimientoOpen = false;
         "
       >
         <section
@@ -1275,26 +1320,59 @@ const isActive = (path: string) =>
                 Navegación
               </p>
               <h3 class="text-lg font-bold text-gray-800">
-                {{ mobileEngraseOpen ? "Engrase" : "Más módulos" }}
+                {{
+                  mobileSeguimientoOpen
+                    ? "Seguimiento"
+                    : mobileEngraseOpen
+                      ? "Engrase"
+                      : "Más módulos"
+                }}
               </h3>
             </div>
             <button
               type="button"
-              class="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              class="cursor-pointer rounded-lg p-2 text-gray-500 hover:bg-gray-100"
               aria-label="Cerrar más módulos"
               @click="
                 mobileMoreOpen = false;
                 mobileEngraseOpen = false;
+                mobileSeguimientoOpen = false;
               "
             >
               <X class="h-5 w-5" />
             </button>
           </div>
 
-          <div v-if="mobileEngraseOpen" class="space-y-2">
+          <div v-if="mobileSeguimientoOpen" class="space-y-2">
             <button
               type="button"
-              class="mb-1 flex items-center gap-2 text-sm font-semibold text-gray-500"
+              class="mb-1 flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-500"
+              @click="
+                mobileMoreOpen = false;
+                mobileSeguimientoOpen = false;
+              "
+            >
+              <ChevronDown class="h-4 w-4 rotate-90" /> Volver a módulos
+            </button>
+            <router-link
+              v-for="item in mobileSeguimientoItems"
+              :key="item.path"
+              :to="item.path"
+              class="flex cursor-pointer items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
+              :class="isActive(item.path) ? 'bg-main/10 text-main' : ''"
+              @click="
+                mobileMoreOpen = false;
+                mobileSeguimientoOpen = false;
+              "
+            >
+              <component :is="item.icon" class="h-5 w-5" /> {{ item.name }}
+            </router-link>
+          </div>
+
+          <div v-else-if="mobileEngraseOpen" class="space-y-2">
+            <button
+              type="button"
+              class="mb-1 flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-500"
               @click="mobileEngraseOpen = false"
             >
               <ChevronDown class="h-4 w-4 rotate-90" /> Volver a módulos
@@ -1302,22 +1380,24 @@ const isActive = (path: string) =>
             <router-link
               v-if="canSeeFiltrosEngrase"
               to="/engrase/filtros"
-              class="block rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
+              class="block cursor-pointer rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
               :class="isFiltrosEngraseRoute ? 'bg-main/10 text-main' : ''"
               @click="
                 mobileMoreOpen = false;
                 mobileEngraseOpen = false;
+                mobileSeguimientoOpen = false;
               "
               >Filtros</router-link
             >
             <router-link
               v-if="canSeeCatalogoEngrase"
               to="/engrase/catalogo"
-              class="block rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
+              class="block cursor-pointer rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
               :class="isCatalogoEngraseRoute ? 'bg-main/10 text-main' : ''"
               @click="
                 mobileMoreOpen = false;
                 mobileEngraseOpen = false;
+                mobileSeguimientoOpen = false;
               "
               >Catálogo</router-link
             >
@@ -1328,7 +1408,7 @@ const isActive = (path: string) =>
               v-for="item in mobileMoreItems"
               :key="item.path"
               :to="item.path"
-              class="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
+              class="flex cursor-pointer items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700"
               :class="isActive(item.path) ? 'bg-main/10 text-main' : ''"
               @click="mobileMoreOpen = false"
             >
@@ -1337,9 +1417,12 @@ const isActive = (path: string) =>
             <button
               v-if="canSeeEngrase"
               type="button"
-              class="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-700"
+              class="flex cursor-pointer items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-700"
               :class="isEngraseRoute ? 'bg-main/10 text-main' : ''"
-              @click="mobileEngraseOpen = true"
+              @click="
+                mobileEngraseOpen = true;
+                mobileSeguimientoOpen = false;
+              "
             >
               <Droplets class="h-5 w-5" /> Engrase
             </button>
