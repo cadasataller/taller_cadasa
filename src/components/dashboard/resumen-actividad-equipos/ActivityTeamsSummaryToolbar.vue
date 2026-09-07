@@ -78,7 +78,7 @@ function updateRange(value: Date | Date[] | null): void {
       </div>
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div
-          class="flex h-9 min-w-0 items-center px-2 shadow-sm sm:w-72"
+          class="flex h-9 min-w-0 items-center px-2  sm:w-72"
         >
           
           <VueDatePicker

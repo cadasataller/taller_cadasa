@@ -180,19 +180,19 @@ const canSeeSeguimientoReportes = computed(
       canSeeSeguimientoResumenActividadEquipos.value),
 );
 const seguimientoReportTabs = computed(() => [
-  ...(canSeeSeguimientoActividadEquipo.value
-    ? [
-        {
-          label: "Actividad equipo",
-          path: "/seguimiento/reportes/actividad-equipo",
-        },
-      ]
-    : []),
   ...(canSeeSeguimientoResumenActividadEquipos.value
     ? [
         {
           label: "Resumen equipos",
           path: "/seguimiento/reportes/resumen-actividad-equipos",
+        },
+      ]
+    : []),
+  ...(canSeeSeguimientoActividadEquipo.value
+    ? [
+        {
+          label: "Actividad equipo",
+          path: "/seguimiento/reportes/actividad-equipo",
         },
       ]
     : []),
@@ -360,9 +360,24 @@ const mobileSeguimientoItems = computed(() => [
     : []),
 ]);
 
-const mobilePrimaryEmptySlots = computed(() =>
-  Math.max(0, 3 - mobilePrimaryItems.value.length),
+const mobileModuleCount = computed(
+  () =>
+    mobilePrimaryItems.value.length +
+    mobileMoreItems.value.length +
+    Number(canSeeEngrase.value),
 );
+const shouldShowMobileMore = computed(() => mobileModuleCount.value > 3);
+const mobilePrimaryEmptySlots = computed(() =>
+  shouldShowMobileMore.value
+    ? Math.max(0, 3 - mobilePrimaryItems.value.length)
+    : 0,
+);
+const mobileBottomNavColumnsClass = computed(() => {
+  if (shouldShowMobileMore.value) return "grid-cols-5";
+  if (mobilePrimaryItems.value.length === 1) return "grid-cols-1";
+  if (mobilePrimaryItems.value.length === 2) return "grid-cols-2";
+  return "grid-cols-3";
+});
 const isMobileMoreActive = computed(
   () =>
     isEngraseRoute.value ||
@@ -1259,7 +1274,7 @@ const isActive = (path: string) =>
       <!-- Content Area -->
       <div
         id="app-main-content-area"
-        class="flex-1 overflow-y-auto w-full pb-[76px] lg:pb-0"
+        class="flex-1 overflow-y-auto w-full lg:pb-0"
       >
         <router-view v-slot="{ Component, route: childRoute }">
           <transition name="fade" mode="out-in">
@@ -1275,7 +1290,8 @@ const isActive = (path: string) =>
       <nav
         v-if="!hideDefaultLayout"
         id="mobile-bottom-nav"
-        class="lg:hidden fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-gray-100 bg-white px-2 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
+        class="lg:hidden fixed inset-x-0 bottom-0 z-30 grid border-t border-gray-100 bg-white px-2 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]"
+        :class="mobileBottomNavColumnsClass"
       >
         <template v-for="item in mobilePrimaryItems" :key="item.path">
           <button
@@ -1314,6 +1330,7 @@ const isActive = (path: string) =>
           aria-hidden="true"
         />
         <button
+          v-if="shouldShowMobileMore"
           type="button"
           class="flex min-w-0 cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition-colors"
           :class="isMobileMoreActive ? 'text-main' : 'text-gray-400'"

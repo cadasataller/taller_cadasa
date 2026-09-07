@@ -4,7 +4,7 @@ import SlideActividadEquipo from "@/components/dashboard/SlideActividadEquipo.vu
 
 <template>
   <section
-    class="flex min-h-full flex-col bg-second pb-[calc(20rem+env(safe-area-inset-bottom))] lg:h-full lg:min-h-0 lg:flex-1 lg:pb-0"
+    class="flex min-h-full flex-col bg-second  lg:h-full lg:min-h-0 lg:flex-1 lg:pb-0"
     aria-label="Actividad de equipo"
   >
     <SlideActividadEquipo />

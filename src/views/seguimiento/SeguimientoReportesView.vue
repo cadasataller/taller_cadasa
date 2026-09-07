@@ -11,16 +11,16 @@ const router = useRouter();
 const featureAccessStore = useFeatureAccessStore();
 
 const firstAvailableReportRoute = computed(() => {
-  if (featureAccessStore.tieneFuncionalidad(ACTIVITY_EQUIPMENT_FEATURE)) {
-    return { name: "SeguimientoReportesActividadEquipo" };
-  }
-
   if (
     featureAccessStore.tieneFuncionalidad(
       SEGUIMIENTO_FEATURES.viewActivityTeamsSummary,
     )
   ) {
     return { name: "SeguimientoReportesResumenActividadEquipos" };
+  }
+
+  if (featureAccessStore.tieneFuncionalidad(ACTIVITY_EQUIPMENT_FEATURE)) {
+    return { name: "SeguimientoReportesActividadEquipo" };
   }
 
   return null;
