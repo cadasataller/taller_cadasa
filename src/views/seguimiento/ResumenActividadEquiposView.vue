@@ -3,5 +3,5 @@ import ActivityTeamsSummaryReport from "@/components/dashboard/resumen-actividad
 </script>
 
 <template>
-  <ActivityTeamsSummaryReport />
+  <ActivityTeamsSummaryReport class="lg:pb-0 pb-[calc(4rem+env(safe-area-inset-bottom))] " />
 </template>
