@@ -225,8 +225,8 @@ onUnmounted(() => {
       class="flex-1 bg-gray-50/50"
       :class="
         activeSlide.id === 'actividad_equipo'
-          ? 'min-h-0 lg:h-full'
-          : 'overflow-y-auto px-4 pb-[120px] md:px-6 md:pb-8 md:pt-0 lg:px-10 lg:pb-10 lg:pt-0'
+          ? 'min-h-full overflow-y-auto pb-2 lg:h-full lg:min-h-0 lg:overflow-hidden lg:pb-0'
+          : 'overflow-y-auto px-4 pb-[76px] md:px-6 md:pb-8 md:pt-0 lg:px-10 lg:pb-10 lg:pt-0'
       "
     >
       <component

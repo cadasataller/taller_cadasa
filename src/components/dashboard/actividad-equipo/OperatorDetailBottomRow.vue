@@ -18,14 +18,14 @@ function isStartOfNewDate(index: number): boolean {
 <template>
   <article
     id="operator-history-card"
-    class="flex h-full min-h-40 flex-col overflow-hidden rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+    class="flex min-h-0 flex-col overflow-visible rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm lg:h-full lg:min-h-40 lg:overflow-hidden"
   >
     <h3 class="mb-1.5 text-xs font-bold text-main">
       Historial reciente · 10 últimos
     </h3>
     <div
       id="operator-history-scroll"
-      class="min-h-0 flex-1 overflow-y-auto rounded-md border border-gray-100"
+      class="min-h-0 flex-1 overflow-x-auto overflow-y-visible rounded-md border border-gray-100 lg:overflow-y-auto"
     >
       <div class="min-w-[550px]">
         <table class="w-full table-fixed text-[10px]">

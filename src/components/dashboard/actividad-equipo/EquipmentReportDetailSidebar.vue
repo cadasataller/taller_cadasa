@@ -50,6 +50,30 @@ function displayDate(value: string | null): string {
         <h2 class="text-xs font-bold text-main">Perfil del equipo</h2>
       </header>
       <div
+        v-if="detail"
+        class="mx-3 mb-3 grid grid-cols-[76px_minmax(0,1fr)] items-center gap-3 lg:hidden"
+      >
+        <div
+          class="grid h-[58px] w-[76px] place-items-center overflow-hidden rounded-md border border-gray-200 bg-gray-50"
+        >
+          <img
+            v-if="detail.imageUrl"
+            :src="detail.imageUrl"
+            :alt="`Equipo ${formatOperationalNumber(detail.code)}`"
+            class="h-full w-full object-contain"
+          />
+          <span v-else class="text-[10px] text-gray-500">IMAGEN</span>
+        </div>
+        <div class="min-w-0">
+          <p class="text-sm font-extrabold text-main">
+            {{ formatOperationalNumber(detail.code) }}
+          </p>
+          <p class="mt-0.5 truncate text-xs text-gray-600">
+            {{ detail.type ?? "—" }}
+          </p>
+        </div>
+      </div>
+      <div
         v-if="detailState === 'loading'"
         class="grid place-items-center gap-2 px-3 pb-5 pt-2 text-xs text-gray-500"
       >

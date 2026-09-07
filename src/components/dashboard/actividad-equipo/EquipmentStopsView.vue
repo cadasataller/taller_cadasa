@@ -22,7 +22,7 @@ const emit = defineEmits<{ retry: [] }>();
 <template>
   <section
     id="equipment-stops-view"
-    class="grid h-full min-h-0 gap-2 overflow-hidden lg:grid-rows-[auto_auto_minmax(0,1fr)_minmax(0,1fr)]"
+    class="grid h-auto gap-2 overflow-visible lg:h-full lg:min-h-0 lg:overflow-hidden lg:grid-rows-[auto_auto_minmax(0,1fr)_minmax(0,1fr)]"
   >
     <template v-if="loadState === 'ready' && stops">
       <EquipmentStopsKpiGrid :metrics="stops.metrics" :context="context" />
@@ -66,7 +66,7 @@ const emit = defineEmits<{ retry: [] }>();
     </div>
     <div
       v-else-if="loadState === 'error'"
-      class="col-span-full grid h-full place-items-center rounded-[10px] border border-danger/20 bg-white p-4 text-center shadow-sm"
+      class="col-span-full grid min-h-[360px] place-items-center rounded-[10px] border border-danger/20 bg-white p-4 text-center shadow-sm lg:h-full lg:min-h-0"
     >
       <div>
         <AlertCircle class="mx-auto size-6 text-danger" />
@@ -84,7 +84,7 @@ const emit = defineEmits<{ retry: [] }>();
     </div>
     <div
       v-else
-      class="col-span-full grid h-full place-items-center rounded-[10px] border border-gray-200 bg-white p-4 text-center text-xs text-gray-500 shadow-sm"
+      class="col-span-full grid min-h-[360px] place-items-center rounded-[10px] border border-gray-200 bg-white p-4 text-center text-xs text-gray-500 shadow-sm lg:h-full lg:min-h-0"
     >
       {{
         loadState === "empty"

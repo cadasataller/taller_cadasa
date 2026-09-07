@@ -33,7 +33,7 @@ const emit = defineEmits<{
 <template>
   <section
     id="equipment-operators-view"
-    class="grid h-full min-h-0 gap-2 overflow-y-auto lg:overflow-hidden"
+    class="grid h-auto gap-2 overflow-visible lg:h-full lg:min-h-0 lg:overflow-hidden"
     :class="gridRowsClass"
   >
     <template v-if="operatorsState === 'ready' && operators"
@@ -125,7 +125,7 @@ const emit = defineEmits<{
     </div>
     <div
       v-else-if="operatorsState === 'error'"
-      class="grid h-full place-items-center rounded-[10px] border border-danger/20 bg-white p-4 text-center"
+      class="grid min-h-[360px] place-items-center rounded-[10px] border border-danger/20 bg-white p-4 text-center lg:h-full lg:min-h-0"
     >
       <div>
         <AlertCircle class="mx-auto size-6 text-danger" />
@@ -143,7 +143,7 @@ const emit = defineEmits<{
     </div>
     <div
       v-else
-      class="grid h-full place-items-center rounded-[10px] border border-gray-200 bg-white p-4 text-center text-xs text-gray-500"
+      class="grid min-h-[360px] place-items-center rounded-[10px] border border-gray-200 bg-white p-4 text-center text-xs text-gray-500 lg:h-full lg:min-h-0"
     >
       {{
         operatorsState === "empty"

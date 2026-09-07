@@ -13,6 +13,7 @@ import {
   Undo2,
 } from "lucide-vue-next";
 import EquipmentEventsDetailDrawer from "./EquipmentEventsDetailDrawer.vue";
+import EquipmentReportMobileDrawer from "./EquipmentReportMobileDrawer.vue";
 import { useJornadaEventos } from "@/composables/dashboard/useJornadaEventos";
 import { formatCompactPanamaDateTime } from "@/utils/formatCompactPanamaDate";
 import "vue-multiselect/dist/vue-multiselect.css";
@@ -119,16 +120,18 @@ function eventColor(type: string): string {
 
 <template>
   <section
-    class="flex h-full min-h-0 flex-col gap-3 overflow-hidden rounded-[10px] border border-gray-200 bg-white p-3 shadow-sm"
+    class="flex min-h-0 flex-col gap-3 overflow-visible rounded-[10px] border border-gray-200 bg-white p-3 shadow-sm lg:h-full lg:overflow-hidden"
   >
-    <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden lg:flex-row">
+    <div
+      class="flex min-h-0 flex-1 flex-col gap-3 overflow-visible lg:overflow-hidden lg:flex-row"
+    >
       <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
         <header
-          class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+          class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between"
         >
           <div>
             <h2 class="text-sm font-bold text-main">Historial de eventos</h2>
-            
+
             <p class="mt-1 text-[10px] text-gray-400">{{ contextLabel }}</p>
           </div>
           <button
@@ -140,7 +143,7 @@ function eventColor(type: string): string {
           </button>
         </header>
 
-        <div class="grid gap-2 sm:grid-cols-2">
+        <div class="grid gap-2 lg:grid-cols-2">
           <label class="text-[10px] font-semibold text-gray-600"
             >Tipo de evento
             <VueMultiselect
@@ -173,8 +176,71 @@ function eventColor(type: string): string {
 
         <div class="flex min-h-0 flex-1 flex-col">
           <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div v-if="isLoading" class="space-y-2 lg:hidden">
+              <div
+                v-for="row in 6"
+                :key="row"
+                class="space-y-3 rounded-md border border-gray-200 p-3"
+              >
+                <i class="block h-3 w-2/3 animate-pulse rounded bg-gray-100" />
+                <i class="block h-3 w-full animate-pulse rounded bg-gray-100" />
+                <i class="block h-3 w-4/5 animate-pulse rounded bg-gray-100" />
+              </div>
+            </div>
+            <div v-else-if="visibleItems.length" class="space-y-2 lg:hidden">
+              <button
+                v-for="row in visibleItems"
+                :key="row.eventoId"
+                type="button"
+                class="w-full cursor-pointer rounded-md border border-gray-200 bg-white p-3 text-left shadow-sm transition-colors hover:bg-main/5"
+                @click="selectEvent(row.eventoId)"
+              >
+                <span class="flex items-start justify-between gap-3">
+                  <span
+                    class="inline-flex min-w-0 items-center gap-2 text-xs font-semibold text-gray-800"
+                  >
+                    <component
+                      :is="eventIcon(row.tipoEvento)"
+                      class="size-4 shrink-0"
+                      :class="eventColor(row.tipoEvento)"
+                    />
+                    <span class="truncate">{{ row.evento }}</span>
+                  </span>
+                  <ChevronRight
+                    class="size-4 shrink-0 text-main"
+                    aria-hidden="true"
+                  />
+                </span>
+                <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[10px]">
+                  <div>
+                    <dt class="text-gray-400">Fecha</dt>
+                    <dd class="mt-0.5 font-medium text-gray-700">
+                      {{ formatCompactPanamaDateTime(row.fechaHora) }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-gray-400">Operador</dt>
+                    <dd class="mt-0.5 truncate font-medium text-gray-700">
+                      {{ row.operador }}
+                    </dd>
+                  </div>
+                  <div class="col-span-2">
+                    <dt class="text-gray-400">Detalle</dt>
+                    <dd class="mt-0.5 line-clamp-2 text-gray-700">
+                      {{ row.detalle ?? "—" }}
+                    </dd>
+                  </div>
+                </dl>
+              </button>
+            </div>
+            <p
+              v-else
+              class="rounded-md border border-gray-200 px-3 py-10 text-center text-xs text-gray-500 lg:hidden"
+            >
+              {{ error ?? "No hay eventos para los filtros seleccionados." }}
+            </p>
             <div
-              class="min-h-0 flex-1 overflow-auto rounded-md border border-gray-200"
+              class="hidden min-h-0 flex-1 overflow-auto rounded-md border border-gray-200 lg:block"
             >
               <table
                 class="w-full min-w-[760px] border-collapse text-left text-xs"
@@ -289,6 +355,7 @@ function eventColor(type: string): string {
       <Transition name="event-drawer">
         <EquipmentEventsDetailDrawer
           v-if="selectedDetail || isDetailLoading || detailError"
+          class="hidden lg:flex"
           :detail="selectedDetail"
           :loading="isDetailLoading"
           :error="detailError"
@@ -296,6 +363,20 @@ function eventColor(type: string): string {
         />
       </Transition>
     </div>
+    <EquipmentReportMobileDrawer
+      v-if="selectedDetail || isDetailLoading || detailError"
+      title="Detalle del evento"
+      hide-header
+      @close="closeDetail"
+    >
+      <EquipmentEventsDetailDrawer
+        class="h-full"
+        :detail="selectedDetail"
+        :loading="isDetailLoading"
+        :error="detailError"
+        @close="closeDetail"
+      />
+    </EquipmentReportMobileDrawer>
   </section>
 </template>
 
