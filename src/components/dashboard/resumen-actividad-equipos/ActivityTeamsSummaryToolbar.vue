@@ -19,7 +19,7 @@ const emit = defineEmits<{
   setTab: [tab: ActivityTeamsSummaryTab];
 }>();
 
-type DateRange = [Date | null, Date | null];
+type DateRange = [Date, Date];
 
 function fromIsoDate(value: string): Date {
   const [year, month, day] = value.split("-").map(Number);
@@ -31,6 +31,13 @@ function toIsoDate(value: Date): string {
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function getDefaultWeekRange(): DateRange {
+  const endDate = new Date();
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - 6);
+  return [startDate, endDate];
 }
 
 const selectedRange = shallowRef<DateRange>([
@@ -52,9 +59,26 @@ function formatRange(value: Date | Date[]): string {
 }
 
 function updateRange(value: Date | Date[] | null): void {
-  if (!Array.isArray(value) || value.length !== 2) return;
+  if (!Array.isArray(value) || value.length !== 2) {
+    const [startDate, endDate] = getDefaultWeekRange();
+    selectedRange.value = [startDate, endDate];
+    emit("updateDateRange", toIsoDate(startDate), toIsoDate(endDate));
+    return;
+  }
+
   const [startDate, endDate] = value;
-  if (!startDate || !endDate) return;
+  if (!startDate || !endDate) {
+    const [defaultStartDate, defaultEndDate] = getDefaultWeekRange();
+    selectedRange.value = [defaultStartDate, defaultEndDate];
+    emit(
+      "updateDateRange",
+      toIsoDate(defaultStartDate),
+      toIsoDate(defaultEndDate),
+    );
+    return;
+  }
+
+  selectedRange.value = [startDate, endDate];
   emit("updateDateRange", toIsoDate(startDate), toIsoDate(endDate));
 }
 </script>
@@ -77,10 +101,7 @@ function updateRange(value: Date | Date[] | null): void {
         </h1>
       </div>
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div
-          class="flex h-9 min-w-0 items-center px-2  sm:w-72"
-        >
-          
+        <div class="flex h-9 min-w-0 items-center px-2 sm:w-72">
           <VueDatePicker
             class="min-w-0 flex-1"
             :model-value="selectedRange"

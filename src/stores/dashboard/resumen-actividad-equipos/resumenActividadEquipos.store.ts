@@ -18,7 +18,7 @@ function toIsoDate(value: Date): string {
 function initialFilters(): ActivityTeamsFilters {
   const endDate = new Date();
   const startDate = new Date(endDate);
-  startDate.setMonth(startDate.getMonth() - 1);
+  startDate.setDate(startDate.getDate() - 6);
   return { startDate: toIsoDate(startDate), endDate: toIsoDate(endDate) };
 }
 

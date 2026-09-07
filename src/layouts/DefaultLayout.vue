@@ -19,6 +19,7 @@ import {
   supabaseRastreoTareas,
 } from "@/lib/supabase";
 import { useFeatureAccessStore } from "@/stores/db_mantenimiento/app_feature_access/featureAccess.store";
+import { useUserStore } from "@/stores/userStore";
 import { useFiltrosCatalogoStore } from "@/stores/dbequipos/engrase/catalogo/filtrosCatalogo.store";
 import { useAceitesCatalogoStore } from "@/stores/dbequipos/engrase/catalogo/aceitesCatalogo.store";
 import { useSistemasCatalogoStore } from "@/stores/dbequipos/engrase/catalogo/sistemasCatalogo.store";
@@ -43,11 +44,13 @@ import {
   X,
   MapPinned,
   MoreHorizontal,
+  UserRound,
 } from "lucide-vue-next";
 
 const router = useRouter();
 const route = useRoute();
 const featureAccessStore = useFeatureAccessStore();
+const userStore = useUserStore();
 const filtrosCatalogoStore = useFiltrosCatalogoStore();
 const aceitesCatalogoStore = useAceitesCatalogoStore();
 const sistemasCatalogoStore = useSistemasCatalogoStore();
@@ -62,6 +65,7 @@ const sidebarTooltipLabel = shallowRef<string | null>(null);
 const sidebarTooltipTop = shallowRef(0);
 const isPreparingSolicitudCompraCreate = ref(false);
 const isDashboardOverflowMenuOpen = shallowRef(false);
+const isProfileMenuOpen = shallowRef(false);
 const { dashboardHeaderNavState, selectDashboardHeaderSlide } =
   useDashboardHeaderNav();
 
@@ -294,6 +298,7 @@ const menuItems = computed(() =>
       isFeatureAccessLoaded.value &&
       (featureAccessStore.tieneFuncionalidad(item.requiredFeature) ||
         ("requiredAnyFeature" in item &&
+          typeof item.requiredAnyFeature === "string" &&
           featureAccessStore.tieneFuncionalidad(item.requiredAnyFeature))),
   ),
 );
@@ -504,6 +509,33 @@ const closeDashboardOverflowMenu = (event: MouseEvent): void => {
   }
 };
 
+const closeProfileMenu = (): void => {
+  isProfileMenuOpen.value = false;
+};
+
+const toggleProfileMenu = (): void => {
+  isProfileMenuOpen.value = !isProfileMenuOpen.value;
+};
+
+const closeProfileMenuOnOutsideClick = (event: MouseEvent): void => {
+  const target = event.target;
+
+  if (target instanceof Element && !target.closest(".profile-menu")) {
+    closeProfileMenu();
+  }
+};
+
+const closeProfileMenuOnEscape = (event: KeyboardEvent): void => {
+  if (event.key === "Escape") {
+    closeProfileMenu();
+  }
+};
+
+const goToProfile = (): void => {
+  closeProfileMenu();
+  void router.push("/perfil");
+};
+
 const mobileFabVisibilityClass = computed(() => {
   if (route.path.startsWith("/compras")) {
     return isSolicitudCompraCreateRoute.value
@@ -534,6 +566,8 @@ onMounted(async () => {
   window.addEventListener("resize", updateSidebarNavScrollState);
   window.addEventListener("click", closeDashboardOverflowMenu);
   window.addEventListener("click", closeDesktopFloatingGroupOnOutsideClick);
+  window.addEventListener("click", closeProfileMenuOnOutsideClick);
+  window.addEventListener("keydown", closeProfileMenuOnEscape);
   window.addEventListener(
     "prepare-open-solicitud-compra",
     handlePrepareSolicitudCompraCreate,
@@ -574,6 +608,8 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", updateSidebarNavScrollState);
   window.removeEventListener("click", closeDashboardOverflowMenu);
   window.removeEventListener("click", closeDesktopFloatingGroupOnOutsideClick);
+  window.removeEventListener("click", closeProfileMenuOnOutsideClick);
+  window.removeEventListener("keydown", closeProfileMenuOnEscape);
   window.removeEventListener(
     "prepare-open-solicitud-compra",
     handlePrepareSolicitudCompraCreate,
@@ -585,6 +621,7 @@ onBeforeUnmount(() => {
 });
 
 const logout = async () => {
+  closeProfileMenu();
   await Promise.all([
     supabase.auth.signOut(),
     supabaseRatings.auth.signOut(),
@@ -597,6 +634,7 @@ const logout = async () => {
   aceitesCatalogoStore.reset();
   sistemasCatalogoStore.reset();
   featureAccessStore.reset();
+  userStore.reset();
   router.push("/login");
 };
 
@@ -1110,7 +1148,7 @@ const isActive = (path: string) =>
 
         <div
           v-if="canViewProfile"
-          class="flex items-center justify-self-end gap-2"
+          class="profile-menu relative flex items-center justify-self-end gap-2"
         >
           <span
             class="text-[9px] font-medium uppercase tracking-[0.1em] text-gray-500"
@@ -1118,12 +1156,48 @@ const isActive = (path: string) =>
           >
           <button
             type="button"
-            class="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-main-dark transition-transform hover:scale-105"
-            aria-label="Ir al perfil"
-            @click="router.push('/perfil')"
+            class="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-accent text-[10px] font-bold text-main-dark transition-transform hover:scale-105"
+            aria-label="Abrir menú de perfil"
+            aria-haspopup="menu"
+            :aria-expanded="isProfileMenuOpen"
+            @click="toggleProfileMenu"
           >
             {{ currentUserName.substring(0, 2).toUpperCase() }}
           </button>
+          <Transition
+            enter-active-class="transition duration-150 ease-out"
+            enter-from-class="translate-y-1 opacity-0"
+            enter-to-class="translate-y-0 opacity-100"
+            leave-active-class="transition duration-100 ease-in"
+            leave-from-class="translate-y-0 opacity-100"
+            leave-to-class="translate-y-1 opacity-0"
+          >
+            <div
+              v-if="isProfileMenuOpen"
+              class="absolute right-0 top-full z-50 mt-2 w-40 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+              role="menu"
+              aria-label="Opciones de perfil"
+            >
+              <button
+                type="button"
+                class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100"
+                role="menuitem"
+                @click="goToProfile"
+              >
+                <UserRound class="h-3.5 w-3.5" />
+                Ver perfil
+              </button>
+              <button
+                type="button"
+                class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-danger transition-colors hover:bg-danger-bg"
+                role="menuitem"
+                @click="logout"
+              >
+                <LogOut class="h-3.5 w-3.5" />
+                Cerrar sesión
+              </button>
+            </div>
+          </Transition>
         </div>
       </header>
 
@@ -1147,22 +1221,63 @@ const isActive = (path: string) =>
           </div>
           <div class="flex items-center gap-4">
             <button
+              v-if="!canViewProfile"
               @click="logout"
-              class="text-gray-400 hover:text-danger transition-colors p-2"
+              class="cursor-pointer p-2 text-gray-400 transition-colors hover:text-danger"
+              aria-label="Cerrar sesión"
             >
               <LogOut class="w-5 h-5 text-danger" />
             </button>
-            <button
-              v-if="canViewProfile"
-              type="button"
-              class="w-8 h-8 rounded-full bg-accent-light flex items-center justify-center font-display text-xs text-main cursor-pointer"
-              aria-label="Ir al perfil"
-              @click="router.push('/perfil')"
-            >
-              {{
-                (userProfile?.nombre || userEmail).substring(0, 2).toUpperCase()
-              }}
-            </button>
+            <div v-else class="profile-menu relative">
+              <button
+                type="button"
+                class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-accent-light font-display text-xs text-main"
+                aria-label="Abrir menú de perfil"
+                aria-haspopup="menu"
+                :aria-expanded="isProfileMenuOpen"
+                @click="toggleProfileMenu"
+              >
+                {{
+                  (userProfile?.nombre || userEmail)
+                    .substring(0, 2)
+                    .toUpperCase()
+                }}
+              </button>
+              <Transition
+                enter-active-class="transition duration-150 ease-out"
+                enter-from-class="translate-y-1 opacity-0"
+                enter-to-class="translate-y-0 opacity-100"
+                leave-active-class="transition duration-100 ease-in"
+                leave-from-class="translate-y-0 opacity-100"
+                leave-to-class="translate-y-1 opacity-0"
+              >
+                <div
+                  v-if="isProfileMenuOpen"
+                  class="absolute right-0 top-full z-50 mt-2 w-40 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+                  role="menu"
+                  aria-label="Opciones de perfil"
+                >
+                  <button
+                    type="button"
+                    class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-gray-700 transition-colors hover:bg-gray-100"
+                    role="menuitem"
+                    @click="goToProfile"
+                  >
+                    <UserRound class="h-3.5 w-3.5" />
+                    Ver perfil
+                  </button>
+                  <button
+                    type="button"
+                    class="flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-danger transition-colors hover:bg-danger-bg"
+                    role="menuitem"
+                    @click="logout"
+                  >
+                    <LogOut class="h-3.5 w-3.5" />
+                    Cerrar sesión
+                  </button>
+                </div>
+              </Transition>
+            </div>
           </div>
         </div>
 
