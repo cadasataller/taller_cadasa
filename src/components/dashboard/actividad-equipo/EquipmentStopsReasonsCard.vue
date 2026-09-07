@@ -8,12 +8,12 @@ defineProps<{ reasons: StopReasonRow[] }>();
 <template>
   <article
     id="stops-main-reasons-card"
-    class="flex min-h-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+    class="flex h-auto self-start flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
   >
     <h3 class="mb-1.5 text-xs font-bold text-main">
       Principales motivos de parada
     </h3>
-    <div v-if="reasons.length" class="min-h-0 flex-1 overflow-auto">
+    <div v-if="reasons.length" class="flex-none overflow-visible">
       <table class="w-full table-fixed border-collapse text-[10px]">
         <thead>
           <tr class="border-b border-gray-100 text-left text-gray-500">

@@ -54,10 +54,10 @@ function isStartOfNewDate(index: number): boolean {
 </script>
 
 <template>
-  <section id="equipment-summary-bottom-row" class="min-h-0 lg:overflow-hidden">
+  <section id="equipment-summary-bottom-row" class="min-w-0 lg:self-start">
     <article
       id="summary-history-card"
-      class="flex min-h-0 flex-col overflow-visible rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm lg:h-full lg:overflow-hidden"
+      class="flex min-w-0 flex-col overflow-visible rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm lg:max-h-[26rem] lg:overflow-hidden"
     >
       <h3 class="mb-1.5 text-xs font-bold text-main">
         Historial reciente · 10 últimos

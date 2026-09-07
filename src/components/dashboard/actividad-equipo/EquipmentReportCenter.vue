@@ -48,7 +48,7 @@ const emit = defineEmits<{
 <template>
   <section
     id="equipment-report-center"
-    class="h-auto overflow-visible lg:h-full lg:min-h-0 lg:overflow-hidden"
+    class="h-auto min-w-0 overflow-visible lg:h-full lg:min-h-0 lg:overflow-hidden"
   >
     <EquipmentReportSummaryView
       v-if="activeTab === 'resumen'"

@@ -33,7 +33,7 @@ const emit = defineEmits<{
 <template>
   <section
     id="equipment-operators-view"
-    class="grid h-auto gap-2 overflow-visible lg:h-full lg:min-h-0 lg:overflow-hidden"
+    class="report-tab-scroll grid h-auto gap-2 overflow-visible lg:h-full lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto"
     :class="gridRowsClass"
   >
     <template v-if="operatorsState === 'ready' && operators"
@@ -153,3 +153,14 @@ const emit = defineEmits<{
     </div>
   </section>
 </template>
+
+<style scoped>
+.report-tab-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.report-tab-scroll::-webkit-scrollbar {
+  display: none;
+}
+</style>

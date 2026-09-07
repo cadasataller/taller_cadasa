@@ -17,18 +17,18 @@ function classificationTone(
 <template>
   <section
     id="equipment-summary-analytics"
-    class="grid min-h-0 items-stretch gap-2 lg:grid-cols-3"
+    class="grid h-auto items-stretch gap-2 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.15fr)_minmax(0,0.9fr)]"
   >
     <article
       id="summary-classification-card"
-      class="group flex min-h-0 min-w-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+      class="summary-analytics-card flex h-auto min-w-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
     >
       <h3 class="mb-1.5 text-xs font-bold text-main">
         Distribución por clasificación
       </h3>
 
       <div
-        class="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto lg:overflow-y-hidden lg:group-hover:overflow-y-auto"
+        class="summary-analytics-scroll min-h-0 min-w-0 flex-1 overflow-auto"
       >
         <table class="w-full table-fixed border-collapse text-[10px]">
           <tbody>
@@ -70,11 +70,11 @@ function classificationTone(
     </article>
     <article
       id="summary-main-stops-card"
-      class="group flex min-h-0 min-w-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+      class="summary-analytics-card flex h-auto min-w-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
     >
       <h3 class="mb-1.5 text-xs font-bold text-main">Principales paradas</h3>
       <div
-        class="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto lg:overflow-y-hidden lg:group-hover:overflow-y-auto"
+        class="summary-analytics-scroll min-h-0 min-w-0 flex-1 overflow-auto"
       >
         <table class="w-full table-fixed border-collapse text-[10px]">
           <tbody>
@@ -114,11 +114,11 @@ function classificationTone(
     </article>
     <article
       id="summary-operator-usage-card"
-      class="group flex min-h-0 min-w-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+      class="summary-analytics-card flex h-auto min-w-0 flex-col rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
     >
       <h3 class="mb-1.5 text-xs font-bold text-main">Uso por operador</h3>
       <div
-        class="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto lg:overflow-y-hidden lg:group-hover:overflow-y-auto"
+        class="summary-analytics-scroll min-h-0 min-w-0 flex-1 overflow-auto"
       >
         <table class="w-full table-fixed border-collapse text-[10px]">
           <tbody>
@@ -158,3 +158,21 @@ function classificationTone(
     </article>
   </section>
 </template>
+
+<style scoped>
+@media (min-width: 1024px) {
+  .summary-analytics-card {
+    /* 1.25rem de padding + 1.5rem de título + 3 filas de 3rem. */
+    height: 11.75rem;
+  }
+}
+
+.summary-analytics-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.summary-analytics-scroll::-webkit-scrollbar {
+  display: none;
+}
+</style>

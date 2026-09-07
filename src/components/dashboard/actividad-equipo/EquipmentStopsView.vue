@@ -22,7 +22,7 @@ const emit = defineEmits<{ retry: [] }>();
 <template>
   <section
     id="equipment-stops-view"
-    class="grid h-auto gap-2 overflow-visible lg:h-full lg:min-h-0 lg:overflow-hidden lg:grid-rows-[auto_auto_minmax(0,1fr)_minmax(0,1fr)]"
+    class="report-tab-scroll grid h-auto gap-2 overflow-visible lg:h-full lg:min-h-0 lg:overflow-x-hidden lg:overflow-y-auto lg:grid-rows-[auto_auto_auto_auto]"
   >
     <template v-if="loadState === 'ready' && stops">
       <EquipmentStopsKpiGrid :metrics="stops.metrics" :context="context" />
@@ -94,3 +94,14 @@ const emit = defineEmits<{ retry: [] }>();
     </div>
   </section>
 </template>
+
+<style scoped>
+.report-tab-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.report-tab-scroll::-webkit-scrollbar {
+  display: none;
+}
+</style>

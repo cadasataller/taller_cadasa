@@ -29,14 +29,14 @@ function isStartOfNewDate(index: number): boolean {
 <template>
   <article
     id="stops-detail-card"
-    class="flex min-h-0 flex-col overflow-hidden rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm"
+    class="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[10px] border border-gray-200 bg-white p-2.5 shadow-sm lg:max-h-[26rem] lg:self-start"
   >
     <h3 class="mb-1.5 text-xs font-bold text-main">
       Detalle de paradas · 10 últimas
     </h3>
     <div
       id="stops-detail-scroll"
-      class="min-h-0 flex-1 overflow-y-auto rounded-md border border-gray-100"
+      class="min-h-0 flex-1 overflow-auto rounded-md border border-gray-100"
     >
       <div class="min-w-[760px]">
         <table class="w-full table-fixed border-collapse text-[10px]">

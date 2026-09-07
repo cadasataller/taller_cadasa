@@ -23,22 +23,20 @@ const emit = defineEmits<{ retry: [] }>();
 <template>
   <section
     id="equipment-summary-view"
-    class="h-auto min-h-0 overflow-visible lg:h-full lg:overflow-hidden"
+    class="report-tab-scroll h-auto min-h-0 min-w-0 overflow-visible lg:h-full lg:overflow-x-hidden lg:overflow-y-auto"
   >
     <Transition name="summary-content" mode="out-in">
       <div
         v-if="loadState === 'ready' && summary"
         :key="`summary-${summary.code}`"
-        class="grid gap-2 lg:h-full lg:min-h-0 lg:grid-rows-[auto_minmax(0,1fr)]"
+        class="grid min-w-0 gap-2 lg:h-full lg:min-h-0 lg:grid-rows-[auto_minmax(0,1fr)]"
       >
         <EquipmentSummaryHero
           :detail="masterDetail"
           :context="context"
           :summary="summary"
         />
-        <div
-          class="grid gap-2 lg:min-h-0 lg:grid-rows-[minmax(30%,45%)_minmax(0,1fr)]"
-        >
+        <div class="grid h-auto gap-2 lg:grid-rows-[auto_auto]">
           <EquipmentSummaryAnalytics :summary="summary" />
           <EquipmentSummaryBottomRow :summary="summary" />
         </div>
@@ -82,6 +80,17 @@ const emit = defineEmits<{ retry: [] }>();
     </Transition>
   </section>
 </template>
+
+<style scoped>
+.report-tab-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.report-tab-scroll::-webkit-scrollbar {
+  display: none;
+}
+</style>
 
 <style scoped>
 .summary-content-enter-active,

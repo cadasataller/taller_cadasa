@@ -45,11 +45,11 @@ const stoppedLabel = computed(
     class="border border-gray-200 bg-white shadow-sm"
   >
     <div
-      class="grid items-stretch lg:grid-cols-[minmax(280px,1.55fr)_minmax(360px,2fr)_minmax(160px,.8fr)]"
+      class="grid min-w-0 items-stretch lg:grid-cols-[minmax(0,1.3fr)_minmax(0,2fr)_minmax(0,.8fr)]"
     >
       <section
         id="equipment-summary-identity"
-        class="grid min-w-0 grid-cols-[76px_minmax(0,1fr)] items-center gap-3 px-1 py-3"
+        class="grid min-w-0 grid-cols-[76px_minmax(0,1fr)] items-center gap-3 px-1 py-1"
       >
         <div
           id="equipment-summary-image"
@@ -92,7 +92,7 @@ const stoppedLabel = computed(
         <div class="grid grid-cols-2 divide-x divide-gray-200">
           <section
             id="summary-effectiveness-card"
-            class="flex min-h-[88px] min-w-0 flex-col justify-center px-4 py-2"
+            class="flex min-h-[70px] min-w-0 flex-col justify-center px-4 py-1"
           >
             <div class="flex items-baseline justify-between gap-2">
               <span
@@ -113,7 +113,7 @@ const stoppedLabel = computed(
           </section>
           <section
             id="summary-stopped-card"
-            class="flex min-h-[88px] min-w-0 flex-col justify-center px-4 py-2"
+            class="flex min-h-[70px] min-w-0 flex-col justify-center px-4 py-1"
           >
             <div class="flex items-baseline justify-between gap-2">
               <span
@@ -151,7 +151,7 @@ const stoppedLabel = computed(
       </section>
       <section
         id="summary-total-time-card"
-        class="flex min-h-[112px] min-w-0 flex-col items-center justify-center border-gray-200 bg-gray-50 px-4 py-3 text-center lg:border-l"
+        class="flex min-h-[80px] min-w-0 flex-col items-center justify-center border-gray-200 bg-gray-50 px-4 py-3 text-center lg:border-l"
       >
         <span
           class="text-[10px] font-medium uppercase tracking-wide text-main-dark/70"
