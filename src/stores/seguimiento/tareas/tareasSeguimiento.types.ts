@@ -328,6 +328,13 @@ export interface TareaSeguimientoDetail extends TareaSeguimientoListItem {
   updatedAt: string;
 }
 
+/** Geometrías que impiden mostrar una parada del tracker como alerta. */
+export interface SeguimientoTaskExclusionZone {
+  taskId: string;
+  type: Extract<SeguimientoTaskType, "duda" | "zona">;
+  zones: SeguimientoZoneGeometry[];
+}
+
 export interface TareaSeguimientoWorkspaceData {
   tasks: TareaSeguimientoListItem[];
   trackers: SeguimientoTracker[];

@@ -57,6 +57,7 @@ const {
   selectedTask,
   selectedTaskId,
   tasks,
+  taskExclusionZones,
   catalog,
   trackers,
   trackerHistory,
@@ -557,7 +558,7 @@ watch(mobileView, (view) => {
     <TrackingMapWorkspace
       v-if="canViewMap"
       :tasks="locallyFilteredTasks"
-      :task-exclusion-points="tasks"
+      :task-exclusion-zones="taskExclusionZones"
       :trackers="trackers"
       :selected-task-id="selectedTaskId"
       :map-tools="mapTools"

@@ -16,6 +16,7 @@ import type {
   ListarTareasRastreoV2Params,
   ListarRutasPlanificadasV2Params,
   TareaSeguimientoDetail,
+  TareaSeguimientoListItem,
   TareasSeguimientoFilters,
   TareaSeguimientoWorkspaceData,
   SeguimientoTaskCatalog,
@@ -24,6 +25,7 @@ import type {
   SeguimientoLineGeometry,
   SeguimientoZoneGeometry,
   SeguimientoRutaPlanificada,
+  SeguimientoTaskExclusionZone,
   ConfiguracionInicialTrackersDto,
 } from "./tareasSeguimiento.types";
 
@@ -124,6 +126,36 @@ export const tareasSeguimientoService = {
     return listarRutasPlanificadasSchema
       .parse(data)
       .rutas.map(mapRutaPlanificada);
+  },
+
+  async loadTaskExclusionZones(
+    tasks: readonly TareaSeguimientoListItem[],
+  ): Promise<SeguimientoTaskExclusionZone[]> {
+    const candidateTasks = tasks.filter(
+      (
+        task,
+      ): task is TareaSeguimientoListItem & {
+        type: "duda" | "zona";
+      } => task.type === "duda" || task.type === "zona",
+    );
+    const details = await Promise.all(
+      candidateTasks.map(async (task) => {
+        try {
+          return await this.loadDetail(task.id);
+        } catch {
+          return null;
+        }
+      }),
+    );
+    return details.flatMap((detail) => {
+      if (!detail || (detail.type !== "duda" && detail.type !== "zona"))
+        return [];
+      const zones =
+        detail.type === "duda" ? detail.permanenceZones : detail.controlZones;
+      return zones.length
+        ? [{ taskId: detail.id, type: detail.type, zones }]
+        : [];
+    });
   },
 
   async loadWorkspace(

@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import {
-  booleanPointInPolygon,
-  distance,
-  multiPolygon,
-  point,
-} from "@turf/turf";
+import { booleanPointInPolygon, multiPolygon, point } from "@turf/turf";
 import { onBeforeUnmount, onMounted, useTemplateRef, watch } from "vue";
 import { mapsProviderLoader } from "@/seguimiento/shared/maps/mapsProvider.loader";
 import { formatPanamaDateTime } from "@/seguimiento/shared/trackers/trackerHistoryWindow";
@@ -37,13 +32,14 @@ import type {
   SeguimientoMapToolState,
   SeguimientoOperationalGeography,
   SeguimientoRutaPlanificada,
+  SeguimientoTaskExclusionZone,
   TareaSeguimientoDetail,
   TareaSeguimientoListItem,
 } from "@/stores/seguimiento/tareas/tareasSeguimiento.types";
 
 const props = defineProps<{
   tasks: TareaSeguimientoListItem[];
-  taskExclusionPoints?: TareaSeguimientoListItem[];
+  taskExclusionZones?: SeguimientoTaskExclusionZone[];
   trackers: SeguimientoTracker[];
   selectedTaskId: string | null;
   mapTools: SeguimientoMapToolState[];
@@ -340,13 +336,10 @@ function isParkingStopOutsideOperationalAreas(
     ),
   );
   if (isInsideFarm) return false;
-  return !(props.taskExclusionPoints ?? props.tasks).some(
-    (task) =>
-      task.routePoint &&
-      distance(
-        stopPoint,
-        point([task.routePoint.longitude, task.routePoint.latitude]),
-      ) <= 0.1,
+  return !(props.taskExclusionZones ?? []).some((task) =>
+    task.zones.some((zone) =>
+      booleanPointInPolygon(stopPoint, multiPolygon(zone.coordinates)),
+    ),
   );
 }
 
@@ -927,7 +920,7 @@ async function initializeMap(): Promise<void> {
 watch(
   () => [
     props.tasks,
-    props.taskExclusionPoints,
+    props.taskExclusionZones,
     props.trackers,
     props.geography,
     props.mapTools,

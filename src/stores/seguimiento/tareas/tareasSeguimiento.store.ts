@@ -34,6 +34,7 @@ import type {
   SeguimientoMapToolState,
   SeguimientoRutaPlanificada,
   TareaSeguimientoDetail,
+  SeguimientoTaskExclusionZone,
   TareaSeguimientoListItem,
   TareasSeguimientoFilters,
 } from "./tareasSeguimiento.types";
@@ -55,6 +56,7 @@ export const useTareasSeguimientoStore = defineStore(
     const trackers = ref<SeguimientoTracker[]>([]);
     const trackerLoadObservations = ref<string[]>([]);
     const trackerHistory = ref<SeguimientoTrackerHistoryPoint[]>([]);
+    const taskExclusionZones = ref<SeguimientoTaskExclusionZone[]>([]);
     const trackerHistoryNow = shallowRef<number | null>(null);
     const trackerLocationError = shallowRef<string | null>(null);
     const realtimeError = shallowRef<string | null>(null);
@@ -519,6 +521,15 @@ export const useTareasSeguimientoStore = defineStore(
           );
           if (canLoadPlannedRoutes.value) void refreshPlannedRoutes();
           const taskData = await taskDataRequest;
+          taskExclusionZones.value = [];
+          try {
+            taskExclusionZones.value =
+              await tareasSeguimientoService.loadTaskExclusionZones(
+                taskData.tasks,
+              );
+          } catch {
+            // Las zonas afinan alertas visuales; no bloquean el workspace.
+          }
           tasks.value = taskData.tasks;
           initializeLivePermanences(taskData.tasks);
           trackers.value = taskData.trackers;
@@ -659,6 +670,7 @@ export const useTareasSeguimientoStore = defineStore(
       trackerLoadObservations,
       trackerHistory,
       trackerHistoryNow,
+      taskExclusionZones,
       trackerLocationError,
       realtimeError,
       liveBadgeNow,
