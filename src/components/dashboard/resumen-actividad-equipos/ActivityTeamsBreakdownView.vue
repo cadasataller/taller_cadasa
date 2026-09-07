@@ -56,9 +56,9 @@ function segmentStyle(percentage: number): { flex: string } {
         title="Mejores equipos"
         :items="bestEquipment"
       /><ActivityTeamsRanking
-        title="Peores equipos"
+        title="Equipos a revisar"
         :items="worstEquipment"
-        tone="gold"
+        tone="danger"
       /><ActivityTeamsRanking
         title="Operadores por tiempo efectivo"
         :items="topOperators"

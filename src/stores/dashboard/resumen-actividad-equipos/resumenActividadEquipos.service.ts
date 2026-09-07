@@ -38,6 +38,16 @@ function dayFromResponse(day: {
   };
 }
 
+function rankingSecondary(item: {
+  tiempo_efectivo: string;
+  tiempo_parado: string;
+  tiempo_total?: string;
+}): string {
+  const totalTime = item.tiempo_total ? ` · ${item.tiempo_total} total` : "";
+
+  return `${item.tiempo_efectivo} efectivo · ${item.tiempo_parado} parado${totalTime}`;
+}
+
 export const activityTeamsSummaryService = {
   async loadReport(
     filters: ActivityTeamsFilters,
@@ -94,12 +104,14 @@ export const activityTeamsSummaryService = {
         value: `${item.porcentaje_tiempo_efectivo.toFixed(1)}%`,
         percentage: item.porcentaje_tiempo_efectivo,
         secondary: `${item.tiempo} · ${item.jornadas} jornadas`,
+        supportingMetric: null,
       })),
       topStopReasons: top_causas_parada.map((item) => ({
         label: item.motivo,
         value: `${item.porcentaje_paradas.toFixed(1)}%`,
         percentage: item.porcentaje_paradas,
         secondary: item.tiempo,
+        supportingMetric: null,
       })),
       equipmentPerformance: rendimiento_equipos.map((item) => ({
         code: item.equipo_numero,
@@ -113,19 +125,25 @@ export const activityTeamsSummaryService = {
         label: item.equipo_numero,
         value: `${item.efectividad.toFixed(1)}%`,
         percentage: item.efectividad,
-        secondary: `${item.tiempo_efectivo} efectivo · ${item.tiempo_parado} parado`,
+        secondary: rankingSecondary(item),
+        supportingMetric: null,
       })),
       worstEquipment: peores_equipos.map((item) => ({
         label: item.equipo_numero,
         value: `${item.efectividad.toFixed(1)}%`,
         percentage: item.efectividad,
-        secondary: `${item.tiempo_efectivo} efectivo · ${item.tiempo_parado} parado`,
+        secondary: rankingSecondary(item),
+        supportingMetric:
+          item.porcentaje_parado === undefined
+            ? null
+            : `${item.porcentaje_parado.toFixed(1)}% tiempo perdido`,
       })),
       topOperators: top_operadores.map((item) => ({
         label: item.operador,
         value: item.tiempo_efectivo,
         percentage: item.efectividad,
         secondary: `${item.efectividad.toFixed(1)}% efectividad · ${item.tiempo_parado} parado`,
+        supportingMetric: null,
       })),
     };
   },

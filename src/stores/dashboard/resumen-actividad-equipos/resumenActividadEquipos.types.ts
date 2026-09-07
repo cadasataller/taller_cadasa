@@ -40,6 +40,7 @@ export interface ActivityTeamsRankingItem {
   value: string;
   percentage: number;
   secondary: string | null;
+  supportingMetric?: string | null;
 }
 
 export interface ActivityTeamsEquipmentPerformance {

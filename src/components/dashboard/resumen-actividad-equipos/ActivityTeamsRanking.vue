@@ -61,8 +61,15 @@ function barWidth(percentage: number): string {
           />
         </div>
         <p v-if="item.secondary" class="ml-5 mt-1 text-[10px] text-gray-500">
-          {{ item.secondary }}
+          {{ item.secondary }} 
+          <strong
+          v-if="item.supportingMetric"
+          class="uppercase tracking-wide "
+        >
+          {{ item.supportingMetric }}
+        </strong>
         </p>
+        
       </li>
     </ol>
     <p v-else class="py-4 text-center text-xs text-gray-500">

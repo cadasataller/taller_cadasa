@@ -49,8 +49,16 @@ const stopReasonSchema = z.object({
 const equipmentRankingSchema = z.object({
   equipo_numero: z.string(),
   efectividad: z.number(),
+  porcentaje_parado: z.number().optional(),
+  tiempo_efectivo_segundos: z.number().optional(),
   tiempo_efectivo: z.string(),
+  tiempo_parado_segundos: z.number().optional(),
   tiempo_parado: z.string(),
+  tiempo_total_segundos: z.number().optional(),
+  tiempo_total: z.string().optional(),
+  jornadas: z.number().optional(),
+  cumple_minimo_horas: z.boolean().optional(),
+  indice_ranking: z.number().optional(),
 });
 
 const operatorSchema = z.object({
