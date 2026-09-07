@@ -1,9 +1,14 @@
 import { computed, ref, shallowRef } from "vue";
 import { defineStore } from "pinia";
 import { reporteEquiposService } from "./reporteEquipos.service";
+import {
+  DEFAULT_EQUIPMENT_SORT_MODE,
+  sortEquipmentList,
+} from "./reporteEquipos.sorting";
 import type {
   EquipmentContext,
   EquipmentListItem,
+  EquipmentSortMode,
   EquipmentMasterDetail,
   EquipmentOperators,
   OperatorDetail,
@@ -40,6 +45,9 @@ export const useReporteEquiposStore = defineStore(
   () => {
     const filters = ref<ReportFilters>(initialFilters());
     const equipment = ref<EquipmentListItem[]>([]);
+    const equipmentSortMode = shallowRef<EquipmentSortMode>(
+      DEFAULT_EQUIPMENT_SORT_MODE,
+    );
     const selectedEquipmentCode = shallowRef<string | null>(null);
     const activeTab = shallowRef<ReportTab>("resumen");
     const selectedOperatorId = shallowRef<string | null>(null);
@@ -71,8 +79,11 @@ export const useReporteEquiposStore = defineStore(
     let operatorsRequestId = 0;
     let operatorDetailRequestId = 0;
     const stopsCache = new Map<string, EquipmentStops>();
+    const equipmentListCache = new Map<string, EquipmentListItem[]>();
     const stopsCacheKey = (code: string): string =>
       `${code}:${filters.value.startDate}:${filters.value.endDate}`;
+    const equipmentListCacheKey = (value: ReportFilters): string =>
+      `${value.startDate}:${value.endDate}`;
     const updateState = (
       key: keyof ReportLoadStates,
       value: ReportLoadState,
@@ -158,7 +169,31 @@ export const useReporteEquiposStore = defineStore(
       if (activeTab.value === "paradas") void loadStops();
       if (activeTab.value === "operadores") void loadOperators();
     }
+    async function selectInitialEquipment(
+      rows: EquipmentListItem[],
+    ): Promise<void> {
+      const hasSelectedEquipment = rows.some(
+        (item) => item.code === selectedEquipmentCode.value,
+      );
+      if (hasSelectedEquipment) return;
+
+      const initialEquipment = sortEquipmentList(
+        rows,
+        equipmentSortMode.value,
+      )[0];
+      if (initialEquipment) await selectEquipment(initialEquipment.code);
+    }
     async function loadInitial(): Promise<void> {
+      const cacheKey = equipmentListCacheKey(filters.value);
+      const cachedRows = equipmentListCache.get(cacheKey);
+      if (cachedRows) {
+        initialError.value = null;
+        equipment.value = cachedRows;
+        updateState("equipmentList", cachedRows.length ? "ready" : "empty");
+        await selectInitialEquipment(cachedRows);
+        return;
+      }
+
       const currentRequest = ++requestId;
       updateState("equipmentList", "loading");
       initialError.value = null;
@@ -167,9 +202,10 @@ export const useReporteEquiposStore = defineStore(
           filters.value,
         );
         if (currentRequest !== requestId) return;
+        equipmentListCache.set(cacheKey, rows);
         equipment.value = rows;
         updateState("equipmentList", rows.length ? "ready" : "empty");
-        if (rows[0]) await selectEquipment(rows[0].code);
+        await selectInitialEquipment(rows);
       } catch (error) {
         if (currentRequest !== requestId) return;
         setFailure(
@@ -184,6 +220,9 @@ export const useReporteEquiposStore = defineStore(
       activeTab.value = tab;
       if (tab === "paradas") void loadStops();
       if (tab === "operadores") void loadOperators();
+    }
+    function setEquipmentSortMode(mode: EquipmentSortMode): void {
+      equipmentSortMode.value = mode;
     }
     async function loadStops(force = false): Promise<void> {
       const code = selectedEquipmentCode.value;
@@ -406,6 +445,7 @@ export const useReporteEquiposStore = defineStore(
     return {
       filters,
       equipment,
+      equipmentSortMode,
       selectedEquipmentCode,
       selectedEquipment,
       selectedOperatorId,
@@ -421,6 +461,7 @@ export const useReporteEquiposStore = defineStore(
       errors,
       loadInitial,
       selectEquipment,
+      setEquipmentSortMode,
       setTab,
       setDateRange,
       clearFilters,

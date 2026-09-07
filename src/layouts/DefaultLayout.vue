@@ -164,6 +164,13 @@ const canSeeSeguimientoActividadEquipo = computed(
     canSeeSeguimiento.value &&
     featureAccessStore.tieneFuncionalidad(VIEW_ACTIVIDAD_EQUIPO_FEATURE),
 );
+const canSeeSeguimientoResumenActividadEquipos = computed(
+  () =>
+    canSeeSeguimiento.value &&
+    featureAccessStore.tieneFuncionalidad(
+      SEGUIMIENTO_FEATURES.viewActivityTeamsSummary,
+    ),
+);
 const canViewProfile = computed(
   () =>
     isFeatureAccessLoaded.value &&
@@ -284,12 +291,18 @@ const mobilePrimaryItems = computed(() => {
     primaryPaths.includes(item.path),
   );
 
-  if (canSeeSeguimientoTareas.value || canSeeSeguimientoActividadEquipo.value) {
+  if (
+    canSeeSeguimientoTareas.value ||
+    canSeeSeguimientoActividadEquipo.value ||
+    canSeeSeguimientoResumenActividadEquipos.value
+  ) {
     primaryItems.splice(2, 0, {
       name: "Seguimiento",
       path: canSeeSeguimientoTareas.value
         ? "/seguimiento/tareas"
-        : "/seguimiento/actividad-equipo",
+        : canSeeSeguimientoActividadEquipo.value
+          ? "/seguimiento/actividad-equipo"
+          : "/seguimiento/resumen-actividad-equipos",
       icon: MapPinned,
       requiredFeature: SEGUIMIENTO_FEATURES.module,
     });
@@ -308,6 +321,14 @@ const mobileMoreItems = computed(() => {
       path: "/seguimiento/actividad-equipo",
       icon: MapPinned,
       requiredFeature: VIEW_ACTIVIDAD_EQUIPO_FEATURE,
+    });
+  }
+  if (canSeeSeguimientoResumenActividadEquipos.value) {
+    items.push({
+      name: "Resumen equipos",
+      path: "/seguimiento/resumen-actividad-equipos",
+      icon: BarChart3,
+      requiredFeature: SEGUIMIENTO_FEATURES.viewActivityTeamsSummary,
     });
   }
 
@@ -770,6 +791,18 @@ const isActive = (path: string) =>
                   @click="seguimientoDesktopOpen = false"
                   >Actividad equipo</router-link
                 >
+                <router-link
+                  v-if="canSeeSeguimientoResumenActividadEquipos"
+                  to="/seguimiento/resumen-actividad-equipos"
+                  class="flex items-center rounded-lg px-4 py-2.5 text-sm"
+                  :class="
+                    isActive('/seguimiento/resumen-actividad-equipos')
+                      ? 'bg-white/10 text-white'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  "
+                  @click="seguimientoDesktopOpen = false"
+                  >Resumen equipos</router-link
+                >
               </div>
             </div>
           </div>
@@ -898,6 +931,18 @@ const isActive = (path: string) =>
             "
             @click="closeDesktopFloatingGroup"
             >Actividad equipo</router-link
+          >
+          <router-link
+            v-if="canSeeSeguimientoResumenActividadEquipos"
+            to="/seguimiento/resumen-actividad-equipos"
+            class="flex rounded-lg px-3 py-2.5 text-sm text-gray-300 hover:bg-white/10 hover:text-white"
+            :class="
+              isActive('/seguimiento/resumen-actividad-equipos')
+                ? 'bg-white/10 text-white'
+                : ''
+            "
+            @click="closeDesktopFloatingGroup"
+            >Resumen equipos</router-link
           >
         </div>
       </div>

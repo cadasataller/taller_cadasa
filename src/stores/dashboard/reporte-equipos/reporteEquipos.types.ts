@@ -1,5 +1,6 @@
 export type ReportTab = "resumen" | "paradas" | "operadores" | "eventos";
 export type ReportLoadState = "idle" | "loading" | "ready" | "empty" | "error";
+export type EquipmentSortMode = "equipmentNumber" | "mostHours";
 
 export interface ReportFilters {
   startDate: string;

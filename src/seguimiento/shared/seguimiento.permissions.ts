@@ -5,6 +5,7 @@ export const SEGUIMIENTO_FEATURES = {
   viewQuestions: "ver_dudas_seguimiento",
   viewTaskHistory: "ver_historial_tarea_seguimiento",
   viewTaskTracker: "ver_tracker_tarea_seguimiento",
+  viewActivityTeamsSummary: "ver_resumen_actividad_equipos",
   viewMap: "ver_mapa_seguimiento",
   createTasks: "crear_tareas_seguimiento",
   assignTaskTracker: "asignar_tracker_tarea_seguimiento",

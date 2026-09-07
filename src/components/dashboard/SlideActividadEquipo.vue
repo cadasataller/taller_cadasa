@@ -29,6 +29,7 @@ const {
   context,
   equipment,
   equipmentListState,
+  equipmentSortMode,
   errors,
   filters,
   initialError,
@@ -49,6 +50,7 @@ const {
   selectedOperatorId,
   selectOperator,
   selectEquipment,
+  setEquipmentSortMode,
   setDateRange,
   setTab: updateActiveTab,
 } = useReporteEquiposView();
@@ -124,8 +126,10 @@ function selectMobileEquipment(code: string): void {
         :load-state="equipmentListState"
         :error="initialError"
         :reset-search-signal="equipmentSearchResetSignal"
+        :sort-mode="equipmentSortMode"
         @select="selectEquipment"
         @retry="retry"
+        @update-sort-mode="setEquipmentSortMode"
       />
       <EquipmentReportCenter
         :active-tab="activeTab"
@@ -177,8 +181,10 @@ function selectMobileEquipment(code: string): void {
         :load-state="equipmentListState"
         :error="initialError"
         :reset-search-signal="equipmentSearchResetSignal"
+        :sort-mode="equipmentSortMode"
         @select="selectMobileEquipment"
         @retry="retry"
+        @update-sort-mode="setEquipmentSortMode"
       />
     </EquipmentReportMobileDrawer>
     <EquipmentReportMobileDrawer

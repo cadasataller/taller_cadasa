@@ -10,7 +10,9 @@ import {
 import type {
   EquipmentListItem,
   ReportLoadState,
+  EquipmentSortMode,
 } from "@/stores/dashboard/reporte-equipos/reporteEquipos.types";
+import { sortEquipmentList } from "@/stores/dashboard/reporte-equipos/reporteEquipos.sorting";
 import { formatOperationalNumber } from "@/utils/formatOperationalNumber";
 
 interface Props {
@@ -19,26 +21,23 @@ interface Props {
   loadState: ReportLoadState;
   error: string | null;
   resetSearchSignal: number;
+  sortMode: EquipmentSortMode;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<{
   select: [code: string];
   retry: [];
+  updateSortMode: [mode: EquipmentSortMode];
 }>();
 
 const searchTerm = shallowRef("");
-const sortMode = shallowRef<"equipmentNumber" | "mostHours">("mostHours");
 const nextSortLabel = computed(() =>
-  sortMode.value === "equipmentNumber" ? "Horas" : "# Equipo",
+  props.sortMode === "equipmentNumber" ? "Horas" : "# Equipo",
 );
 const sortAriaLabel = computed(
   () => `Ordenar por ${nextSortLabel.value.toLocaleLowerCase()}`,
 );
-const equipmentNumberCollator = new Intl.Collator("es", {
-  numeric: true,
-  sensitivity: "base",
-});
 const visibleEquipment = computed(() => {
   const normalized = searchTerm.value.trim().toLocaleLowerCase();
   const filteredEquipment = normalized
@@ -49,20 +48,14 @@ const visibleEquipment = computed(() => {
       )
     : props.equipment;
 
-  return [...filteredEquipment].sort((first, second) => {
-    if (sortMode.value === "mostHours") {
-      const timeDifference =
-        (second.totalSeconds ?? 0) - (first.totalSeconds ?? 0);
-      if (timeDifference !== 0) return timeDifference;
-    }
-
-    return equipmentNumberCollator.compare(first.code, second.code);
-  });
+  return sortEquipmentList(filteredEquipment, props.sortMode);
 });
 
 function toggleSortMode(): void {
-  sortMode.value =
-    sortMode.value === "equipmentNumber" ? "mostHours" : "equipmentNumber";
+  emit(
+    "updateSortMode",
+    props.sortMode === "equipmentNumber" ? "mostHours" : "equipmentNumber",
+  );
 }
 
 function clearSearch(): void {

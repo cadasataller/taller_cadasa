@@ -13,6 +13,7 @@ export function useReporteEquiposView() {
     equipmentListState: computed(() => state.loadStates.value.equipmentList),
     retry: store.loadInitial,
     selectEquipment: store.selectEquipment,
+    setEquipmentSortMode: store.setEquipmentSortMode,
     setTab: store.setTab,
     setDateRange: store.setDateRange,
     clearFilters: store.clearFilters,

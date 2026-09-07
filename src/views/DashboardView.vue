@@ -9,6 +9,7 @@ import SlideReparaciones from "@/components/dashboard/SlideReparaciones.vue";
 import SlideMantenimiento from "@/components/dashboard/SlideMantenimiento.vue";
 import SlideHorasTrabajo from "@/components/dashboard/SlideHorasTrabajo.vue";
 import SlideServiciosGenerales from "@/components/dashboard/SlideServiciosGenerales.vue";
+import SlideResumenActividadEquipos from "@/components/dashboard/SlideResumenActividadEquipos.vue";
 import SlideCalificaciones from "@/components/dashboard/SlideCalificaciones.vue";
 import SlideProductividadSemanal from "@/components/dashboard/SlideProductividadSemanal.vue";
 import SlideActividadEquipo from "@/components/dashboard/SlideActividadEquipo.vue";
@@ -59,6 +60,12 @@ const allSlides: DashboardSlide[] = [
     label: "Servicios G.",
     component: SlideServiciosGenerales,
     requiredFeature: "ver_dashboard_servicios_generales",
+  },
+  {
+    id: "resumen_actividad_equipos",
+    label: "Resumen equipos",
+    component: SlideResumenActividadEquipos,
+    requiredFeature: "ver_resumen_actividad_equipos",
   },
   {
     id: "actividad_equipo",

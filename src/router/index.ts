@@ -36,6 +36,13 @@ const moduleHomeRoutes: readonly ModuleHomeRoute[] = [
     requiredFeatures: SEGUIMIENTO_TASK_ROUTE_FEATURES,
   },
   {
+    path: "/seguimiento/resumen-actividad-equipos",
+    requiredFeatures: [
+      SEGUIMIENTO_FEATURES.module,
+      SEGUIMIENTO_FEATURES.viewActivityTeamsSummary,
+    ],
+  },
+  {
     path: "/engrase/filtros",
     requiredFeatures: ["module_engrase", "ver_filtros_engrase"],
   },
@@ -155,6 +162,18 @@ const router = createRouter({
             requiredFeatures: [
               SEGUIMIENTO_FEATURES.module,
               "ver_dashboard_actividad_equipo",
+            ],
+          },
+        },
+        {
+          path: "seguimiento/resumen-actividad-equipos",
+          name: "SeguimientoResumenActividadEquipos",
+          component: () =>
+            import("@/views/seguimiento/ResumenActividadEquiposView.vue"),
+          meta: {
+            requiredFeatures: [
+              SEGUIMIENTO_FEATURES.module,
+              SEGUIMIENTO_FEATURES.viewActivityTeamsSummary,
             ],
           },
         },
